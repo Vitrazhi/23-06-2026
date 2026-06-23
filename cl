@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Витраж — Собери свою новую жизнь</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cinzel:wght@400;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07080f;--bg2:#0d0f1a;--bg3:#13151f;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);
+  --text:#eeedf8;--text2:#8e8cac;--text3:#4e4d68;
+  --accent:#7c6fff;--accent2:#a78bfa;
+  --gold:#f0c060;--teal:#38d9c0;--rose:#e87090;
+}
+html,body{height:100%;background:#03040a;font-family:'Inter',sans-serif;color:var(--text);overflow:hidden;}
+
+/* ══ SCREENS ══ */
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity .5s,transform .5s;z-index:1;}
+.screen.hidden{opacity:0;pointer-events:none;transform:scale(.97);}
+.screen.slide-left{transform:translateX(-100%);}
+.screen.slide-right{transform:translateX(100%);}
+
+/* ══ PHONE FRAME ══ */
+.phone{width:390px;height:844px;background:var(--bg);border-radius:48px;border:1.5px solid rgba(255,255,255,0.11);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 120px rgba(0,0,0,0.85),0 0 0 1px rgba(255,255,255,0.05);position:relative;}
+.status-bar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;}
+.sb-time{font-size:15px;font-weight:600;}
+.sb-ic{font-size:11px;color:var(--text2);}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;}
+.scroll::-webkit-scrollbar{display:none;}
+.nav{height:84px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;background:rgba(8,9,16,.97);backdrop-filter:blur(20px);flex-shrink:0;padding-bottom:18px;}
+.ni{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 16px;border-radius:14px;border:none;background:none;color:var(--text3);font-family:inherit;font-size:10px;font-weight:500;letter-spacing:.04em;transition:all .2s;}
+.ni:hover{background:rgba(255,255,255,.04);}
+.ni.on{color:var(--accent2);}
+.ni-ic{font-size:22px;line-height:1;}
+
+/* ══ ONBOARDING ══ */
+#ob-screen{background:radial-gradient(ellipse at 50% 30%, #1a1040 0%, #050310 60%);}
+.ob-wrap{width:390px;max-height:844px;background:var(--bg);border-radius:48px;border:1.5px solid rgba(255,255,255,0.11);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 120px rgba(0,0,0,0.85);position:relative;}
+.ob-step{display:none;flex:1;flex-direction:column;padding:0 28px 32px;justify-content:center;gap:20px;min-height:760px;}
+.ob-step.on{display:flex;}
+.ob-icon{font-size:64px;text-align:center;filter:drop-shadow(0 0 20px rgba(124,111,255,0.5));}
+.ob-eyebrow{font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;text-align:center;}
+.ob-title{font-size:28px;font-weight:600;letter-spacing:-.6px;line-height:1.2;text-align:center;font-family:'Cinzel',serif;}
+.ob-sub{font-size:14px;color:var(--text2);line-height:1.7;text-align:center;}
+.ob-dots{display:flex;gap:6px;justify-content:center;}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:var(--bg3);transition:all .3s;}
+.ob-dot.on{background:var(--accent);width:20px;border-radius:3px;}
+.sphere-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sphere-opt{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px 14px;cursor:pointer;transition:all .2s;text-align:left;}
+.sphere-opt:hover{border-color:var(--border2);}
+.sphere-opt.sel{border-color:var(--accent);background:rgba(124,111,255,.1);}
+.sphere-emoji{font-size:26px;margin-bottom:8px;display:block;}
+.sphere-name{font-size:14px;font-weight:600;}
+.sphere-desc{font-size:12px;color:var(--text2);margin-top:2px;}
+.action-inp-row{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:13px 16px;display:flex;align-items:center;gap:10px;transition:border-color .2s;}
+.action-inp-row:focus-within{border-color:rgba(124,111,255,.4);}
+.action-inp{flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;}
+.action-inp::placeholder{color:var(--text3);}
+.action-num{font-size:15px;color:var(--text3);}
+
+/* Превью витража в онбординге */
+.ob-vitrazh-preview{border-radius:16px;overflow:hidden;background:#04050e;position:relative;}
+.ob-vitrazh-preview svg{display:block;width:100%;}
+
+/* Settings screen components */
+.opt-pill{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;}
+.opt-pill:hover{border-color:var(--border2);}
+.opt-pill.sel{border-color:var(--accent);background:rgba(124,111,255,.12);}
+.opt-pill-title{font-size:16px;font-weight:600;}
+.opt-pill-title.sm{font-size:13px;font-weight:500;}
+.opt-pill-sub{font-size:10px;color:var(--text2);margin-top:2px;}
+.opt-pill.sm{padding:9px 4px;}
+.toggle{width:42px;height:24px;border-radius:12px;background:var(--bg3);border:1px solid var(--border2);position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.toggle.on{background:var(--accent);border-color:var(--accent);}
+.toggle-knob{width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.toggle.on .toggle-knob{left:21px;}
+
+/* ══ BUTTONS ══ */
+.btn{border:none;cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:16px;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--accent);color:#fff;font-size:16px;padding:17px;width:100%;}
+.btn-primary:hover{background:#6b5fff;box-shadow:0 8px 24px rgba(124,111,255,.35);}
+.btn-ghost{background:rgba(255,255,255,.05);color:var(--text2);font-size:14px;padding:13px;width:100%;border-radius:12px;}
+.btn-ghost:hover{background:rgba(255,255,255,.08);}
+.btn-sm{background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:12px;padding:8px 14px;border-radius:10px;}
+.btn-sm.sel{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* ══ MAIN SCREEN ══ */
+.screen-header{padding:10px 20px 16px;flex-shrink:0;}
+.sh-title{font-size:26px;font-weight:600;letter-spacing:-.5px;}
+.sh-sub{font-size:13px;color:var(--text2);margin-top:3px;}
+
+/* Master card */
+.master-card{margin:0 18px 16px;background:linear-gradient(135deg,rgba(28,22,56,.95),rgba(14,11,26,.95));border:1px solid rgba(124,111,255,.2);border-radius:18px;padding:14px;display:flex;gap:11px;}
+.m-av{width:38px;height:38px;border-radius:50%;background:rgba(40,35,70,.8);border:1px solid rgba(124,111,255,.35);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.m-name{font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:.07em;margin-bottom:3px;}
+.m-msg{font-size:13px;color:var(--text2);line-height:1.55;}
+
+/* Vitrazh card */
+.vcard{margin:0 10px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:22px;padding:12px;position:relative;transition:border-color .6s,box-shadow .6s;}
+.vcard.glow{border-color:rgba(124,111,255,.6);box-shadow:0 0 50px rgba(100,80,255,.18);}
+.vcard-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.vcard-name{font-size:15px;font-weight:600;}
+.vcard-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+.streak{font-size:13px;font-weight:700;color:var(--gold);}
+
+/* SVG витраж */
+.vg-wrap{border-radius:12px;overflow:hidden;background:#04050e;position:relative;margin-bottom:12px;}
+.memo-dot{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px var(--gold);}
+#memo-modal,#completion-modal{animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+#memo-modal textarea,#completion-modal textarea{background:var(--bg3);border:1px solid var(--border);color:var(--text);transition:border-color .2s;}
+#memo-modal textarea:focus,#completion-modal textarea:focus{border-color:rgba(124,111,255,.45);outline:none;}
+.gal-card{cursor:pointer;transition:border-color .2s;}
+.vg-wrap svg{display:block;width:100%;cursor:pointer;}
+
+/* Toast */
+.toast{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);background:rgba(240,192,96,.13);border:1px solid rgba(240,192,96,.4);border-radius:9px;padding:5px 14px;font-size:12px;font-weight:600;color:var(--gold);pointer-events:none;white-space:nowrap;opacity:0;z-index:20;}
+@keyframes toastRise{0%{opacity:0;transform:translate(-50%,4px)}15%{opacity:1}80%{opacity:1;transform:translate(-50%,-22px)}100%{opacity:0;transform:translate(-50%,-34px)}}
+.toast.show{animation:toastRise 1.4s ease-out forwards;}
+
+/* Progress */
+.prog-row{display:flex;align-items:center;gap:9px;}
+.prog-bar{flex:1;height:4px;background:#1a1d2e;border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .7s cubic-bezier(.22,1,.36,1);}
+.prog-lb{font-size:11px;color:var(--text2);white-space:nowrap;}
+.hint{font-size:11px;color:var(--text3);text-align:center;margin-top:7px;transition:opacity .5s;}
+
+/* Done banner */
+.done-banner{display:none;background:linear-gradient(135deg,rgba(100,80,255,.18),rgba(45,200,180,.1));border:1px solid rgba(124,111,255,.4);border-radius:13px;padding:12px 14px;align-items:center;gap:9px;margin-top:10px;}
+.done-banner.show{display:flex;}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 18px 16px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:13px 8px;text-align:center;}
+.sv{font-size:22px;font-weight:600;}
+.sv.gold{color:var(--gold);}
+.sv.teal{color:var(--teal);}
+.sv.ac{color:var(--accent2);}
+@keyframes bump{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.sv.b{animation:bump .3s ease;}
+.sn{font-size:10px;color:var(--text3);margin-top:3px;}
+
+/* Actions */
+.actions-wrap{margin:0 18px 16px;}
+.sec-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:9px;}
+.act-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:7px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:all .2s;}
+.act-card:hover:not(.done){border-color:var(--border2);transform:translateY(-1px);}
+.act-card.done{border-color:rgba(124,111,255,.28);background:rgba(100,80,255,.07);}
+.act-dot{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;transition:all .25s;}
+.act-card.done .act-dot{background:var(--accent);border-color:var(--accent);}
+.act-name{font-size:14px;font-weight:500;}
+.act-meta{font-size:11px;color:var(--text2);margin-top:1px;}
+.act-light{font-size:11px;color:var(--gold);}
+
+/* Upload zone */
+.upload-zone{margin:0 18px 16px;border:1.5px dashed var(--border2);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;}
+.upload-zone:hover{border-color:rgba(124,111,255,.5);background:rgba(124,111,255,.04);}
+.upload-zone input{display:none;}
+.uz-icon{font-size:28px;margin-bottom:8px;}
+.uz-title{font-size:14px;font-weight:500;margin-bottom:4px;}
+.uz-sub{font-size:12px;color:var(--text2);}
+
+/* ══ GALLERY SCREEN ══ */
+.gal-card{margin:0 18px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:16px;cursor:pointer;transition:border-color .2s;}
+.gal-card:hover{border-color:var(--border2);}
+.gal-card-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:11px;}
+.gal-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;}
+.gal-mini{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;margin-bottom:11px;}
+.gal-mini-sh{aspect-ratio:1;border-radius:1px;}
+.add-card{margin:0 18px 12px;border:1.5px dashed var(--border2);border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text2);font-size:14px;font-weight:500;cursor:pointer;}
+
+/* ══ PROFILE SCREEN ══ */
+.prof-header{margin:0 18px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:16px;display:flex;align-items:center;gap:13px;}
+.prof-avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:24px;}
+.prof-name{font-size:17px;font-weight:600;}
+.prof-sub{font-size:12px;color:var(--text2);margin-top:2px;}
+.prof-light{margin-left:auto;text-align:right;}
+.menu-item{margin:0 18px 7px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:11px;cursor:pointer;font-size:14px;font-weight:500;transition:background .15s;}
+.menu-item:hover{background:var(--bg3);}
+.mi-arrow{margin-left:auto;color:var(--text3);}
+.premium-banner{margin:0 18px 14px;background:linear-gradient(135deg,#2d1b69,#1a1235);border:1px solid rgba(167,139,250,.3);border-radius:20px;padding:20px;}
+
+/* ══ PARTICLES ══ */
+.pt{position:fixed;pointer-events:none;border-radius:50%;animation:ptf var(--d,.7s) ease-out forwards;z-index:9999;}
+@keyframes ptf{0%{opacity:.9;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}
+.flash-el{position:fixed;border-radius:50%;pointer-events:none;z-index:9998;}
+@keyframes flashAnim{0%{transform:translate(-50%,-50%) scale(0);opacity:.85}55%{transform:translate(-50%,-50%) scale(2.6);opacity:.3}100%{transform:translate(-50%,-50%) scale(4.2);opacity:0}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════
+     ONBOARDING
+══════════════════════════════════ -->
+<div class="screen" id="ob-screen">
+<div class="ob-wrap" style="width:390px;height:844px;">
+  <div class="status-bar"><span class="sb-time" id="ob-clk">9:41</span><span class="sb-ic">●●● WiFi ■■■</span></div>
+
+  <!-- Шаг 0: приветствие -->
+  <div class="ob-step on" id="ob0" style="padding-top:20px;justify-content:space-evenly;">
+    <div style="text-align:center;">
+      <div class="ob-icon" style="font-size:72px;margin-bottom:12px;font-family:Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif;">🪟</div>
+      <div class="ob-eyebrow" style="margin-bottom:14px;">Добро пожаловать</div>
+      <div class="ob-title" style="font-size:26px;margin-bottom:16px;">Собери свою лучшую жизнь по кусочкам</div>
+      <div class="ob-sub">Каждое выполненное действие — осколок витража. Выполняй действие и открывай кусочек витража. Собери все — и увидишь тайный образ.</div>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(124,111,255,.12),rgba(45,212,191,.08));border:1px solid rgba(124,111,255,.25);border-radius:20px;padding:20px 18px;display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;"><div style="font-size:26px;">✦</div><div><div style="font-size:14px;font-weight:600;">Открывай осколки</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">Каждое выполненное действие — один осколок</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;"><div style="font-size:26px;">🎨</div><div><div style="font-size:14px;font-weight:600;">Собирай образ</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">Витраж складывается из твоих усилий</div></div></div>
+      <div style="display:flex;align-items:center;gap:12px;"><div style="font-size:26px;">📖</div><div><div style="font-size:14px;font-weight:600;">Добавляй заметки</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">Фото, текст и аудио — памятник трансформации</div></div></div>
+    </div>
+    <button class="btn btn-primary" onclick="nextOb()">Начать ритуал →</button>
+    <div class="ob-dots" style="margin-top:4px;"><div class="ob-dot on"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
+  </div>
+
+  <!-- Шаг 1: выбор сферы -->
+  <div class="ob-step" id="ob1">
+    <div class="ob-eyebrow">Шаг 1 из 3</div>
+    <div class="ob-title" style="font-size:22px;">Выбери сферу жизни</div>
+    <div class="ob-sub" style="font-size:13px;">Первый витраж посвящён одной цели. За ней скрыт тайный образ.</div>
+    <div class="sphere-grid" id="sphere-grid">
+      <div class="sphere-opt" onclick="selSphere(this,'sleep','🌙','Сон','#4a80d0')"><span class="sphere-emoji">🌙</span><div class="sphere-name">Сон</div><div class="sphere-desc">Режим и качество</div></div>
+      <div class="sphere-opt" onclick="selSphere(this,'sport','⚡','Спорт','#30c090')"><span class="sphere-emoji">⚡</span><div class="sphere-name">Спорт</div><div class="sphere-desc">Движение и сила</div></div>
+      <div class="sphere-opt" onclick="selSphere(this,'work','🧠','Работа','#e09030')"><span class="sphere-emoji">🧠</span><div class="sphere-name">Работа</div><div class="sphere-desc">Фокус и рост</div></div>
+      <div class="sphere-opt" onclick="selSphere(this,'calm','🌿','Спокойствие','#4890c0')"><span class="sphere-emoji">🌿</span><div class="sphere-name">Спокойствие</div><div class="sphere-desc">Ментальный покой</div></div>
+      <div class="sphere-opt" onclick="selSphere(this,'food','🥗','Питание','#60b040')"><span class="sphere-emoji">🥗</span><div class="sphere-name">Питание</div><div class="sphere-desc">Еда и энергия</div></div>
+      <div class="sphere-opt" onclick="selSphere(this,'creative','✨','Творчество','#9060e0')"><span class="sphere-emoji">✨</span><div class="sphere-name">Творчество</div><div class="sphere-desc">Созидание</div></div>
+    </div>
+    <button class="btn btn-primary" id="ob1-next" onclick="nextOb()" style="opacity:.4;pointer-events:none;">Дальше →</button>
+    <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot on"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
+  </div>
+
+  <!-- Шаг 2: действия -->
+  <div class="ob-step" id="ob2">
+    <div class="ob-eyebrow">Шаг 2 из 3</div>
+    <div class="ob-title" style="font-size:22px;">Добавь 1–3 действия</div>
+    <div class="ob-sub" style="font-size:13px;">Что ты будешь делать каждый день? Каждое выполненное действие открывает осколок витража.</div>
+    <div id="act-list-wrap" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;"></div>
+    <button class="btn btn-ghost" onclick="addActionField()" style="margin-top:0;font-size:13px;padding:10px;">+ Добавить действие</button>
+
+    <!-- Загрузка своего изображения -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
+      <div style="font-size:12px;font-weight:600;color:var(--accent2);margin-bottom:8px;">✦ Свой образ витража (необязательно)</div>
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('img-input').click()">
+        <input type="file" id="img-input" accept="image/*" onchange="handleImageUpload(event)">
+        <div class="uz-icon" id="uz-icon">🖼️</div>
+        <div class="uz-title" id="uz-title">Загрузить своё изображение</div>
+        <div class="uz-sub" id="uz-sub">Оно превратится в витраж-пазл</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="nextOb()">Дальше →</button>
+    <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot on"></div><div class="ob-dot"></div></div>
+  </div>
+
+  <!-- Шаг 3: настройки -->
+  <div class="ob-step" id="ob3" style="padding-top:36px;">
+    <div class="ob-icon">⚙️</div>
+    <div class="ob-eyebrow">Твой витраж почти готов</div>
+    <div class="ob-title" style="font-size:21px;">Настрой свой ритуал</div>
+    <div class="ob-sub" style="font-size:13px;">Эти параметры можно изменить позже в Мастерской. Сейчас выбери то, что подходит именно тебе.</div>
+
+    <!-- Размер витража -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:3px;"><span style="font-family:Apple Color Emoji,Segoe UI Emoji,sans-serif;">🪟</span> Размер витража</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Сколько осколков нужно собрать, чтобы открыть образ</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div class="opt-pill" data-val="15" onclick="selSetting(this,'shardCount',15)"><div class="opt-pill-title">15</div><div class="opt-pill-sub">Быстрый старт</div></div>
+        <div class="opt-pill sel" data-val="30" onclick="selSetting(this,'shardCount',30)"><div class="opt-pill-title">30</div><div class="opt-pill-sub">Рекомендуем</div></div>
+        <div class="opt-pill" data-val="50" onclick="selSetting(this,'shardCount',50)"><div class="opt-pill-title">50</div><div class="opt-pill-sub">Долгий путь</div></div>
+      </div>
+    </div>
+
+    <!-- Лимит осколков в день -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:3px;">✋ Осколков в день</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Ограничение бережёт привычку от выгорания за один день</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div class="opt-pill" data-val="1" onclick="selSetting(this,'dailyLimit',1)"><div class="opt-pill-title">1</div><div class="opt-pill-sub">Бережно</div></div>
+        <div class="opt-pill" data-val="3" onclick="selSetting(this,'dailyLimit',3)"><div class="opt-pill-title">3</div><div class="opt-pill-sub">Сбалансировано</div></div>
+        <div class="opt-pill sel" data-val="0" onclick="selSetting(this,'dailyLimit',0)"><div class="opt-pill-title">∞</div><div class="opt-pill-sub">Без лимита</div></div>
+      </div>
+    </div>
+
+    <!-- Напоминание -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+        <div style="font-size:13px;font-weight:600;">🔔 Напоминание от Мастера</div>
+        <div class="toggle on" id="reminder-toggle" onclick="toggleReminder()"><div class="toggle-knob"></div></div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Мастер напомнит закрасить осколок в выбранное время</div>
+      <div id="reminder-time-row" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+        <div class="opt-pill sm" data-val="09:00" onclick="selSetting(this,'reminderTime','09:00')"><div class="opt-pill-title sm">09:00</div></div>
+        <div class="opt-pill sm" data-val="14:00" onclick="selSetting(this,'reminderTime','14:00')"><div class="opt-pill-title sm">14:00</div></div>
+        <div class="opt-pill sm sel" data-val="21:00" onclick="selSetting(this,'reminderTime','21:00')"><div class="opt-pill-title sm">21:00</div></div>
+        <div class="opt-pill sm" data-val="22:30" onclick="selSetting(this,'reminderTime','22:30')"><div class="opt-pill-title sm">22:30</div></div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="nextObAndStart()">Открыть витраж ✦</button>
+    <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot on"></div></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════
+     MAIN APP
+══════════════════════════════════ -->
+<div class="screen hidden" id="app-screen">
+<div class="phone">
+  <div class="status-bar"><span class="sb-time" id="app-clk">9:41</span><span class="sb-ic">●●● WiFi ■■■</span></div>
+
+  <!-- TAB: MAIN -->
+  <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;" id="tab-main">
+    <div class="screen-header">
+      <div class="sh-title" id="main-greeting">Добрый день ✦</div>
+      <div class="sh-sub" id="main-date">Понедельник, 15 июня</div>
+    </div>
+    <div class="scroll">
+      <div class="master-card">
+        <div class="m-av">🧙</div>
+        <div><div class="m-name">МАСТЕР-ВИТРАЖИСТ</div><div class="m-msg" id="master-msg">Каждый осколок открывает часть тайного образа. Что скрывается за стеклом — узнаешь сам.</div></div>
+      </div>
+      <div class="vcard" id="main-vcard">
+        <div class="toast" id="main-toast">+10 ✦</div>
+
+        <div class="vcard-hdr">
+          <div><div class="vcard-name" id="v-name">Витраж Сна</div><div class="vcard-sub" id="v-sub">Открыто 0 из 30</div></div>
+          <div class="streak">⚡ <span id="v-stk">0</span> дн</div>
+        </div>
+        <div class="vg-wrap" id="vg-wrap"></div>
+        <div class="done-banner" id="main-done-banner">
+          <span style="font-size:18px;">✦</span>
+          <div><div style="font-size:13px;font-weight:600;">Витраж завершён!</div><div style="font-size:12px;color:var(--text2);">Образ открыт полностью.</div></div>
+        </div>
+        <div class="prog-row">
+          <div class="prog-bar"><div class="prog-fill" id="v-prog" style="width:0%"></div></div>
+          <div class="prog-lb" id="v-prog-lb">0 / 30</div>
+        </div>
+        <div class="hint" id="v-hint">Нажми на тёмный осколок — открой образ</div>
+      </div>
+      <div class="actions-wrap">
+        <div class="sec-label">Сегодняшние действия</div>
+        <div id="acts-list"></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="sv gold" id="s-light">0</div><div class="sn">Света ✦</div></div>
+        <div class="stat-card"><div class="sv teal" id="s-done">0</div><div class="sn">Открыто</div></div>
+        <div class="stat-card"><div class="sv ac" id="s-left">30</div><div class="sn">Осталось</div></div>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="ni on" onclick="switchTab('main',this)"><span class="ni-ic">🪟</span>Витраж</button>
+      <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic">🏛</span>Собор</button>
+      <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
+    </div>
+  </div>
+
+  <!-- TAB: GALLERY -->
+  <div style="display:none;flex-direction:column;flex:1;overflow:hidden;" id="tab-gallery">
+    <div class="screen-header"><div class="sh-title">Собор</div><div class="sh-sub">Все твои витражи</div></div>
+    <div class="scroll">
+      <div class="stats-row" style="margin-top:4px;">
+        <div class="stat-card"><div class="sv ac" id="g-count">1</div><div class="sn">Витражей</div></div>
+        <div class="stat-card"><div class="sv gold" id="g-comp">0</div><div class="sn">Завершено</div></div>
+        <div class="stat-card"><div class="sv teal" id="g-pct">0%</div><div class="sn">Прогресс</div></div>
+      </div>
+      <div id="gallery-list"></div>
+    </div>
+    <div class="nav">
+      <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic">🪟</span>Витраж</button>
+      <button class="ni on" onclick="switchTab('gallery',this)"><span class="ni-ic">🏛</span>Собор</button>
+      <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
+    </div>
+  </div>
+
+  <!-- TAB: PROFILE -->
+  <div style="display:none;flex-direction:column;flex:1;overflow:hidden;" id="tab-profile">
+    <div class="screen-header"><div class="sh-title">Мастерская</div></div>
+    <div class="scroll">
+      <div class="prof-header">
+        <div class="prof-avatar">🧱</div>
+        <div><div class="prof-name">Мастер витражей</div><div class="prof-sub">Ученик · 1-й уровень</div></div>
+        <div class="prof-light"><div style="font-size:20px;font-weight:600;color:var(--gold);" id="p-light">0</div><div style="font-size:11px;color:var(--text3);">✦ Света</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card"><div class="sv gold" id="p-stk">0</div><div class="sn">Стрик</div></div>
+        <div class="stat-card"><div class="sv teal" id="p-done">0</div><div class="sn">Осколков</div></div>
+        <div class="stat-card"><div class="sv ac" id="p-sh">30</div><div class="sn">Осталось</div></div>
+      </div>
+      <div class="premium-banner">
+        <div style="font-size:15px;font-weight:600;margin-bottom:5px;">✦ Мастерская Тиффани</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:13px;line-height:1.55;">Безлимит витражей, редкие текстуры и личный ИИ-наставник.</div>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;">
+          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Безлимит витражей и сфер</div>
+          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Текстуры: Тиффани, Космос, Мороз</div>
+          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>ИИ-наставник с личными советами</div>
+          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Загрузка своих изображений</div>
+        </div>
+        <button class="btn btn-primary" style="font-size:14px;padding:13px;">399 ₽ / месяц — открыть</button>
+      </div>
+      <div class="sec-label" style="margin:0 18px 9px;">Настройки</div>
+      <div class="menu-item" id="menu-limit-info">✋<span id="menu-limit-text">Лимит: без ограничений</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item">🔔<span id="menu-reminder-text">Напоминания от Мастера</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item">🖼️<span>Загрузить своё изображение</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item">📤<span>Поделиться витражом</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" onclick="resetApp()">🔄<span>Начать заново</span><span class="mi-arrow">›</span></div>
+    </div>
+    <div class="nav">
+      <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic">🪟</span>Витраж</button>
+      <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic">🏛</span>Собор</button>
+      <button class="ni on" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
+    </div>
+  </div>
+
+<!-- ══ SHARD MEMO MODAL ══ -->
+<div id="memo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:flex-end;justify-content:center;">
+  <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:16px;font-weight:600;" id="memo-title">Осколок #1</div>
+      <button onclick="closeMemo()" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:4px;">Дата открытия</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px;" id="memo-date">—</div>
+    <!-- Existing memo content -->
+    <div id="memo-content-view" style="display:none;margin-bottom:14px;">
+      <div id="memo-text-view" style="background:var(--bg3);border-radius:12px;padding:12px;font-size:14px;line-height:1.6;margin-bottom:8px;display:none;"></div>
+      <img id="memo-photo-view" style="width:100%;border-radius:12px;margin-bottom:8px;display:none;" src="">
+      <audio id="memo-audio-view" controls style="width:100%;display:none;"></audio>
+    </div>
+    <!-- Add/edit memo -->
+    <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Добавить впечатление</div>
+    <textarea id="memo-text" placeholder="Что ты почувствовал? Что изменилось?" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;color:var(--text);font-family:inherit;resize:vertical;min-height:80px;outline:none;margin-bottom:8px;"></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <label style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);">
+        📷 Фото<input type="file" accept="image/*" style="display:none;" onchange="memoPhotoChange(event)">
+      </label>
+      <button onclick="startMemoAudio()" id="memo-audio-btn" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;">🎙 Запись</button>
+    </div>
+    <div id="memo-photo-preview" style="display:none;margin-bottom:8px;"><img id="memo-photo-img" style="width:100%;border-radius:12px;" src=""><button onclick="clearMemoPhoto()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;margin-top:4px;">✕ Удалить фото</button></div>
+    <div id="memo-audio-status" style="display:none;font-size:12px;color:var(--teal);margin-bottom:8px;"></div>
+    <button class="btn btn-primary" onclick="saveMemo()" style="font-size:14px;padding:13px;">Сохранить</button>
+  </div>
+</div>
+
+<!-- ══ COMPLETION MODAL ══ -->
+<div id="completion-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--bg2);border-radius:24px;padding:24px;width:100%;max-width:380px;">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:48px;margin-bottom:12px;">✦</div>
+      <div style="font-size:20px;font-weight:600;margin-bottom:8px;" id="comp-title">Витраж завершён!</div>
+      <div style="font-size:14px;color:var(--text2);">Ты прошёл этот путь. Что ты чувствуешь?</div>
+    </div>
+    <div style="font-size:13px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Главный инсайт пути</div>
+    <textarea id="comp-insight" placeholder="Что изменилось в тебе? Главная мысль, эмоция, открытие..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;color:var(--text);font-family:inherit;resize:vertical;min-height:100px;outline:none;margin-bottom:14px;"></textarea>
+    <button class="btn btn-primary" onclick="saveCompletion()" style="margin-bottom:10px;">Сохранить и закрыть ✦</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('completion-modal').style.display='none'" style="font-size:13px;padding:11px;">Позже</button>
+  </div>
+</div>
+</div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   СОСТОЯНИЕ
+══════════════════════════════════════════════ */
+const app = {
+  ob: 0,
+  sphere: null, sphereName:'', sphereEmoji:'🌙', sphereColor:'#4a80d0',
+  actions: [],
+  shards: new Array(30).fill(false),
+  shardColors: new Array(30).fill(null),
+  shardMemos: new Array(30).fill(null), // {text, photo, audioUrl, date} для каждого осколка
+  shardDates: new Array(30).fill(null), // дата открытия каждого осколка
+  todayDone: new Set(),
+  shardsToday: 0,
+  streak: 0, light: 0, totalDone: 0,
+  customImage: null,
+  completed: [], // {name, sphere, emoji, shards, shardColors, shardMemos, shardDates, insight, completedAt}
+  currentMemoIdx: -1, // осколок открытый в модалке
+  memoPhotoData: null,
+  memoAudioUrl: null,
+  memoRecorder: null,
+};
+
+/* ══ ВРЕМЯ ══ */
+function updateClocks(){
+  const now=new Date();
+  const t=now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('ob-clk').textContent=t;
+  const el=document.getElementById('app-clk');
+  if(el)el.textContent=t;
+  const h=now.getHours();
+  const greet=h<12?'Доброе утро ✦':h<17?'Добрый день ✦':'Добрый вечер ✦';
+  const gel=document.getElementById('main-greeting');
+  if(gel)gel.textContent=greet;
+  const days=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+  const months=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  const del=document.getElementById('main-date');
+  if(del)del.textContent=days[now.getDay()]+', '+now.getDate()+' '+months[now.getMonth()];
+}
+updateClocks();
+setInterval(updateClocks,30000);
+
+/* ══ ONBOARDING ══ */
+let obStep=0;
+function nextOb(){
+  document.getElementById('ob'+obStep).classList.remove('on');
+  obStep++;
+  document.getElementById('ob'+obStep).classList.add('on');
+  if(obStep===2) initActFields();
+}
+function nextObAndStart(){
+  // Screen 3 (settings) → directly launch app
+  applyShardCountToGrid(settings.shardCount);
+  startApp();
+}
+
+function selSphere(el,id,emoji,name,color){
+  document.querySelectorAll('.sphere-opt').forEach(o=>o.classList.remove('sel'));
+  el.classList.add('sel');
+  app.sphere=id; app.sphereName=name; app.sphereEmoji=emoji; app.sphereColor=color;
+  const btn=document.getElementById('ob1-next');
+  btn.style.opacity='1'; btn.style.pointerEvents='auto';
+}
+
+function handleImageUpload(e){
+  const file=e.target.files[0]; if(!file) return;
+  document.getElementById('uz-icon').textContent='⏳';
+  document.getElementById('uz-title').textContent='Читаю файл...';
+  document.getElementById('uz-sub').textContent=file.name+' ('+Math.round(file.size/1024)+' KB)';
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    app.customImage=ev.target.result;
+    document.getElementById('uz-icon').textContent='⏳';
+    document.getElementById('uz-title').textContent='Декодирую изображение...';
+    loadCustomImagePixels(ev.target.result);
+  };
+  reader.onerror=()=>{
+    document.getElementById('uz-icon').textContent='❌';
+    document.getElementById('uz-title').textContent='Ошибка чтения файла';
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ══ ВЫБОРКА ЦВЕТОВ ИЗ ЗАГРУЖЕННОГО ФОТО ══
+   Подход: рисуем фото в offscreen canvas, читаем пиксели по bbox каждого полигона,
+   квантуем в витражную палитру. Всё вычисляется ПОСЛЕ того как vitrazh_W/H известны. */
+let __imgCanvas=null, __imgCtx=null, __imgReady=false;
+
+function loadCustomImagePixels(dataUrl){
+  __imgReady=false;
+  __imgCanvas=null; __imgCtx=null;
+  const img=new Image();
+  img.onload=()=>{
+    // Создаём canvas фиксированного размера для выборки цветов
+    const CW=300, CH=Math.round(300*img.height/img.width)||300;
+    const cv=document.createElement('canvas');
+    cv.width=CW; cv.height=CH;
+    const ctx=cv.getContext('2d',{willReadFrequently:true});
+    // Cover — заполняем без искажений
+    const sr=img.width/img.height, dr=CW/CH;
+    let sx=0,sy=0,sw=img.width,sh=img.height;
+    if(sr>dr){sw=Math.round(img.height*dr);sx=Math.round((img.width-sw)/2);}
+    else{sh=Math.round(img.width/dr);sy=Math.round((img.height-sh)/2);}
+    ctx.drawImage(img,sx,sy,sw,sh,0,0,CW,CH);
+    // Проверяем доступность пикселей
+    try{
+      const px=ctx.getImageData(CW>>1,CH>>1,1,1).data;
+      // Успех — сохраняем canvas
+      __imgCanvas=cv; __imgCtx=ctx; __imgReady=true;
+      document.getElementById('uz-icon').textContent='✅';
+      document.getElementById('uz-title').textContent='Фото загружено';
+      document.getElementById('uz-sub').textContent='Размер: '+img.width+'×'+img.height+' → цвета будут применены к витражу';
+    }catch(err){
+      document.getElementById('uz-icon').textContent='⚠️';
+      document.getElementById('uz-title').textContent='Не удалось прочитать пиксели';
+      document.getElementById('uz-sub').textContent=err.message;
+    }
+  };
+  img.onerror=()=>{
+    document.getElementById('uz-icon').textContent='❌';
+    document.getElementById('uz-title').textContent='Ошибка загрузки изображения';
+  };
+  img.src=dataUrl;
+}
+
+// Вычисляет средний цвет из canvas в bbox полигона pts (в координатах W×H),
+// квантует в витражную краску. Возвращает hex-строку или null.
+function getColorForPoly(pts, W, H){
+  if(!__imgReady||!__imgCtx||!__imgCanvas) return null;
+  const CW=__imgCanvas.width, CH=__imgCanvas.height;
+
+  // Центр полигона в координатах canvas
+  const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length;
+  const cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
+  const ccx=Math.max(0,Math.min(CW-1, Math.round(cx/W*CW)));
+  const ccy=Math.max(0,Math.min(CH-1, Math.round(cy/H*CH)));
+
+  // bbox полигона → координаты canvas
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const x0=Math.max(0, Math.floor(Math.min(...xs)/W*CW));
+  const y0=Math.max(0, Math.floor(Math.min(...ys)/H*CH));
+  const x1=Math.min(CW-1, Math.ceil(Math.max(...xs)/W*CW));
+  const y1=Math.min(CH-1, Math.ceil(Math.max(...ys)/H*CH));
+  const bw=Math.max(0, x1-x0);
+  const bh=Math.max(0, y1-y0);
+
+  let r=0, g=0, b=0, n=0;
+
+  // Стратегия 1: читаем весь bbox (если он ненулевой)
+  if(bw>0 && bh>0){
+    try{
+      const data=__imgCtx.getImageData(x0, y0, bw, bh).data;
+      const step=Math.max(1, Math.floor(bw*bh/100));
+      for(let i=0; i<data.length; i+=4*step){
+        r+=data[i]; g+=data[i+1]; b+=data[i+2]; n++;
+      }
+    }catch(e){ n=0; }
+  }
+
+  // Стратегия 2: если bbox пустой — читаем только центральный пиксель
+  if(!n){
+    try{
+      const px=__imgCtx.getImageData(ccx, ccy, 1, 1).data;
+      r=px[0]; g=px[1]; b=px[2]; n=1;
+    }catch(e){ n=0; }
+  }
+
+  // Стратегия 3: если и центр не сработал — читаем пиксель из середины canvas
+  if(!n){
+    try{
+      const px=__imgCtx.getImageData(CW>>1, CH>>1, 1, 1).data;
+      r=px[0]; g=px[1]; b=px[2]; n=1;
+    }catch(e){ n=0; }
+  }
+
+  if(!n) return null; // полный отказ canvas
+
+  const avg=[Math.round(r/n), Math.round(g/n), Math.round(b/n)];
+  return quantizeToGlassColor(avg) || '#46a0dc';
+}
+
+// Вычисляет цвета всех осколков из фото и записывает в app.shardColors.
+// Вызывать только когда vitrazh_W/H уже известны (после rebuildVitrazh).
+function applyPhotoColors(){
+  if(!__imgReady||!vitrazh_W||!vitrazh_H) return 0;
+  const polys=getShardPolygons(vitrazh_W,vitrazh_H);
+  let count=0;
+  for(let i=0;i<polys.length;i++){
+    // Пропускаем только уже ОТКРЫТЫЕ осколки — их цвет уже зафиксирован
+    if(app.shards[i]) continue;
+    const c=getColorForPoly(polys[i],vitrazh_W,vitrazh_H);
+    if(c){ app.shardColors[i]=c; count++; }
+  }
+  return count;
+}
+
+// Квантуем произвольный RGB-цвет в одну из насыщенных "витражных красок" —
+// сохраняем тон (светлое/среднее/тёмное) и оттенок исходного фото,
+// но превращаем в плоский яркий цвет стекла, без полупрозрачности.
+// Конвертация между RGB и HSL
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  const l=(max+min)/2;
+  if(max===min) return [0,0,l];
+  const d=max-min;
+  const s=l>0.5 ? d/(2-max-min) : d/(max+min);
+  let h;
+  if(max===r) h=((g-b)/d + (g<b?6:0))/6;
+  else if(max===g) h=((b-r)/d+2)/6;
+  else h=((r-g)/d+4)/6;
+  return [h*360, s, l];
+}
+function hslToRgb(h,s,l){
+  h/=360;
+  const q=l<0.5 ? l*(1+s) : l+s-l*s;
+  const p=2*l-q;
+  const hue2rgb=(p,q,t)=>{
+    if(t<0)t+=1; if(t>1)t-=1;
+    if(t<1/6) return p+(q-p)*6*t;
+    if(t<1/2) return q;
+    if(t<2/3) return p+(q-p)*(2/3-t)*6;
+    return p;
+  };
+  if(s===0) return [Math.round(l*255),Math.round(l*255),Math.round(l*255)];
+  return [
+    Math.round(hue2rgb(p,q,h+1/3)*255),
+    Math.round(hue2rgb(p,q,h)*255),
+    Math.round(hue2rgb(p,q,h-1/3)*255)
+  ];
+}
+
+// Превращает реальный цвет фото в цвет витражного стекла:
+// сохраняет точный оттенок (hue) из фото, делает насыщенность максимальной,
+// яркость подгоняет под "светящееся стекло" — не слишком тёмное, не слишком светлое.
+function photoColorToGlass(rgb){
+  if(!rgb) return null;
+  const [r,g,b] = rgb;
+  let [h,s,l] = rgbToHsl(r,g,b);
+
+  // Если пиксель почти серый (низкая насыщенность) — используем оттенок как есть,
+  // но немного усиливаем чтобы серое тоже выглядело красиво как матовое стекло
+  if(s < 0.12){
+    // Нейтральный цвет — делаем чуть теплее или холоднее по исходному тону
+    s = 0.25;
+    l = Math.max(0.35, Math.min(0.65, l));
+  } else {
+    // Цветной пиксель — полная насыщенность как у витражного стекла,
+    // яркость держим в диапазоне "подсвеченного стекла" (0.35–0.65)
+    s = Math.min(1.0, s * 1.6 + 0.3);  // резко увеличиваем насыщенность
+    l = Math.max(0.32, Math.min(0.62, l * 0.85 + 0.15)); // нормируем яркость
+  }
+
+  const [nr,ng,nb] = hslToRgb(h, s, l);
+  return '#' + [nr,ng,nb].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
+}
+
+// Оставляем rgbToHex для обратной совместимости
+function rgbToHex(rgb){
+  const [r,g,b]=rgb;
+  return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
+}
+
+// quantizeToGlassColor теперь просто вызывает photoColorToGlass — без квантования в палитру
+function quantizeToGlassColor(rgb){
+  return photoColorToGlass(rgb);
+}
+
+/* Выбор настройки на экране "почти готов" */
+function selSetting(el, key, value){
+  // Снимаем выделение только с пилюль в той же группе (родительском гриде)
+  const group=el.parentElement;
+  group.querySelectorAll('.opt-pill').forEach(o=>o.classList.remove('sel'));
+  el.classList.add('sel');
+  settings[key]=value;
+}
+
+function toggleReminder(){
+  settings.reminderOn=!settings.reminderOn;
+  const t=document.getElementById('reminder-toggle');
+  t.classList.toggle('on', settings.reminderOn);
+  document.getElementById('reminder-time-row').style.opacity = settings.reminderOn ? '1' : '.4';
+  document.getElementById('reminder-time-row').style.pointerEvents = settings.reminderOn ? 'auto' : 'none';
+}
+
+function buildOb4Preview(){
+  document.getElementById('ob4-title').textContent='Витраж '+app.sphereName;
+  document.getElementById('ob4-name').textContent='Витраж '+app.sphereName;
+  document.getElementById('ob4-emoji').textContent=app.sphereEmoji;
+  document.getElementById('ob4-meta').textContent=TOTAL+' осколков · Тайный образ скрыт';
+  const wrap=document.getElementById('ob4-preview');
+  // Мини превью витража
+  const svg=buildVitrazhSVG(app.shards, 320, Math.round(320*0.95), true, 'ob4-');
+  svg.style.width='100%'; svg.style.display='block';
+  wrap.innerHTML=''; wrap.appendChild(svg);
+  // Add memo indicator dots for shards with notes
+  addMemoIndicators(svg);
+}
+function addMemoIndicators(svg){
+  if(!svg||!app.shardMemos) return;
+  const polys=getShardPolygons(vitrazh_W,vitrazh_H);
+  polys.forEach((pts,i)=>{
+    if(!app.shards[i]||!app.shardMemos[i]) return;
+    const m=app.shardMemos[i];
+    if(!m||(!m.text&&!m.photo&&!m.audioUrl)) return;
+    const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length;
+    const cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
+    const NS='http://www.w3.org/2000/svg';
+    const dot=document.createElementNS(NS,'circle');
+    dot.setAttribute('cx',(cx+8).toFixed(1));
+    dot.setAttribute('cy',(cy-8).toFixed(1));
+    dot.setAttribute('r','5');
+    dot.setAttribute('fill','#f0c060');
+    dot.setAttribute('stroke','#0a0a14');
+    dot.setAttribute('stroke-width','1');
+    dot.style.pointerEvents='auto';
+    dot.style.cursor='pointer';
+    dot.addEventListener('click', e => { e.stopPropagation(); openMemoModal(i); });
+    dot.style.filter='drop-shadow(0 0 4px #f0c060)';
+    svg.appendChild(dot);
+  });
+}
+
+function startApp(){
+  // Собираем действия
+  // Collect dynamic actions from ob2
+  const actInputs = document.querySelectorAll('.dyn-act-input');
+  const collectedActions = Array.from(actInputs).map(i=>i.value.trim()).filter(Boolean);
+  if(!collectedActions.length){
+    const defaults={
+      sleep:['Лечь до 23:00','Убрать телефон в 22:30','Принять тёплую ванну'],
+      sport:['Зарядка 15 минут','10 000 шагов','Стакан воды утром'],
+      work:['Глубокий фокус 90 мин','Без соцсетей до обеда','Список задач с вечера'],
+      calm:['Медитация 10 минут','Прогулка без телефона','Дневник благодарности'],
+      food:['Завтрак без сахара','2 литра воды','Овощи в каждый приём'],
+      creative:['30 минут творчества','Зарисовка идеи','Без отвлечений 1 час'],
+    };
+    app.actions=(defaults[app.sphere]||['Действие 1','Действие 2','Действие 3']);
+  } else {
+    app.actions=collectedActions;
+  }
+
+  // Гарантируем чистое состояние цветов перед запуском
+  app.shards=new Array(TOTAL).fill(false);
+  app.shardColors=new Array(TOTAL).fill(null);
+  app.shardMemos=new Array(TOTAL).fill(null);
+  app.shardDates=new Array(TOTAL).fill(null);
+  app.todayDone=new Set();
+  app.shardsToday=0;
+  // (кэш убран)
+
+  // Переходим в приложение
+  document.getElementById('ob-screen').classList.add('hidden');
+  document.getElementById('app-screen').classList.remove('hidden');
+  initMainScreen();
+}
+
+/* ══════════════════════════════════════════════
+   ВИТРАЖ SVG — ГЕНЕРАЦИЯ
+   Вороной-мозаика: крупные и мелкие осколки разной формы,
+   как в настоящем витраже (не однотипная сетка)
+══════════════════════════════════════════════ */
+let TOTAL=30;
+
+const settings = {
+  shardCount: 30,      // 15, 30 или 50
+  dailyLimit: 0,        // 0 = без лимита, иначе число осколков в день
+  reminderTime: '21:00',
+  reminderOn: true,
+};
+
+function applyShardCountToGrid(count){
+  TOTAL=count;
+}
+
+// Генератор псевдослучайных чисел (детерминированный по seed)
+function rng(seed){
+  let s=seed|0;
+  return ()=>{ s=Math.imul(s,1664525)+1013904223|0; return (s>>>0)/0xffffffff; };
+}
+
+/* ══ ГЕНЕРАЦИЯ ВОРОНОЙ-МОЗАИКИ ══
+   Расставляем seed-точки с переменной плотностью (кластерами),
+   что естественно даёт смесь крупных и мелких кусков —
+   как в реальном витраже: большие плоские панели неба
+   и мелкие острые детали в композиционных центрах. */
+function generateVoronoiShards(W,H,count,seedOffset=0){
+  const r2=rng(count*7919+13+seedOffset*99991);
+
+  // 1) Точки притяжения (composition focal points) — там кусочки мельче
+  const focalCount=2+Math.floor(r2()*2);
+  const focals=[];
+  for(let i=0;i<focalCount;i++){
+    focals.push([r2()*W, r2()*H*0.7+H*0.15]);
+  }
+
+  // Вспомогательная: добавить точку с минимальной дистанцией до уже имеющихся
+  // (защита от вырожденных/совпадающих полигонов в Вороном)
+  const minDist=Math.min(W,H)/Math.sqrt(count)*0.18;
+  function pushSafe(arr,pt){
+    for(const ex of arr){
+      const dx=ex[0]-pt[0], dy=ex[1]-pt[1];
+      if(dx*dx+dy*dy < minDist*minDist) return false;
+    }
+    arr.push(pt);
+    return true;
+  }
+
+  // 2) Генерируем seed-точки: основная часть равномерно/у фокусов,
+  //    небольшая часть — у краёв (для разнообразия краевых осколков).
+  //    Сумма всех трёх типов точно равна count.
+  const edgeCount=Math.max(3,Math.round(count*0.15));
+  const remaining=count-edgeCount;
+  const uniformCount=Math.round(remaining*0.55);
+  const focalPtCount=remaining-uniformCount;
+
+  const pts=[];
+  let guard=0;
+  while(pts.length<uniformCount && guard<uniformCount*40){
+    guard++;
+    pushSafe(pts,[r2()*W, r2()*H]);
+  }
+  guard=0;
+  while(pts.length<uniformCount+focalPtCount && guard<focalPtCount*40){
+    guard++;
+    const f=focals[Math.floor(r2()*focals.length)];
+    const ang=r2()*Math.PI*2;
+    const dist=r2()*Math.min(W,H)*0.22;
+    pushSafe(pts,[
+      Math.max(2,Math.min(W-2,f[0]+Math.cos(ang)*dist)),
+      Math.max(2,Math.min(H-2,f[1]+Math.sin(ang)*dist))
+    ]);
+  }
+  guard=0;
+  while(pts.length<uniformCount+focalPtCount+edgeCount && guard<edgeCount*40){
+    guard++;
+    const side=Math.floor(r2()*4);
+    let cand;
+    if(side===0) cand=[r2()*W,2];
+    else if(side===1) cand=[W-2,r2()*H];
+    else if(side===2) cand=[r2()*W,H-2];
+    else cand=[2,r2()*H];
+    pushSafe(pts,cand);
+  }
+  // Если из-за тесноты не набрали нужное число — довносим равномерные точки без проверки дистанции
+  while(pts.length<count){
+    pts.push([r2()*W, r2()*H]);
+  }
+
+  // 4) Строим полигоны Вороного методом half-plane clipping
+  //    Для каждой точки начинаем с прямоугольника всего поля
+  //    и последовательно отрезаем по серединным перпендикулярам к соседям.
+  const shards=pts.map((p,idx)=>{
+    let poly=[[0,0],[W,0],[W,H],[0,H]]; // весь холст
+    for(let j=0;j<pts.length;j++){
+      if(j===idx) continue;
+      const q=pts[j];
+      poly=clipHalfPlane(poly,p,q);
+      if(poly.length===0) break;
+    }
+    return poly;
+  }).filter(poly=>poly.length>=3);
+
+  return shards;
+}
+
+// Отрезаем многоугольник полуплоскостью "ближе к p, чем к q"
+function clipHalfPlane(poly,p,q){
+  // Серединная точка и нормаль (направление от p к q)
+  const mx=(p[0]+q[0])/2, my=(p[1]+q[1])/2;
+  const nx=q[0]-p[0], ny=q[1]-p[1];
+  // Точка x внутри полуплоскости p, если (x-m)·n < 0
+  const side=([x,y])=>(x-mx)*nx+(y-my)*ny;
+
+  const out=[];
+  const n=poly.length;
+  for(let i=0;i<n;i++){
+    const cur=poly[i], next=poly[(i+1)%n];
+    const curSide=side(cur), nextSide=side(next);
+    if(curSide<=0) out.push(cur);
+    if((curSide<0&&nextSide>0)||(curSide>0&&nextSide<=0)){
+      const t=curSide/(curSide-nextSide);
+      out.push([cur[0]+t*(next[0]-cur[0]), cur[1]+t*(next[1]-cur[1])]);
+    }
+  }
+  return out;
+}
+
+function ptsD(pts){ return pts.map(([x,y],i)=>(i?'L':'M')+x.toFixed(1)+','+y.toFixed(1)).join(' ')+'Z'; }
+
+// Кэш сгенерированной мозаики — пересчитываем только при смене размера/количества
+let SHARD_CACHE={key:null, polys:null};
+function getShardPolygons(W,H){
+  const key=`${W.toFixed(0)}x${H.toFixed(0)}x${TOTAL}x${app.sphere}`;
+  if(SHARD_CACHE.key===key) return SHARD_CACHE.polys;
+  let polys=generateVoronoiShards(W,H,TOTAL);
+  // Защита: если из-за вырожденных пересечений получилось не ровно TOTAL —
+  // пробуем ещё раз с другим смещением seed (редкий случай)
+  let attempt=0;
+  while(polys.length!==TOTAL && attempt<5){
+    attempt++;
+    polys=generateVoronoiShards(W,H,TOTAL,attempt);
+  }
+  SHARD_CACHE={key, polys};
+  return polys;
+}
+
+/* Цвет осколка — яркая мультяшная палитра, как в витражных референсах:
+   плоские насыщенные цвета (не градиенты), сгруппированные по зонам холста */
+function shardColor(cx,cy,W,H,sphere,seedIdx){
+  const y=cy/H;
+  const r2=rng(seedIdx*977+13);
+  const palettes={
+    sleep:{
+      sky:['#8ec9f0','#6fb3e8','#bcd9f5','#4a9bd6'],
+      mid:['#5a7fd0','#4868c0','#7a93dd','#3a56b0'],
+      acc:['#f5d96a','#fce8a0','#ffd34d'],
+      bot:['#e85a8a','#d8467a','#f078a0','#c2386a']
+    },
+    sport:{
+      sky:['#6fe0b8','#4fd0a0','#8eeac8','#36b890'],
+      mid:['#3fb87a','#2fa068','#5cc890','#258a56'],
+      acc:['#f0e060','#ffe97a','#d8c844'],
+      bot:['#2e8f5c','#1f7a4a','#46a872']
+    },
+    work:{
+      sky:['#f5c258','#ffd178','#f0a83a','#e89020'],
+      mid:['#e8782a','#d6661c','#f08c44','#c25a14'],
+      acc:['#ffe27a','#fff0a8','#ffd84f'],
+      bot:['#c2501a','#a8420f','#d6602a']
+    },
+    calm:{
+      sky:['#7ec8e0','#5cb8d8','#a0d8ec','#3aa0c8'],
+      mid:['#5098c0','#3e84ac','#6cacd2','#2e72980'],
+      acc:['#e8f5f0','#c8ece0','#a8e0d0'],
+      bot:['#3e7a9c','#2e6688','#4e8cae']
+    },
+    food:{
+      sky:['#9ee05c','#7fd03e','#bce880','#5cb828'],
+      mid:['#6cc02e','#54a820','#80d048','#449018'],
+      acc:['#f0e860','#fff088','#dfd840'],
+      bot:['#3e9018','#2e7a10','#509c28']
+    },
+    creative:{
+      sky:['#c89cec','#b07ce0','#dcc0f5','#9860d0'],
+      mid:['#a868d8','#9050c4','#bc80e4','#7c3cb0'],
+      acc:['#f0a8d8','#f8c0e4','#e088c0'],
+      bot:['#8030a8','#6c2090','#9444bc']
+    }
+  };
+  const p=palettes[sphere]||palettes.sleep;
+  let colors;
+  if(y<0.3) colors=p.sky;
+  else if(y<0.68) colors=p.mid;
+  else colors=p.bot;
+  // Иногда добавляем акцентный цвет для контраста (~18% осколков)
+  if(r2()<0.18) colors=p.acc;
+  const idx=Math.floor(r2()*colors.length);
+  return colors[idx]||colors[0];
+}
+
+/* ══ СТРОИМ VITRAZH SVG ══ */
+function buildVitrazhSVG(revealed, W, H, preview=false, idPrefix=''){
+  const NS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(NS,'svg');
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.setAttribute('xmlns',NS);
+
+  const defs=document.createElementNS(NS,'defs');
+
+  // Фильтр свечения
+  defs.innerHTML=`
+    <filter id="${idPrefix}gf" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="${idPrefix}gf2" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="${idPrefix}shine-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>`;
+
+  // Цвета осколков теперь извлекаются из offscreen canvas (__imgCanvas),
+  // отдельный SVG <image> элемент для этого больше не нужен.
+
+  // Полигоны Вороного — разные по размеру и форме осколки
+  const polys=getShardPolygons(W,H);
+
+  // Клип-пути для каждого осколка
+  for(let i=0;i<polys.length;i++){
+    const cp=document.createElementNS(NS,'clipPath');
+    cp.id=`${idPrefix}cp${i}`;
+    const p=document.createElementNS(NS,'path');
+    p.setAttribute('d',ptsD(polys[i]));
+    cp.appendChild(p); defs.appendChild(cp);
+  }
+  svg.appendChild(defs);
+
+  // Тёмный фон
+  const bg=document.createElementNS(NS,'rect');
+  bg.setAttribute('width',W); bg.setAttribute('height',H);
+  bg.setAttribute('fill','#040610'); bg.setAttribute('rx',preview?'8':'12');
+  svg.appendChild(bg);
+
+  // Осколки
+  for(let i=0;i<polys.length;i++){
+    const pts=polys[i];
+    const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length;
+    const cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
+    const isRevealed=revealed[i];
+
+    let color;
+    if(isRevealed){
+      // Цвет фиксируется один раз при первом открытии осколка:
+      // 1) если было загружено фото — цвет уже в app.shardColors[i] (вычислен при загрузке)
+      // 2) иначе — процедурная палитра по сфере
+      if(!app.shardColors[i]){
+        app.shardColors[i]=shardColor(cx,cy,W,H,app.sphere||'sleep',i);
+      }
+      color=app.shardColors[i];
+    } else {
+      // Закрытый осколок — показываем тёмный, цвет не фиксируем
+      color='#10131f';
+    }
+
+    const g=document.createElementNS(NS,'g');
+    g.id=`${idPrefix}sg${i}`;
+
+    // Основная заливка — толстый мультяшный контур, как в референсах
+    const fill=document.createElementNS(NS,'path');
+    fill.id=`${idPrefix}sf${i}`;
+    fill.setAttribute('d',ptsD(pts));
+    fill.setAttribute('fill', isRevealed ? color : '#10131f');
+    fill.setAttribute('stroke', isRevealed ? '#0a0a14' : '#1c2030');
+    fill.setAttribute('stroke-width', isRevealed?'2.6':'1.6');
+    fill.setAttribute('stroke-linejoin','round');
+    fill.style.transition='fill .4s ease,stroke .4s ease';
+    if(isRevealed) fill.setAttribute('filter',`url(#${idPrefix}gf)`);
+    g.appendChild(fill);
+
+    // Примечание: фото больше не накладывается полупрозрачным слоем —
+    // основная заливка fill уже несёт цвет, извлечённый и квантованный из фото.
+    // Это даёт настоящий витражный эффект (плоская краска), а не "фильтр на фото".
+
+    // Блик на открытом осколке — масштабируем под размер осколка
+    if(isRevealed){
+      // приблизительный "радиус" осколка для масштабирования блика
+      const area=Math.sqrt(polygonArea(pts));
+      const shine=document.createElementNS(NS,'ellipse');
+      shine.id=`${idPrefix}ss${i}`;
+      shine.setAttribute('cx',(cx-area*0.18).toFixed(1));
+      shine.setAttribute('cy',(cy-area*0.18).toFixed(1));
+      shine.setAttribute('rx',Math.max(4,area*0.28).toFixed(1));
+      shine.setAttribute('ry',Math.max(3,area*0.18).toFixed(1));
+      shine.setAttribute('fill','rgba(255,255,255,0.22)');
+      shine.setAttribute('clip-path',`url(#${idPrefix}cp${i})`);
+      g.appendChild(shine);
+    }
+
+    // Хит-зона (прозрачная, поверх всего)
+    if(!preview){
+      const hit=document.createElementNS(NS,'path');
+      hit.setAttribute('d',ptsD(pts));
+      hit.setAttribute('fill','transparent');
+      hit.setAttribute('stroke','none');
+      hit.style.cursor=isRevealed?'default':'pointer';
+      if(!isRevealed){
+        hit.addEventListener('mouseenter',()=>{
+          const f=document.getElementById(`${idPrefix}sf${i}`);
+          if(f&&!app.shards[i]) f.setAttribute('fill','#1c2236');
+        });
+        hit.addEventListener('mouseleave',()=>{
+          const f=document.getElementById(`${idPrefix}sf${i}`);
+          if(f&&!app.shards[i]) f.setAttribute('fill','#10131f');
+        });
+        hit.dataset.shardIdx=i;
+        hit.addEventListener('click',e=>{ e.stopPropagation(); tapShard(i,e); });
+      }
+      g.appendChild(hit);
+    }
+
+    svg.appendChild(g);
+  }
+
+  // Общий блик (стекло) — не должен перехватывать клики
+  const glassShine=document.createElementNS(NS,'rect');
+  glassShine.setAttribute('width',W); glassShine.setAttribute('height',H);
+  glassShine.setAttribute('fill',`url(#${idPrefix}shine-g)`); glassShine.setAttribute('rx',preview?'8':'12');
+  glassShine.style.pointerEvents='none';
+  svg.appendChild(glassShine);
+
+  return svg;
+}
+
+// Площадь многоугольника (формула шнурования) — для масштабирования блика
+function polygonArea(pts){
+  let a=0;
+  for(let i=0;i<pts.length;i++){
+    const [x1,y1]=pts[i], [x2,y2]=pts[(i+1)%pts.length];
+    a+=x1*y2-x2*y1;
+  }
+  return Math.abs(a/2);
+}
+
+function adjustColor(hex,amount){
+  const num=parseInt(hex.slice(1),16);
+  const r=Math.max(0,Math.min(255,(num>>16)+amount));
+  const g2=Math.max(0,Math.min(255,((num>>8)&0xff)+amount));
+  const b=Math.max(0,Math.min(255,(num&0xff)+amount));
+  return '#'+((r<<16)|(g2<<8)|b).toString(16).padStart(6,'0');
+}
+
+/* ══════════════════════════════════════════════
+   ЛОГИКА ПРИЛОЖЕНИЯ
+══════════════════════════════════════════════ */
+let vitrazh_W=0, vitrazh_H=0;
+
+function initMainScreen(){
+  document.getElementById('v-name').textContent='Витраж '+app.sphereName;
+
+  // Ждём два кадра чтобы браузер успел сделать layout
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      rebuildVitrazh(); // теперь vitrazh_W/H точно известны
+
+      let photoApplied=0;
+      if(app.customImage && __imgReady){
+        photoApplied=applyPhotoColors();
+        if(photoApplied>0) rebuildVitrazh();
+      }
+
+
+
+      buildActionsList();
+      updateUI();
+      updateGallery();
+
+      const limitText=document.getElementById('menu-limit-text');
+      if(limitText) limitText.textContent=settings.dailyLimit>0
+        ?`Лимит: ${settings.dailyLimit} осколков в день`
+        :'Лимит: без ограничений';
+      const remText=document.getElementById('menu-reminder-text');
+      if(remText) remText.textContent=settings.reminderOn
+        ?`Напоминание в ${settings.reminderTime}`
+        :'Напоминания выключены';
+    });
+  });
+}
+
+function rebuildVitrazh(){
+  const wrap=document.getElementById('vg-wrap');
+  vitrazh_W=wrap.offsetWidth||340;
+  // Высокий формат — как готическое окно, почти весь экран
+  vitrazh_H=Math.round(vitrazh_W*1.6);
+  const svg=buildVitrazhSVG(app.shards, vitrazh_W, vitrazh_H, false, 'main-');
+  svg.style.width='100%'; svg.style.display='block';
+  wrap.innerHTML=''; wrap.appendChild(svg);
+  // Add memo indicator dots for shards with notes
+  addMemoIndicators(svg);
+}
+function addMemoIndicators(svg){
+  if(!svg||!app.shardMemos) return;
+  const polys=getShardPolygons(vitrazh_W,vitrazh_H);
+  polys.forEach((pts,i)=>{
+    if(!app.shards[i]||!app.shardMemos[i]) return;
+    const m=app.shardMemos[i];
+    if(!m||(!m.text&&!m.photo&&!m.audioUrl)) return;
+    const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length;
+    const cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
+    const NS='http://www.w3.org/2000/svg';
+    const dot=document.createElementNS(NS,'circle');
+    dot.setAttribute('cx',(cx+8).toFixed(1));
+    dot.setAttribute('cy',(cy-8).toFixed(1));
+    dot.setAttribute('r','5');
+    dot.setAttribute('fill','#f0c060');
+    dot.setAttribute('stroke','#0a0a14');
+    dot.setAttribute('stroke-width','1');
+    dot.style.pointerEvents='auto';
+    dot.style.cursor='pointer';
+    dot.addEventListener('click', e => { e.stopPropagation(); openMemoModal(i); });
+    dot.style.filter='drop-shadow(0 0 4px #f0c060)';
+    svg.appendChild(dot);
+  });
+}
+
+function tapShard(idx, e){
+  if(app.shards[idx]) return;
+
+  // Дневной лимит осколков
+  if(settings.dailyLimit>0 && app.shardsToday>=settings.dailyLimit){
+    const msgs=[
+      `На сегодня лимит закрашенных осколков (${settings.dailyLimit}) достигнут. Возвращайся завтра — терпение тоже часть мастерства.`,
+      `Мастер советует беречь силы: сегодня уже закрашено ${settings.dailyLimit} из ${settings.dailyLimit}. До встречи завтра.`,
+    ];
+    document.getElementById('master-msg').textContent=msgs[Math.floor(Math.random()*msgs.length)];
+    return;
+  }
+
+  // Отмечаем действие
+  const nextAct=app.actions.findIndex((_,i)=>!app.todayDone.has(i));
+  if(nextAct!==-1) app.todayDone.add(nextAct);
+
+  app.shards[idx]=true;
+  app.light+=10;
+  app.totalDone++;
+  app.shardsToday++;
+
+  // Записываем дату открытия осколка
+  if(!app.shardDates[idx]){
+    const now=new Date();
+    app.shardDates[idx]=now.toLocaleDateString('ru')+' '+now.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+  }
+
+  // Перестраиваем витраж целиком
+  rebuildVitrazh();
+
+  // Эффекты
+  spawnFlash(e.clientX, e.clientY);
+  spawnParticles(e.clientX, e.clientY);
+  showToast('main-toast');
+
+  // Все действия дня?
+  const allDone=app.actions.every((_,i)=>app.todayDone.has(i));
+  if(allDone){
+    app.streak++;
+    document.getElementById('v-stk').textContent=app.streak;
+    const masterMsgs=[
+      'День закрыт. Витраж светится твоим усилием.',
+      'Все осколки дня вложены. Продолжай — образ проясняется.',
+      'Стрик идёт! Каждый день ты ближе к полному витражу.',
+    ];
+    document.getElementById('master-msg').textContent=masterMsgs[Math.floor(Math.random()*masterMsgs.length)];
+  }
+
+  // Витраж завершён?
+  const done=app.shards.filter(Boolean).length;
+  if(done===TOTAL){
+    document.getElementById('main-vcard').classList.add('glow');
+    document.getElementById('main-done-banner').classList.add('show');
+    const endMsgs=['Витраж завершён! Образ открыт полностью.','Мастер восхищён. Весь свет на месте.'];
+    document.getElementById('master-msg').textContent=endMsgs[Math.floor(Math.random()*endMsgs.length)];
+    setTimeout(()=>{
+      document.getElementById('comp-title').textContent='Витраж «'+app.sphereName+'» завершён!';
+      document.getElementById('completion-modal').style.display='flex';
+    }, 800);
+  }
+
+  buildActionsList();
+  updateUI();
+  updateGallery();
+
+  // Открываем модалку заметки — небольшая задержка чтобы дать анимациям осесть
+  setTimeout(()=>{ if(app.shards[idx]) openMemoModal(idx); }, 650);
+}
+
+function buildActionsList(){
+  const c=document.getElementById('acts-list'); c.innerHTML='';
+  app.actions.forEach((a,i)=>{
+    const done=app.todayDone.has(i);
+    const d=document.createElement('div');
+    d.className='act-card'+(done?' done':'');
+    d.innerHTML=`<div class="act-dot">${done?'✓':''}</div><div style="flex:1"><div class="act-name" style="${done?'text-decoration:line-through;opacity:.4;':''}">${a}</div><div class="act-meta">Открывает осколок витража</div></div><div class="act-light">+10 ✦</div>`;
+    if(!done) d.onclick=()=>{
+      const n=app.shards.findIndex(s=>!s);
+      if(n!==-1){
+        const el=document.getElementById(`main-sf${n}`);
+        const wrap=document.getElementById('vg-wrap');
+        const rect=el ? el.getBoundingClientRect() : wrap.getBoundingClientRect();
+        tapShard(n,{clientX:rect.left+rect.width/2,clientY:rect.top+rect.height/2});
+      }
+    };
+    c.appendChild(d);
+  });
+}
+
+function updateUI(){
+  const done=app.shards.filter(Boolean).length;
+  const left=TOTAL-done;
+  const pct=Math.round(done/TOTAL*100);
+  ['s-light','s-done','s-left','p-light','p-done','p-sh'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.classList.remove('b');void el.offsetWidth;el.classList.add('b');}
+  });
+  document.getElementById('s-light').textContent=app.light;
+  document.getElementById('s-done').textContent=done;
+  document.getElementById('s-left').textContent=left;
+  document.getElementById('v-sub').textContent=`Открыто ${done} из ${TOTAL}`;
+  document.getElementById('v-prog').style.width=pct+'%';
+  document.getElementById('v-prog-lb').textContent=done+' / '+TOTAL;
+  document.getElementById('p-light').textContent=app.light;
+  document.getElementById('p-stk').textContent=app.streak;
+  document.getElementById('p-done').textContent=app.totalDone;
+  document.getElementById('p-sh').textContent=left;
+  document.getElementById('g-pct').textContent=pct+'%';
+
+  // Подсказка про дневной лимит
+  const hint=document.getElementById('v-hint');
+  if(hint){
+    if(done===0){
+      hint.textContent='Нажми на тёмный осколок — открой образ';
+    } else if(settings.dailyLimit>0){
+      const remainingToday=Math.max(0, settings.dailyLimit-app.shardsToday);
+      hint.textContent = remainingToday>0
+        ? `Сегодня доступно ещё ${remainingToday} из ${settings.dailyLimit} осколков`
+        : 'Дневной лимит достигнут — возвращайся завтра';
+      hint.style.opacity='1';
+    }
+  }
+}
+
+function updateGallery(){
+  const list=document.getElementById('gallery-list');
+  list.innerHTML='';
+  // Текущий витраж
+  const card=document.createElement('div');
+  card.className='gal-card';
+  card.onclick=()=>switchTab('main',document.querySelector('.ni'));
+  const done=app.shards.filter(Boolean).length;
+  const pct=Math.round(done/TOTAL*100);
+  card.innerHTML=`
+    <div class="gal-card-hdr">
+      <div><div style="font-size:15px;font-weight:600;">Витраж ${app.sphereName}</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">${app.actions.length} действия · ${TOTAL} осколков</div></div>
+      <div class="gal-badge" style="background:rgba(124,111,255,.18);color:var(--accent2);">${app.sphereName.toUpperCase()}</div>
+    </div>
+    <div class="gal-mini" id="gal-mini-main"></div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+      <div class="prog-lb">${done} / ${TOTAL}</div>
+    </div>`;
+  list.appendChild(card);
+  // Мини-осколки
+  const mini=card.querySelector('#gal-mini-main');
+  app.shards.forEach((rev,i)=>{
+    const d=document.createElement('div');
+    d.className='gal-mini-sh';
+    d.style.background=rev?shardColor((i*37)%100,(i/TOTAL)*100,100,100,app.sphere,i):'#1a1d30';
+    mini.appendChild(d);
+  });
+}
+
+/* ══ TABS ══ */
+function switchTab(tab, btn){
+  ['main','gallery','profile'].forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(el) el.style.display='none';
+  });
+  document.getElementById('tab-'+tab).style.display='flex';
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  if(tab==='gallery') updateGallery();
+}
+
+/* ══ ЭФФЕКТЫ ══ */
+function showToast(id){
+  const t=document.getElementById(id);
+  if(!t) return;
+  t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1500);
+}
+
+function spawnFlash(x,y){
+  const f=document.createElement('div');
+  f.className='flash-el';
+  f.style.cssText=`left:${x}px;top:${y}px;width:44px;height:44px;background:rgba(180,210,255,.8);animation:flashAnim .55s ease-out forwards;`;
+  // inject keyframes once
+  if(!document.getElementById('flash-kf')){
+    const s=document.createElement('style');
+    s.id='flash-kf';
+    s.textContent='@keyframes flashAnim{0%{transform:translate(-50%,-50%) scale(0);opacity:.85}55%{transform:translate(-50%,-50%) scale(2.6);opacity:.3}100%{transform:translate(-50%,-50%) scale(4.2);opacity:0}}';
+    document.head.appendChild(s);
+  }
+  document.body.appendChild(f); setTimeout(()=>f.remove(),600);
+}
+
+function spawnParticles(x,y){
+  const cols=['#38d9c0','#7c6fff','#a78bfa','#60b8e8','#f0c060','#e87090'];
+  for(let i=0;i<12;i++){
+    const p=document.createElement('div'); p.className='pt';
+    const a=(i*30+Math.random()*20-10)*Math.PI/180;
+    const d=20+Math.random()*36, size=2+Math.random()*5, dur=(.4+Math.random()*.4).toFixed(2);
+    p.style.cssText=`left:${x}px;top:${y}px;width:${size}px;height:${size}px;`
+      +`background:${cols[Math.floor(Math.random()*cols.length)]};`
+      +`--tx:${(Math.cos(a)*d).toFixed(1)}px;--ty:${(Math.sin(a)*d).toFixed(1)}px;--d:${dur}s;`;
+    document.body.appendChild(p); setTimeout(()=>p.remove(),800);
+  }
+}
+
+function resetApp(){
+  if(confirm('Начать заново? Весь прогресс будет сброшен.')) location.reload();
+}
+
+
+/* ══ DYNAMIC ACTIONS IN OB2 ══ */
+function addActionField(){
+  const wrap=document.getElementById('act-list-wrap');
+  if(wrap.children.length>=30) return;
+  const num=wrap.children.length+1;
+  const row=document.createElement('div');
+  row.className='action-inp-row';
+  row.style.cssText='display:flex;align-items:center;gap:10px;';
+  row.innerHTML=`<span class="action-num" style="min-width:22px;color:var(--text3);font-size:14px;">${num}</span>
+    <input class="action-inp dyn-act-input" placeholder="Действие ${num}" style="flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;">
+    <button onclick="this.parentElement.remove();renumberActions();" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;">✕</button>`;
+  wrap.appendChild(row);
+  row.querySelector('input').focus();
+}
+function renumberActions(){
+  const rows=document.querySelectorAll('#act-list-wrap .action-inp-row');
+  rows.forEach((r,i)=>{
+    const num=r.querySelector('.action-num');
+    if(num) num.textContent=i+1;
+  });
+}
+// Add first field automatically when screen 2 shows
+function initActFields(){
+  const wrap=document.getElementById('act-list-wrap');
+  if(wrap && wrap.children.length===0) addActionField();
+}
+
+/* ══ MEMO MODAL ══ */
+function openMemoModal(idx){
+  app.currentMemoIdx=idx;
+  app.memoPhotoData=null; app.memoAudioUrl=null;
+  const m=app.shardMemos[idx]||{};
+  document.getElementById('memo-title').textContent='Осколок #'+(idx+1)+' — '+app.sphereName;
+  document.getElementById('memo-date').textContent=app.shardDates[idx]||'—';
+  // Show existing content
+  const cv=document.getElementById('memo-content-view');
+  const tv=document.getElementById('memo-text-view');
+  const pv=document.getElementById('memo-photo-view');
+  const av=document.getElementById('memo-audio-view');
+  if(m.text||m.photo||m.audioUrl){
+    cv.style.display='block';
+    if(m.text){tv.style.display='block';tv.textContent=m.text;}else{tv.style.display='none';}
+    if(m.photo){pv.style.display='block';document.getElementById('memo-photo-view').querySelector('img').src=m.photo;}else{pv.style.display='none';}
+    if(m.audioUrl){av.style.display='block';av.src=m.audioUrl;}else{av.style.display='none';}
+  } else {cv.style.display='none';}
+  // Reset edit fields
+  document.getElementById('memo-text').value=m.text||'';
+  document.getElementById('memo-photo-preview').style.display='none';
+  document.getElementById('memo-audio-status').style.display='none';
+  document.getElementById('memo-audio-btn').textContent='🎙 Запись';
+  const modal=document.getElementById('memo-modal');
+  modal.style.display='flex';
+}
+function closeMemo(){ document.getElementById('memo-modal').style.display='none'; }
+function memoPhotoChange(e){
+  const file=e.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    app.memoPhotoData=ev.target.result;
+    const preview=document.getElementById('memo-photo-preview');
+    document.getElementById('memo-photo-img').src=ev.target.result;
+    preview.style.display='block';
+  };
+  r.readAsDataURL(file);
+}
+function clearMemoPhoto(){ app.memoPhotoData=null; document.getElementById('memo-photo-preview').style.display='none'; }
+let _memoRecording=false;
+function startMemoAudio(){
+  if(_memoRecording){ stopMemoAudio(); return; }
+  if(!navigator.mediaDevices){
+    alert('Запись недоступна в этом браузере');return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    _memoRecording=true;
+    document.getElementById('memo-audio-btn').textContent='⏹ Остановить';
+    document.getElementById('memo-audio-status').style.display='block';
+    document.getElementById('memo-audio-status').textContent='● Идёт запись...';
+    const chunks=[];
+    const rec=new MediaRecorder(stream);
+    app.memoRecorder=rec;
+    rec.ondataavailable=e=>chunks.push(e.data);
+    rec.onstop=()=>{
+      const blob=new Blob(chunks,{type:'audio/webm'});
+      app.memoAudioUrl=URL.createObjectURL(blob);
+      document.getElementById('memo-audio-status').textContent='✓ Запись готова';
+      stream.getTracks().forEach(t=>t.stop());
+      _memoRecording=false;
+    };
+    rec.start();
+  }).catch(()=>{ alert('Нет доступа к микрофону'); _memoRecording=false; });
+}
+function stopMemoAudio(){
+  if(app.memoRecorder&&app.memoRecorder.state!=='inactive') app.memoRecorder.stop();
+  document.getElementById('memo-audio-btn').textContent='🎙 Запись';
+}
+function saveMemo(){
+  const idx=app.currentMemoIdx;
+  if(idx<0)return;
+  const text=document.getElementById('memo-text').value.trim();
+  const existing=app.shardMemos[idx]||{};
+  app.shardMemos[idx]={
+    text: text||existing.text||'',
+    photo: app.memoPhotoData||existing.photo||null,
+    audioUrl: app.memoAudioUrl||existing.audioUrl||null,
+    date: app.shardDates[idx]||new Date().toLocaleString('ru')
+  };
+  closeMemo();
+}
+
+/* ══ COMPLETION ══ */
+function saveCompletion(){
+  const insight=document.getElementById('comp-insight').value.trim();
+  app.completed.push({
+    name:'Витраж '+app.sphereName,
+    sphere:app.sphere,
+    emoji:app.sphereEmoji,
+    shards:[...app.shards],
+    shardColors:[...app.shardColors],
+    shardMemos:[...app.shardMemos],
+    shardDates:[...app.shardDates],
+    insight,
+    completedAt:new Date().toLocaleString('ru')
+  });
+  document.getElementById('g-comp').textContent=app.completed.length;
+  document.getElementById('completion-modal').style.display='none';
+  updateGallery();
+}
+
+/* ══ GALLERY: full rewrite with filter + completed vitrazhi + history ══ */
+let galleryFilter='all'; // 'all' | 'done' | 'active'
+function setGalleryFilter(f){
+  galleryFilter=f;
+  document.querySelectorAll('.gal-filter-btn').forEach(b=>{
+    b.classList.toggle('sel',b.dataset.f===f);
+  });
+  updateGallery();
+}
+
+function updateGallery(){
+  const list=document.getElementById('gallery-list');
+  if(!list)return;
+  list.innerHTML='';
+
+  const done=app.shards.filter(Boolean).length;
+  const pct=Math.round(done/TOTAL*100);
+  const el=document.getElementById('g-pct');
+  if(el) el.textContent=pct+'%';
+  const gc=document.getElementById('g-count');
+  if(gc) gc.textContent=1+app.completed.length;
+
+  // ── Filter buttons ──
+  const filterBar=document.createElement('div');
+  filterBar.style.cssText='display:flex;gap:8px;margin:0 18px 14px;';
+  [['all','Все'],['done','Завершённые'],['active','В работе']].forEach(([f,label])=>{
+    const b=document.createElement('button');
+    b.className='btn btn-sm gal-filter-btn'+(galleryFilter===f?' sel':'');
+    b.dataset.f=f;
+    b.textContent=label;
+    b.style.cssText='flex:1;border-radius:10px;font-size:12px;padding:8px 4px;'+(galleryFilter===f?'background:var(--accent);color:#fff;border-color:var(--accent);':'');
+    b.onclick=()=>setGalleryFilter(f);
+    filterBar.appendChild(b);
+  });
+  list.appendChild(filterBar);
+
+  // ── Active vitrazh (current) ──
+  const isCompleted=done===TOTAL;
+  if(galleryFilter!=='done'){
+    const card=createGalleryCard({
+      name:'Витраж '+app.sphereName,
+      sphere:app.sphere,
+      emoji:app.sphereEmoji,
+      shards:app.shards,
+      shardColors:app.shardColors,
+      shardMemos:app.shardMemos,
+      shardDates:app.shardDates,
+      done,total:TOTAL,
+      isActive:true,
+      insight:null
+    });
+    list.appendChild(card);
+  }
+
+  // ── Completed vitrazhi ──
+  if(galleryFilter!=='active'){
+    app.completed.forEach((v,ci)=>{
+      const card=createGalleryCard({...v, done:v.shards.filter(Boolean).length, total:v.shards.length, isActive:false, compIdx:ci});
+      list.appendChild(card);
+    });
+  }
+
+  // ── Add new ──
+  const addCard=document.createElement('div');
+  addCard.className='add-card';
+  addCard.innerHTML='<span style="font-size:20px;">+</span><span>Новая сфера жизни</span><span style="font-size:11px;color:var(--text3);margin-left:auto;">Премиум</span>';
+  addCard.onclick=()=>switchTab('main',document.querySelector('.ni'));
+  list.appendChild(addCard);
+}
+
+function createGalleryCard(v){
+  const wrap=document.createElement('div');
+  wrap.style.cssText='margin:0 18px 12px;';
+
+  // Card header
+  const card=document.createElement('div');
+  card.className='gal-card';
+
+  const pct=Math.round(v.done/v.total*100);
+  const badge=v.isActive?'В РАБОТЕ':'ЗАВЕРШЁН';
+  const badgeColor=v.isActive?'rgba(45,212,191,.15)':'rgba(124,111,255,.18)';
+  const badgeTextColor=v.isActive?'var(--teal)':'var(--accent2)';
+
+  card.innerHTML=`
+    <div class="gal-card-hdr">
+      <div>
+        <div style="font-size:15px;font-weight:600;">${v.emoji} ${v.name}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px;">${v.done} из ${v.total} открыто${v.isActive?'':' · завершён '+( v.completedAt||'')} </div>
+      </div>
+      <div style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:${badgeColor};color:${badgeTextColor};">${badge}</div>
+    </div>`;
+
+  // Mini vitrazh SVG
+  const miniWrap=document.createElement('div');
+  miniWrap.style.cssText='border-radius:8px;overflow:hidden;margin-bottom:10px;background:#04050e;cursor:pointer;';
+  const miniSvg=buildVitrazhSVG(v.shards, 312, Math.round(312*0.55), true, 'gal'+Date.now()+'_');
+  miniSvg.style.cssText='width:100%;display:block;';
+  // Override colors from stored shardColors
+  // Colors already baked in via revealed[i] + shardColors in buildVitrazhSVG's color logic
+  miniWrap.appendChild(miniSvg);
+  miniWrap.onclick=()=>openVitrazh(v);
+  card.appendChild(miniWrap);
+
+  // Progress
+  const progRow=document.createElement('div');
+  progRow.style.cssText='display:flex;align-items:center;gap:9px;';
+  progRow.innerHTML=`<div class="prog-bar" style="flex:1;"><div class="prog-fill" style="width:${pct}%;"></div></div><div class="prog-lb">${v.done} / ${v.total}</div>`;
+  card.appendChild(progRow);
+
+  // Insight if completed
+  if(v.insight){
+    const ins=document.createElement('div');
+    ins.style.cssText='margin-top:10px;background:var(--bg3);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text2);line-height:1.55;';
+    ins.innerHTML=`<span style="color:var(--accent2);font-size:11px;font-weight:600;display:block;margin-bottom:4px;">ИНСАЙТ</span>${v.insight}`;
+    card.appendChild(ins);
+  }
+
+  wrap.appendChild(card);
+
+  // ── History list for completed ──
+  if(!v.isActive && v.shardMemos){
+    const histBtn=document.createElement('button');
+    histBtn.className='btn btn-ghost';
+    histBtn.style.cssText='font-size:12px;padding:9px;margin:0 0 4px;width:100%;border-radius:0 0 12px 12px;';
+    histBtn.textContent='▾ История осколков';
+    let histOpen=false;
+    const histPanel=document.createElement('div');
+    histPanel.style.display='none';
+    const memos=v.shardMemos.map((m,i)=>({m,i,date:v.shardDates?v.shardDates[i]:null}))
+      .filter(x=>x.m&&(x.m.text||x.m.photo||x.m.audioUrl));
+    if(memos.length===0){
+      histBtn.textContent='Нет заметок';
+      histBtn.disabled=true;
+    } else {
+      memos.forEach(({m,i,date})=>{
+        const item=document.createElement('div');
+        item.style.cssText='padding:10px 14px;border-top:1px solid var(--border);';
+        item.innerHTML=`<div style="font-size:11px;color:var(--text3);margin-bottom:5px;">Осколок #${i+1} · ${date||''}</div>`;
+        if(m.text){const t=document.createElement('div');t.style.cssText='font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:5px;';t.textContent=m.text;item.appendChild(t);}
+        if(m.photo){const img=document.createElement('img');img.src=m.photo;img.style.cssText='width:100%;border-radius:8px;margin-bottom:5px;';item.appendChild(img);}
+        if(m.audioUrl){const a=document.createElement('audio');a.src=m.audioUrl;a.controls=true;a.style.cssText='width:100%;margin-bottom:4px;';item.appendChild(a);}
+        histPanel.appendChild(item);
+      });
+    }
+    histBtn.onclick=()=>{
+      histOpen=!histOpen;
+      histPanel.style.display=histOpen?'block':'none';
+      histBtn.textContent=(histOpen?'▴ ':'▾ ')+'История осколков ('+memos.length+')';
+    };
+    wrap.appendChild(histBtn);
+    wrap.appendChild(histPanel);
+  }
+
+  return wrap;
+}
+
+function openVitrazh(v){
+  // For now just switch to main tab if active
+  if(v.isActive) switchTab('main',document.querySelector('.ni'));
+}
+
+</script>
+</body>
+</html>
