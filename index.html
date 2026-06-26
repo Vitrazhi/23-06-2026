@@ -436,7 +436,7 @@ html,body{height:100%;background:#03040a;font-family:'Inter',sans-serif;color:va
     <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Добавить впечатление</div>
     <textarea id="memo-text" placeholder="Что ты почувствовал? Что изменилось?" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;color:var(--text);font-family:inherit;resize:vertical;min-height:80px;outline:none;margin-bottom:8px;"></textarea>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      <label style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);">
+      <label for-memo="1" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);" id="memo-photo-label">
         📷 Фото<input type="file" accept="image/*" style="display:none;" onchange="memoPhotoChange(event)">
       </label>
       <button onclick="startMemoAudio()" id="memo-audio-btn" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;">🎙 Запись</button>
@@ -749,19 +749,6 @@ function toggleReminder(){
   document.getElementById('reminder-time-row').style.pointerEvents = settings.reminderOn ? 'auto' : 'none';
 }
 
-function buildOb4Preview(){
-  document.getElementById('ob4-title').textContent='Витраж '+app.sphereName;
-  document.getElementById('ob4-name').textContent='Витраж '+app.sphereName;
-  document.getElementById('ob4-emoji').textContent=app.sphereEmoji;
-  document.getElementById('ob4-meta').textContent=TOTAL+' осколков · Тайный образ скрыт';
-  const wrap=document.getElementById('ob4-preview');
-  // Мини превью витража
-  const svg=buildVitrazhSVG(app.shards, 320, Math.round(320*0.95), true, 'ob4-');
-  svg.style.width='100%'; svg.style.display='block';
-  wrap.innerHTML=''; wrap.appendChild(svg);
-  // Add memo indicator dots for shards with notes
-  addMemoIndicators(svg);
-}
 function addMemoIndicators(svg){
   if(!svg||!app.shardMemos) return;
   const polys=getShardPolygons(vitrazh_W,vitrazh_H);
@@ -1512,7 +1499,17 @@ function openMemoModal(idx){
   const modal=document.getElementById('memo-modal');
   modal.style.display='flex';
 }
-function closeMemo(){ document.getElementById('memo-modal').style.display='none'; }
+function closeMemo(){
+  document.getElementById('memo-modal').style.display='none';
+  // Restore edit fields in case they were hidden for archived view
+  const mt=document.getElementById('memo-text');
+  if(mt) mt.style.display='';
+  const ab=document.getElementById('memo-audio-btn');
+  if(ab){ ab.style.display=''; ab.textContent='🎙 Запись'; }
+  const phl=document.getElementById('memo-photo-label'); if(phl) phl.style.display='';
+  const sb=document.querySelector('#memo-modal .btn-primary');
+  if(sb) sb.textContent='Сохранить';
+}
 function memoPhotoChange(e){
   const file=e.target.files[0]; if(!file)return;
   const r=new FileReader();
@@ -1744,8 +1741,134 @@ function createGalleryCard(v){
 }
 
 function openVitrazh(v){
-  // For now just switch to main tab if active
-  if(v.isActive) switchTab('main',document.querySelector('.ni'));
+  if(v.isActive){
+    switchTab('main',document.querySelector('.ni'));
+    return;
+  }
+  // Show completed vitrazh in fullscreen overlay
+  showFullscreenVitrazh(v);
+}
+
+function showFullscreenVitrazh(v){
+  let overlay = document.getElementById('vitrazh-overlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'vitrazh-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(4,5,16,.97);z-index:2000;display:flex;flex-direction:column;overflow-y:auto;';
+    document.body.appendChild(overlay);
+  }
+  const _sc = app.shardColors, _sp = app.sphere, _TOTAL = TOTAL;
+  const _CACHE = {key:SHARD_CACHE.key, polys:SHARD_CACHE.polys};
+  if(v.shardColors) app.shardColors = v.shardColors;
+  if(v.sphere) app.sphere = v.sphere;
+  TOTAL = v.total || v.shards.length;
+  SHARD_CACHE = {key:null, polys:null}; // force regenerate for this size
+  const W = 354, H = Math.round(354*1.4);
+  const pfx = 'fs'+Date.now()%9999+'_';
+  const svg = buildVitrazhSVG(v.shards, W, H, false, pfx);
+  app.shardColors = _sc; app.sphere = _sp;
+  TOTAL = _TOTAL; SHARD_CACHE = _CACHE;
+
+  overlay.innerHTML = '';
+  // Header
+  const hdr = document.createElement('div');
+  hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:16px 20px;flex-shrink:0;';
+  hdr.innerHTML = `<div><div style="font-size:18px;font-weight:600;">${v.emoji} ${v.name}</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Завершён ${v.completedAt||''}</div></div>
+    <button onclick="document.getElementById('vitrazh-overlay').style.display='none'" style="background:none;border:none;font-size:24px;color:var(--text2);cursor:pointer;">✕</button>`;
+  overlay.appendChild(hdr);
+
+  // SVG vitrazh
+  const svgWrap = document.createElement('div');
+  svgWrap.style.cssText = 'padding:0 18px;margin-bottom:16px;';
+  svg.style.cssText = 'width:100%;display:block;border-radius:12px;';
+  // Make shards clickable to show their memos
+  if(v.shardMemos){
+    const _T2=TOTAL; TOTAL=v.total||v.shards.length; const polys = getShardPolygons(W, H); TOTAL=_T2;
+    polys.forEach((pts,i)=>{
+      const hit = document.createElementNS('http://www.w3.org/2000/svg','path');
+      hit.setAttribute('d', ptsD(pts));
+      hit.setAttribute('fill','transparent');
+      hit.style.cursor = v.shardMemos[i] ? 'pointer' : 'default';
+      hit.addEventListener('click', ()=>{
+        if(!v.shardMemos[i]) return;
+        showArchivedMemo(v, i);
+      });
+      svg.appendChild(hit);
+    });
+    // Gold dots for shards with memos
+    polys.forEach((pts,i)=>{
+      if(!v.shardMemos[i]||!v.shards[i]) return;
+      const m = v.shardMemos[i];
+      if(!m.text&&!m.photo&&!m.audioUrl) return;
+      const cx = pts.reduce((s,p)=>s+p[0],0)/pts.length;
+      const cy = pts.reduce((s,p)=>s+p[1],0)/pts.length;
+      const NS = 'http://www.w3.org/2000/svg';
+      const dot = document.createElementNS(NS,'circle');
+      dot.setAttribute('cx',(cx+8).toFixed(1)); dot.setAttribute('cy',(cy-8).toFixed(1));
+      dot.setAttribute('r','5'); dot.setAttribute('fill','#f0c060');
+      dot.setAttribute('stroke','#0a0a14'); dot.setAttribute('stroke-width','1');
+      dot.style.pointerEvents='none';
+      svg.appendChild(dot);
+    });
+  }
+  svgWrap.appendChild(svg);
+  overlay.appendChild(svgWrap);
+
+  // Insight
+  if(v.insight){
+    const ins = document.createElement('div');
+    ins.style.cssText = 'margin:0 18px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;';
+    ins.innerHTML = `<div style="font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:.07em;margin-bottom:8px;">✦ ИНСАЙТ ПУТИ</div><div style="font-size:14px;color:var(--text);line-height:1.6;">${v.insight}</div>`;
+    overlay.appendChild(ins);
+  }
+
+  // History list
+  if(v.shardMemos){
+    const memos = v.shardMemos.map((m,i)=>({m,i,date:v.shardDates?.[i]})).filter(x=>x.m&&(x.m.text||x.m.photo||x.m.audioUrl));
+    if(memos.length){
+      const histWrap = document.createElement('div');
+      histWrap.style.cssText = 'margin:0 18px 20px;';
+      const histTitle = document.createElement('div');
+      histTitle.style.cssText = 'font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;';
+      histTitle.textContent = 'История осколков';
+      histWrap.appendChild(histTitle);
+      memos.forEach(({m,i,date})=>{
+        const item = document.createElement('div');
+        item.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:8px;';
+        item.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">Осколок #${i+1} · ${date||''}</div>`;
+        if(m.text){const t=document.createElement('div');t.style.cssText='font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:6px;';t.textContent=m.text;item.appendChild(t);}
+        if(m.photo){const img=document.createElement('img');img.src=m.photo;img.style.cssText='width:100%;border-radius:8px;margin-bottom:6px;';item.appendChild(img);}
+        if(m.audioUrl){const a=document.createElement('audio');a.src=m.audioUrl;a.controls=true;a.style.cssText='width:100%;';item.appendChild(a);}
+        histWrap.appendChild(item);
+      });
+      overlay.appendChild(histWrap);
+    }
+  }
+  overlay.style.display = 'flex';
+}
+
+function showArchivedMemo(v, idx){
+  const m = v.shardMemos[idx];
+  if(!m) return;
+  // Reuse memo modal in read-only mode
+  document.getElementById('memo-title').textContent = 'Осколок #'+(idx+1)+' — '+v.name;
+  document.getElementById('memo-date').textContent = v.shardDates?.[idx]||'—';
+  const cv = document.getElementById('memo-content-view');
+  const tv = document.getElementById('memo-text-view');
+  const pv = document.getElementById('memo-photo-view');
+  const av = document.getElementById('memo-audio-view');
+  cv.style.display = 'block';
+  if(m.text){tv.style.display='block';tv.textContent=m.text;}else{tv.style.display='none';}
+  if(m.photo){pv.style.display='block';pv.querySelector('img').src=m.photo;}else{pv.style.display='none';}
+  if(m.audioUrl){av.style.display='block';av.src=m.audioUrl;}else{av.style.display='none';}
+  // Hide edit fields in read-only mode
+  document.getElementById('memo-text').style.display='none';
+  const phl=document.getElementById('memo-photo-label'); if(phl) phl.style.display='none';
+  document.getElementById('memo-audio-btn').style.display='none';
+  document.getElementById('memo-photo-preview').style.display='none';
+  const saveBtn = document.querySelector('#memo-modal .btn-primary');
+  if(saveBtn) saveBtn.textContent='Закрыть';
+  document.getElementById('memo-modal').style.display='flex';
 }
 
 </script>
