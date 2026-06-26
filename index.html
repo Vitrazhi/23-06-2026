@@ -2,8 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#07080f">
 <title>Витраж — Собери свою новую жизнь</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cinzel:wght@400;600&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -13,6 +15,14 @@
   --text:#eeedf8;--text2:#8e8cac;--text3:#4e4d68;
   --accent:#7c6fff;--accent2:#a78bfa;
   --gold:#f0c060;--teal:#38d9c0;--rose:#e87090;
+  /* Safe-area: отступы под системные панели Telegram/iOS/Android.
+     Берём максимум из env() (вырез/notch) и переменных Telegram WebApp. */
+  --safe-top: max(env(safe-area-inset-top, 0px), 0px);
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
+  --tg-top: 0px;     /* выставляется из JS (Telegram content safe area) */
+  --tg-bottom: 0px;  /* выставляется из JS */
+  --pad-top: calc(var(--safe-top) + var(--tg-top));
+  --pad-bottom: calc(var(--safe-bottom) + var(--tg-bottom));
 }
 html,body{height:100%;background:#03040a;font-family:'Inter',sans-serif;color:var(--text);overflow:hidden;}
 
@@ -22,24 +32,56 @@ html,body{height:100%;background:#03040a;font-family:'Inter',sans-serif;color:va
 .screen.slide-left{transform:translateX(-100%);}
 .screen.slide-right{transform:translateX(100%);}
 
-/* ══ PHONE FRAME ══ */
+/* ══ PHONE FRAME (desktop preview) ══ */
 .phone{width:390px;height:844px;background:var(--bg);border-radius:48px;border:1.5px solid rgba(255,255,255,0.11);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 120px rgba(0,0,0,0.85),0 0 0 1px rgba(255,255,255,0.05);position:relative;}
 .status-bar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;}
 .sb-time{font-size:15px;font-weight:600;}
 .sb-ic{font-size:11px;color:var(--text2);}
-.scroll{flex:1;overflow-y:auto;overflow-x:hidden;}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
 .scroll::-webkit-scrollbar{display:none;}
-.nav{height:84px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;background:rgba(8,9,16,.97);backdrop-filter:blur(20px);flex-shrink:0;padding-bottom:18px;}
+.nav{height:64px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;background:rgba(8,9,16,.97);backdrop-filter:blur(20px);flex-shrink:0;padding-bottom:calc(var(--pad-bottom) + 6px);box-sizing:content-box;}
 .ni{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 16px;border-radius:14px;border:none;background:none;color:var(--text3);font-family:inherit;font-size:10px;font-weight:500;letter-spacing:.04em;transition:all .2s;}
 .ni:hover{background:rgba(255,255,255,.04);}
 .ni.on{color:var(--accent2);}
 .ni-ic{font-size:22px;line-height:1;}
 
+/* ══════════════════════════════════════════════
+   TELEGRAM / МОБИЛЬНЫЙ ПОЛНОЭКРАННЫЙ РЕЖИМ
+   Активируется классом .tg-mode на <body> (ставит JS),
+   а также как fallback на узких экранах через media-query.
+══════════════════════════════════════════════ */
+body.tg-mode .screen{align-items:stretch;justify-content:stretch;}
+body.tg-mode .phone,
+body.tg-mode .ob-wrap{
+  width:100%!important;height:100%!important;max-height:none!important;
+  border-radius:0!important;border:none!important;box-shadow:none!important;
+}
+/* Прячем фейковый статус-бар (время/wifi) — в Telegram он не нужен */
+body.tg-mode .status-bar{display:none;}
+/* Внутренний контент получает отступ сверху под меню Telegram */
+body.tg-mode .phone > div[id^="tab-"],
+body.tg-mode .ob-wrap{padding-top:var(--pad-top);}
+body.tg-mode #ob-screen{padding:0;}
+
+@media (max-width:480px){
+  .screen{align-items:stretch;justify-content:stretch;}
+  .phone,.ob-wrap{
+    width:100%!important;height:100%!important;max-height:none!important;
+    border-radius:0!important;border:none!important;box-shadow:none!important;
+  }
+  .status-bar{display:none;}
+  .phone > div[id^="tab-"]{padding-top:var(--pad-top);}
+  #ob-screen{padding:0;}
+  .ob-wrap{padding-top:var(--pad-top);}
+  .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
+}
+
 /* ══ ONBOARDING ══ */
 #ob-screen{background:radial-gradient(ellipse at 50% 30%, #1a1040 0%, #050310 60%);}
 .ob-wrap{width:390px;max-height:844px;background:var(--bg);border-radius:48px;border:1.5px solid rgba(255,255,255,0.11);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 120px rgba(0,0,0,0.85);position:relative;}
-.ob-step{display:none;flex:1;flex-direction:column;padding:0 28px 32px;justify-content:center;gap:20px;min-height:760px;}
+.ob-step{display:none;flex:1;flex-direction:column;padding:24px 28px 28px;justify-content:center;gap:18px;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;}
 .ob-step.on{display:flex;}
+body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 .ob-icon{font-size:64px;text-align:center;filter:drop-shadow(0 0 20px rgba(124,111,255,0.5));}
 .ob-eyebrow{font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;text-align:center;}
 .ob-title{font-size:28px;font-weight:600;letter-spacing:-.6px;line-height:1.2;text-align:center;font-family:'Cinzel',serif;}
@@ -196,11 +238,11 @@ html,body{height:100%;background:#03040a;font-family:'Inter',sans-serif;color:va
      ONBOARDING
 ══════════════════════════════════ -->
 <div class="screen" id="ob-screen">
-<div class="ob-wrap" style="width:390px;height:844px;">
+<div class="ob-wrap">
   <div class="status-bar"><span class="sb-time" id="ob-clk">9:41</span><span class="sb-ic">●●● WiFi ■■■</span></div>
 
   <!-- Шаг 0: приветствие -->
-  <div class="ob-step on" id="ob0" style="padding-top:20px;justify-content:space-evenly;">
+  <div class="ob-step on" id="ob0" style="justify-content:flex-start;gap:16px;">
     <div style="text-align:center;">
       <div class="ob-icon" style="font-size:72px;margin-bottom:12px;font-family:Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif;">🪟</div>
       <div class="ob-eyebrow" style="margin-bottom:14px;">Добро пожаловать</div>
@@ -257,7 +299,7 @@ html,body{height:100%;background:#03040a;font-family:'Inter',sans-serif;color:va
   </div>
 
   <!-- Шаг 3: настройки -->
-  <div class="ob-step" id="ob3" style="padding-top:36px;">
+  <div class="ob-step" id="ob3" style="justify-content:flex-start;">
     <div class="ob-icon">⚙️</div>
     <div class="ob-eyebrow">Твой витраж почти готов</div>
     <div class="ob-title" style="font-size:21px;">Настрой свой ритуал</div>
@@ -419,7 +461,7 @@ html,body{height:100%;background:#03040a;font-family:'Inter',sans-serif;color:va
 
 <!-- ══ SHARD MEMO MODAL ══ -->
 <div id="memo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:flex-end;justify-content:center;">
-  <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto;">
+  <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;max-height:85vh;overflow-y:auto;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
       <div style="font-size:16px;font-weight:600;" id="memo-title">Осколок #1</div>
       <button onclick="closeMemo()" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;">✕</button>
@@ -465,6 +507,44 @@ html,body{height:100%;background:#03040a;font-family:'Inter',sans-serif;color:va
 </div>
 
 <script>
+/* ══════════════════════════════════════════════
+   TELEGRAM WEB APP — инициализация и safe-area
+══════════════════════════════════════════════ */
+(function initTelegram(){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if(tg){
+    document.body.classList.add('tg-mode');
+    try{ tg.ready(); }catch(e){}
+    try{ tg.expand(); }catch(e){} // раскрываем на весь экран
+    // Просим Telegram не закрывать приложение свайпом вниз случайно
+    try{ tg.disableVerticalSwipes && tg.disableVerticalSwipes(); }catch(e){}
+    try{ tg.setHeaderColor && tg.setHeaderColor('#07080f'); }catch(e){}
+    try{ tg.setBackgroundColor && tg.setBackgroundColor('#07080f'); }catch(e){}
+
+    function applyInsets(){
+      // Telegram отдаёт отступы под своё меню сверху и системные панели.
+      // contentSafeAreaInset — отступ под шапку Telegram (название/кнопки).
+      // safeAreaInset — отступ под вырезы устройства.
+      const c = tg.contentSafeAreaInset || {};
+      const s = tg.safeAreaInset || {};
+      const top = Math.max(c.top||0, 0) + Math.max(s.top||0, 0);
+      const bottom = Math.max(c.bottom||0, 0) + Math.max(s.bottom||0, 0);
+      document.documentElement.style.setProperty('--tg-top', top+'px');
+      document.documentElement.style.setProperty('--tg-bottom', bottom+'px');
+    }
+    applyInsets();
+    // Обновляем при изменении (поворот, разворачивание)
+    try{ tg.onEvent('safeAreaChanged', applyInsets); }catch(e){}
+    try{ tg.onEvent('contentSafeAreaChanged', applyInsets); }catch(e){}
+    try{ tg.onEvent('viewportChanged', applyInsets); }catch(e){}
+  } else {
+    // Не в Telegram: если экран узкий (телефонный браузер) — тоже полноэкранный режим.
+    if(window.innerWidth <= 480){
+      document.body.classList.add('tg-mode');
+    }
+  }
+})();
+
 /* ══════════════════════════════════════════════
    СОСТОЯНИЕ
 ══════════════════════════════════════════════ */
@@ -1754,7 +1834,7 @@ function showFullscreenVitrazh(v){
   if(!overlay){
     overlay = document.createElement('div');
     overlay.id = 'vitrazh-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(4,5,16,.97);z-index:2000;display:flex;flex-direction:column;overflow-y:auto;';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(4,5,16,.97);z-index:2000;display:flex;flex-direction:column;overflow-y:auto;padding-top:var(--pad-top);padding-bottom:var(--pad-bottom);';
     document.body.appendChild(overlay);
   }
   const _sc = app.shardColors, _sp = app.sphere, _TOTAL = TOTAL;
