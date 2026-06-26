@@ -491,16 +491,24 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 
 <!-- ══ COMPLETION MODAL ══ -->
 <div id="completion-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:24px;">
-  <div style="background:var(--bg2);border-radius:24px;padding:24px;width:100%;max-width:380px;">
+  <div style="background:var(--bg2);border-radius:24px;padding:24px;padding-bottom:calc(24px + var(--pad-bottom));width:100%;max-width:380px;max-height:90vh;overflow-y:auto;">
     <div style="text-align:center;margin-bottom:20px;">
       <div style="font-size:48px;margin-bottom:12px;">✦</div>
       <div style="font-size:20px;font-weight:600;margin-bottom:8px;" id="comp-title">Витраж завершён!</div>
-      <div style="font-size:14px;color:var(--text2);">Ты прошёл этот путь. Что ты чувствуешь?</div>
+      <div style="font-size:14px;color:var(--text2);" id="comp-subtitle">Ты прошёл этот путь. Что ты чувствуешь?</div>
     </div>
     <div style="font-size:13px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Главный инсайт пути</div>
-    <textarea id="comp-insight" placeholder="Что изменилось в тебе? Главная мысль, эмоция, открытие..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;color:var(--text);font-family:inherit;resize:vertical;min-height:100px;outline:none;margin-bottom:14px;"></textarea>
-    <button class="btn btn-primary" onclick="saveCompletion()" style="margin-bottom:10px;">Сохранить и закрыть ✦</button>
-    <button class="btn btn-ghost" onclick="document.getElementById('completion-modal').style.display='none'" style="font-size:13px;padding:11px;">Позже</button>
+    <textarea id="comp-insight" placeholder="Что изменилось в тебе? Главная мысль, эмоция, открытие..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;color:var(--text);font-family:inherit;resize:vertical;min-height:90px;outline:none;margin-bottom:10px;"></textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <label style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);">
+        📷 Фото<input type="file" accept="image/*" style="display:none;" onchange="compPhotoChange(event)">
+      </label>
+      <button onclick="startCompAudio()" id="comp-audio-btn" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;">🎙 Запись</button>
+    </div>
+    <div id="comp-photo-preview" style="display:none;margin-bottom:10px;"><img id="comp-photo-img" style="width:100%;border-radius:12px;" src=""><button onclick="clearCompPhoto()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;margin-top:4px;">✕ Удалить фото</button></div>
+    <div id="comp-audio-status" style="display:none;font-size:12px;color:var(--teal);margin-bottom:10px;"></div>
+    <button class="btn btn-primary" onclick="saveCompletion()" style="margin-bottom:10px;">Сохранить ✦</button>
+    <button class="btn btn-ghost" onclick="closeCompletion()" style="font-size:13px;padding:11px;">Позже</button>
   </div>
 </div>
 </div>
@@ -561,10 +569,15 @@ const app = {
   streak: 0, light: 0, totalDone: 0,
   customImage: null,
   completed: [], // {name, sphere, emoji, shards, shardColors, shardMemos, shardDates, insight, completedAt}
+  activeVitrazhi: [], // другие незавершённые витражи (снимки), кроме текущего отображаемого
+  activeId: null, // id текущего витража (для обновления при переключении)
   currentMemoIdx: -1, // осколок открытый в модалке
   memoPhotoData: null,
   memoAudioUrl: null,
   memoRecorder: null,
+  compPhotoData: null, // фото для инсайта завершённого витража
+  compAudioUrl: null,  // аудио для инсайта
+  compRecorder: null,
 };
 
 /* ══ ВРЕМЯ ══ */
@@ -880,12 +893,96 @@ function startApp(){
   app.shardDates=new Array(TOTAL).fill(null);
   app.todayDone=new Set();
   app.shardsToday=0;
-  // (кэш убран)
+  app.activeId='v'+Date.now(); // уникальный id нового витража
+  app.vTotal=TOTAL; // фиксируем размер этого витража
 
   // Переходим в приложение
   document.getElementById('ob-screen').classList.add('hidden');
   document.getElementById('app-screen').classList.remove('hidden');
   initMainScreen();
+}
+
+/* ══ МНОЖЕСТВЕННЫЕ ВИТРАЖИ ══ */
+// Снимок текущего витража (для сохранения перед переключением/созданием нового)
+function snapshotCurrentVitrazh(){
+  if(!app.sphere) return null;
+  return {
+    id: app.activeId||('v'+Date.now()),
+    name:'Витраж '+app.sphereName,
+    sphere:app.sphere, sphereName:app.sphereName, sphereEmoji:app.sphereEmoji, sphereColor:app.sphereColor,
+    actions:[...app.actions],
+    shards:[...app.shards],
+    shardColors:[...app.shardColors],
+    shardMemos:[...app.shardMemos],
+    shardDates:[...app.shardDates],
+    customImage:app.customImage,
+    streak:app.streak, light:app.light, totalDone:app.totalDone,
+    shardsToday:app.shardsToday,
+    todayDone:[...app.todayDone],
+    vTotal:app.vTotal||TOTAL,
+  };
+}
+
+// Сохраняет текущий активный витраж в массив activeVitrazhi (или обновляет)
+function saveCurrentToActive(){
+  const snap=snapshotCurrentVitrazh();
+  if(!snap) return;
+  const idx=app.activeVitrazhi.findIndex(v=>v.id===snap.id);
+  if(idx>=0) app.activeVitrazhi[idx]=snap;
+  else app.activeVitrazhi.push(snap);
+}
+
+// Загружает витраж-снимок как текущий активный
+function loadVitrazh(snap){
+  TOTAL=snap.vTotal||30;
+  app.activeId=snap.id;
+  app.sphere=snap.sphere; app.sphereName=snap.sphereName;
+  app.sphereEmoji=snap.sphereEmoji; app.sphereColor=snap.sphereColor;
+  app.actions=[...snap.actions];
+  app.shards=[...snap.shards];
+  app.shardColors=[...snap.shardColors];
+  app.shardMemos=[...(snap.shardMemos||[])];
+  app.shardDates=[...(snap.shardDates||[])];
+  app.customImage=snap.customImage||null;
+  app.streak=snap.streak||0; app.light=snap.light||0; app.totalDone=snap.totalDone||0;
+  app.shardsToday=snap.shardsToday||0;
+  app.todayDone=new Set(snap.todayDone||[]);
+  app.vTotal=snap.vTotal||TOTAL;
+  // Сброс кэша полигонов под новый размер
+  SHARD_CACHE={key:null,polys:null};
+  // Если было фото — переинициализируем пиксели
+  if(app.customImage){ loadCustomImagePixels(app.customImage); }
+  // Убираем из списка активных (он снова станет текущим)
+  app.activeVitrazhi=app.activeVitrazhi.filter(v=>v.id!==snap.id);
+  document.getElementById('main-vcard').classList.remove('glow');
+  document.getElementById('main-done-banner').classList.remove('show');
+  switchTab('main',document.querySelector('.ni'));
+  initMainScreen();
+}
+
+// Запускает создание нового витража (новая сфера) — сохраняет текущий
+function startNewVitrazh(){
+  saveCurrentToActive();
+  // Сбрасываем onboarding-состояние сферы и действий
+  app.sphere=null; app.sphereName=''; app.sphereEmoji='🌙'; app.sphereColor='#4a80d0';
+  app.customImage=null; __imgReady=false; __imgCanvas=null; __imgCtx=null;
+  // Возвращаемся на онбординг (шаг выбора сферы)
+  obStep=1;
+  document.querySelectorAll('.ob-step').forEach(s=>s.classList.remove('on'));
+  document.getElementById('ob1').classList.add('on');
+  document.querySelectorAll('.sphere-opt').forEach(o=>o.classList.remove('sel'));
+  const nb=document.getElementById('ob1-next');
+  if(nb){ nb.style.opacity='.4'; nb.style.pointerEvents='none'; }
+  // Очищаем поля действий
+  const wrap=document.getElementById('act-list-wrap');
+  if(wrap) wrap.innerHTML='';
+  // Сбрасываем upload-зону
+  const uzi=document.getElementById('uz-icon'); if(uzi) uzi.textContent='🖼️';
+  const uzt=document.getElementById('uz-title'); if(uzt) uzt.textContent='Загрузить своё изображение';
+  const uzs=document.getElementById('uz-sub'); if(uzs) uzs.textContent='Оно превратится в витраж-пазл';
+  // Показываем экран онбординга
+  document.getElementById('app-screen').classList.add('hidden');
+  document.getElementById('ob-screen').classList.remove('hidden');
 }
 
 /* ══════════════════════════════════════════════
@@ -1444,36 +1541,6 @@ function updateUI(){
   }
 }
 
-function updateGallery(){
-  const list=document.getElementById('gallery-list');
-  list.innerHTML='';
-  // Текущий витраж
-  const card=document.createElement('div');
-  card.className='gal-card';
-  card.onclick=()=>switchTab('main',document.querySelector('.ni'));
-  const done=app.shards.filter(Boolean).length;
-  const pct=Math.round(done/TOTAL*100);
-  card.innerHTML=`
-    <div class="gal-card-hdr">
-      <div><div style="font-size:15px;font-weight:600;">Витраж ${app.sphereName}</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">${app.actions.length} действия · ${TOTAL} осколков</div></div>
-      <div class="gal-badge" style="background:rgba(124,111,255,.18);color:var(--accent2);">${app.sphereName.toUpperCase()}</div>
-    </div>
-    <div class="gal-mini" id="gal-mini-main"></div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-      <div class="prog-lb">${done} / ${TOTAL}</div>
-    </div>`;
-  list.appendChild(card);
-  // Мини-осколки
-  const mini=card.querySelector('#gal-mini-main');
-  app.shards.forEach((rev,i)=>{
-    const d=document.createElement('div');
-    d.className='gal-mini-sh';
-    d.style.background=rev?shardColor((i*37)%100,(i/TOTAL)*100,100,100,app.sphere,i):'#1a1d30';
-    mini.appendChild(d);
-  });
-}
-
 /* ══ TABS ══ */
 function switchTab(tab, btn){
   ['main','gallery','profile'].forEach(t=>{
@@ -1646,22 +1713,130 @@ function saveMemo(){
 }
 
 /* ══ COMPLETION ══ */
+let _compEditId=null; // если редактируем уже завершённый витраж — его completedAt-id
+
+function compPhotoChange(e){
+  const file=e.target.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    app.compPhotoData=ev.target.result;
+    document.getElementById('comp-photo-img').src=ev.target.result;
+    document.getElementById('comp-photo-preview').style.display='block';
+  };
+  r.readAsDataURL(file);
+}
+function clearCompPhoto(){ app.compPhotoData=null; document.getElementById('comp-photo-preview').style.display='none'; }
+let _compRecording=false;
+function startCompAudio(){
+  if(_compRecording){ stopCompAudio(); return; }
+  if(!navigator.mediaDevices){ alert('Запись недоступна в этом браузере'); return; }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    _compRecording=true;
+    document.getElementById('comp-audio-btn').textContent='⏹ Остановить';
+    document.getElementById('comp-audio-status').style.display='block';
+    document.getElementById('comp-audio-status').textContent='● Идёт запись...';
+    const chunks=[];
+    const rec=new MediaRecorder(stream);
+    app.compRecorder=rec;
+    rec.ondataavailable=e=>chunks.push(e.data);
+    rec.onstop=()=>{
+      const blob=new Blob(chunks,{type:'audio/webm'});
+      app.compAudioUrl=URL.createObjectURL(blob);
+      document.getElementById('comp-audio-status').textContent='✓ Запись готова';
+      stream.getTracks().forEach(t=>t.stop());
+      _compRecording=false;
+    };
+    rec.start();
+  }).catch(()=>{ alert('Нет доступа к микрофону'); _compRecording=false; });
+}
+function stopCompAudio(){
+  if(app.compRecorder&&app.compRecorder.state!=='inactive') app.compRecorder.stop();
+  document.getElementById('comp-audio-btn').textContent='🎙 Запись';
+}
+
+function closeCompletion(){
+  document.getElementById('completion-modal').style.display='none';
+  _compEditId=null;
+}
+
+// Открыть редактор инсайта для УЖЕ завершённого витража (добавить/изменить позже)
+let _editedVitrazh=null;
+function openInsightEditor(v){
+  _compEditId=v.completedAt; // используем completedAt как идентификатор
+  _editedVitrazh=v;
+  app.compPhotoData=v.insightPhoto||null;
+  app.compAudioUrl=v.insightAudio||null;
+  document.getElementById('comp-title').textContent='Впечатление о витраже';
+  document.getElementById('comp-subtitle').textContent='Витраж «'+(v.sphereName||v.name)+'». Добавь или измени свои мысли о пути.';
+  document.getElementById('comp-insight').value=v.insight||'';
+  // photo preview
+  if(v.insightPhoto){
+    document.getElementById('comp-photo-img').src=v.insightPhoto;
+    document.getElementById('comp-photo-preview').style.display='block';
+  } else {
+    document.getElementById('comp-photo-preview').style.display='none';
+  }
+  // audio status
+  if(v.insightAudio){
+    document.getElementById('comp-audio-status').style.display='block';
+    document.getElementById('comp-audio-status').textContent='✓ Аудио есть';
+  } else {
+    document.getElementById('comp-audio-status').style.display='none';
+  }
+  document.getElementById('comp-audio-btn').textContent='🎙 Запись';
+  document.getElementById('completion-modal').style.display='flex';
+}
+
 function saveCompletion(){
   const insight=document.getElementById('comp-insight').value.trim();
-  app.completed.push({
-    name:'Витраж '+app.sphereName,
-    sphere:app.sphere,
-    emoji:app.sphereEmoji,
-    shards:[...app.shards],
-    shardColors:[...app.shardColors],
-    shardMemos:[...app.shardMemos],
-    shardDates:[...app.shardDates],
-    insight,
-    completedAt:new Date().toLocaleString('ru')
-  });
+  const photo=app.compPhotoData||null;
+  const audio=app.compAudioUrl||null;
+
+  if(_compEditId!==null){
+    // Редактируем существующий завершённый витраж
+    const v=app.completed.find(c=>c.completedAt===_compEditId);
+    if(v){
+      v.insight=insight;
+      v.insightPhoto=photo;
+      v.insightAudio=audio;
+    }
+    _compEditId=null;
+  } else {
+    // Новый завершённый витраж
+    app.completed.push({
+      name:'Витраж '+app.sphereName,
+      sphere:app.sphere,
+      sphereName:app.sphereName,
+      emoji:app.sphereEmoji,
+      shards:[...app.shards],
+      shardColors:[...app.shardColors],
+      shardMemos:[...app.shardMemos],
+      shardDates:[...app.shardDates],
+      vTotal:app.vTotal||TOTAL,
+      insight,
+      insightPhoto:photo,
+      insightAudio:audio,
+      completedAt:new Date().toLocaleString('ru')
+    });
+    // Текущий витраж завершён — убираем его как активный
+    app.activeId=null;
+  }
+
+  // Сброс полей модалки
+  app.compPhotoData=null; app.compAudioUrl=null;
+  document.getElementById('comp-photo-preview').style.display='none';
+  document.getElementById('comp-audio-status').style.display='none';
+
   document.getElementById('g-comp').textContent=app.completed.length;
   document.getElementById('completion-modal').style.display='none';
   updateGallery();
+
+  // Если открыт полноэкранный просмотр этого витража — обновляем его
+  const overlay=document.getElementById('vitrazh-overlay');
+  if(overlay && overlay.style.display!=='none' && _editedVitrazh){
+    showFullscreenVitrazh(_editedVitrazh);
+  }
+  _editedVitrazh=null;
 }
 
 /* ══ GALLERY: full rewrite with filter + completed vitrazhi + history ══ */
@@ -1700,12 +1875,14 @@ function updateGallery(){
   });
   list.appendChild(filterBar);
 
-  // ── Active vitrazh (current) ──
-  const isCompleted=done===TOTAL;
+  // ── Active vitrazhi: текущий + сохранённые ──
   if(galleryFilter!=='done'){
+    // Текущий отображаемый витраж
     const card=createGalleryCard({
+      id: app.activeId,
       name:'Витраж '+app.sphereName,
       sphere:app.sphere,
+      sphereName:app.sphereName,
       emoji:app.sphereEmoji,
       shards:app.shards,
       shardColors:app.shardColors,
@@ -1713,25 +1890,39 @@ function updateGallery(){
       shardDates:app.shardDates,
       done,total:TOTAL,
       isActive:true,
+      isCurrent:true,
       insight:null
     });
     list.appendChild(card);
+    // Остальные незавершённые витражи
+    app.activeVitrazhi.forEach(v=>{
+      const vdone=v.shards.filter(Boolean).length;
+      const card2=createGalleryCard({
+        ...v,
+        emoji:v.sphereEmoji,
+        done:vdone, total:v.vTotal||v.shards.length,
+        isActive:true, isCurrent:false, insight:null
+      });
+      list.appendChild(card2);
+    });
   }
 
   // ── Completed vitrazhi ──
   if(galleryFilter!=='active'){
     app.completed.forEach((v,ci)=>{
-      const card=createGalleryCard({...v, done:v.shards.filter(Boolean).length, total:v.shards.length, isActive:false, compIdx:ci});
+      const card=createGalleryCard({...v, emoji:v.emoji||v.sphereEmoji, done:v.shards.filter(Boolean).length, total:v.shards.length, isActive:false, compIdx:ci});
       list.appendChild(card);
     });
   }
 
-  // ── Add new ──
-  const addCard=document.createElement('div');
-  addCard.className='add-card';
-  addCard.innerHTML='<span style="font-size:20px;">+</span><span>Новая сфера жизни</span><span style="font-size:11px;color:var(--text3);margin-left:auto;">Премиум</span>';
-  addCard.onclick=()=>switchTab('main',document.querySelector('.ni'));
-  list.appendChild(addCard);
+  // ── Кнопка добавления новой сферы (без премиум-ограничения на время разработки) ──
+  if(galleryFilter!=='done'){
+    const addCard=document.createElement('div');
+    addCard.className='add-card';
+    addCard.innerHTML='<span style="font-size:20px;">+</span><span>Новая сфера жизни</span>';
+    addCard.onclick=()=>startNewVitrazh();
+    list.appendChild(addCard);
+  }
 }
 
 function createGalleryCard(v){
@@ -1743,9 +1934,9 @@ function createGalleryCard(v){
   card.className='gal-card';
 
   const pct=Math.round(v.done/v.total*100);
-  const badge=v.isActive?'В РАБОТЕ':'ЗАВЕРШЁН';
-  const badgeColor=v.isActive?'rgba(45,212,191,.15)':'rgba(124,111,255,.18)';
-  const badgeTextColor=v.isActive?'var(--teal)':'var(--accent2)';
+  const badge=v.isActive?(v.isCurrent?'ТЕКУЩИЙ':'В РАБОТЕ'):'ЗАВЕРШЁН';
+  const badgeColor=v.isActive?(v.isCurrent?'rgba(124,111,255,.2)':'rgba(45,212,191,.15)'):'rgba(124,111,255,.18)';
+  const badgeTextColor=v.isActive?(v.isCurrent?'var(--accent2)':'var(--teal)'):'var(--accent2)';
 
   card.innerHTML=`
     <div class="gal-card-hdr">
@@ -1759,10 +1950,16 @@ function createGalleryCard(v){
   // Mini vitrazh SVG
   const miniWrap=document.createElement('div');
   miniWrap.style.cssText='border-radius:8px;overflow:hidden;margin-bottom:10px;background:#04050e;cursor:pointer;';
-  const miniSvg=buildVitrazhSVG(v.shards, 312, Math.round(312*0.55), true, 'gal'+Date.now()+'_');
+  // Временно подставляем цвета/сферу этого витража для корректного рендера
+  const _sc=app.shardColors, _sp=app.sphere, _sh=app.shards;
+  if(v.shardColors) app.shardColors=v.shardColors;
+  if(v.sphere) app.sphere=v.sphere;
+  const _t=TOTAL; TOTAL=v.total;
+  SHARD_CACHE={key:null,polys:null};
+  const miniSvg=buildVitrazhSVG(v.shards, 312, Math.round(312*0.55), true, 'g'+Date.now()%99999+'_');
+  TOTAL=_t; app.shardColors=_sc; app.sphere=_sp;
+  SHARD_CACHE={key:null,polys:null};
   miniSvg.style.cssText='width:100%;display:block;';
-  // Override colors from stored shardColors
-  // Colors already baked in via revealed[i] + shardColors in buildVitrazhSVG's color logic
   miniWrap.appendChild(miniSvg);
   miniWrap.onclick=()=>openVitrazh(v);
   card.appendChild(miniWrap);
@@ -1773,11 +1970,9 @@ function createGalleryCard(v){
   progRow.innerHTML=`<div class="prog-bar" style="flex:1;"><div class="prog-fill" style="width:${pct}%;"></div></div><div class="prog-lb">${v.done} / ${v.total}</div>`;
   card.appendChild(progRow);
 
-  // Insight if completed
-  if(v.insight){
-    const ins=document.createElement('div');
-    ins.style.cssText='margin-top:10px;background:var(--bg3);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text2);line-height:1.55;';
-    ins.innerHTML=`<span style="color:var(--accent2);font-size:11px;font-weight:600;display:block;margin-bottom:4px;">ИНСАЙТ</span>${v.insight}`;
+  // Insight (для завершённых витражей) — сворачиваемый, с фото/аудио и кнопкой редактирования
+  if(!v.isActive){
+    const ins=buildInsightBlock(v, {compact:true, showEdit:true});
     card.appendChild(ins);
   }
 
@@ -1820,12 +2015,108 @@ function createGalleryCard(v){
   return wrap;
 }
 
-function openVitrazh(v){
-  if(v.isActive){
-    switchTab('main',document.querySelector('.ni'));
+/* Создаёт блок инсайта с поддержкой:
+   - сворачивания длинного текста (кнопка развернуть/свернуть)
+   - отображения фото
+   - воспроизведения аудиозаписи
+   - кнопки редактирования (для завершённых витражей)
+   Параметры: v — объект витража; opts {compact:bool, showEdit:bool} */
+function buildInsightBlock(v, opts){
+  opts = opts || {};
+  const hasInsight = v.insight || v.insightPhoto || v.insightAudio;
+  const block = document.createElement('div');
+  if(opts.compact){
+    block.style.cssText = 'margin-top:10px;background:var(--bg3);border-radius:10px;padding:10px 12px;';
+  } else {
+    block.style.cssText = 'margin:0 18px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;';
+  }
+
+  // Заголовок + кнопка редактирования
+  const head = document.createElement('div');
+  head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
+  const label = opts.compact ? 'ИНСАЙТ' : '✦ ИНСАЙТ ПУТИ';
+  head.innerHTML = `<span style="color:var(--accent2);font-size:11px;font-weight:600;letter-spacing:.06em;">${label}</span>`;
+  if(opts.showEdit){
+    const editBtn = document.createElement('button');
+    editBtn.textContent = hasInsight ? '✎ Изменить' : '+ Добавить';
+    editBtn.style.cssText = 'background:none;border:none;color:var(--accent2);font-size:12px;cursor:pointer;font-family:inherit;padding:2px 4px;';
+    editBtn.onclick = (e)=>{ e.stopPropagation(); openInsightEditor(v); };
+    head.appendChild(editBtn);
+  }
+  block.appendChild(head);
+
+  if(!hasInsight){
+    if(opts.showEdit){
+      const empty = document.createElement('div');
+      empty.style.cssText = 'font-size:13px;color:var(--text3);';
+      empty.textContent = 'Пока нет впечатления о пути. Добавь его.';
+      block.appendChild(empty);
+    }
+    return block;
+  }
+
+  // ── Текст с возможностью сворачивания ──
+  if(v.insight){
+    const COLLAPSE_LIMIT = 160; // символов до сворачивания
+    const isLong = v.insight.length > COLLAPSE_LIMIT;
+    const textEl = document.createElement('div');
+    textEl.style.cssText = 'font-size:14px;color:var(--text);line-height:1.6;white-space:pre-wrap;';
+
+    if(isLong){
+      let expanded = false;
+      const shortText = v.insight.slice(0, COLLAPSE_LIMIT).trim() + '…';
+      const render = ()=>{
+        textEl.textContent = expanded ? v.insight : shortText;
+        toggle.textContent = expanded ? 'Свернуть ▴' : 'Читать полностью ▾';
+      };
+      const toggle = document.createElement('button');
+      toggle.style.cssText = 'background:none;border:none;color:var(--accent2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;padding:6px 0 0;display:block;';
+      toggle.onclick = (e)=>{ e.stopPropagation(); expanded=!expanded; render(); };
+      render();
+      block.appendChild(textEl);
+      block.appendChild(toggle);
+    } else {
+      textEl.textContent = v.insight;
+      block.appendChild(textEl);
+    }
+  }
+
+  // ── Фото ──
+  if(v.insightPhoto){
+    const img = document.createElement('img');
+    img.src = v.insightPhoto;
+    img.style.cssText = 'width:100%;border-radius:10px;margin-top:10px;display:block;';
+    block.appendChild(img);
+  }
+
+  // ── Аудио ──
+  if(v.insightAudio){
+    const audioRow = document.createElement('div');
+    audioRow.style.cssText = 'margin-top:10px;';
+    audioRow.innerHTML = '<div style="font-size:11px;color:var(--text3);margin-bottom:4px;">🎙 Голосовое впечатление</div>';
+    const audio = document.createElement('audio');
+    audio.src = v.insightAudio;
+    audio.controls = true;
+    audio.style.cssText = 'width:100%;';
+    audioRow.appendChild(audio);
+    block.appendChild(audioRow);
+  }
+
+  return block;
+}
+
+function openVitrazh(v){  if(v.isActive){
+    if(v.isCurrent){
+      // Это уже текущий витраж — просто переходим на главный экран
+      switchTab('main',document.querySelector('.ni'));
+    } else {
+      // Сохраняем текущий и загружаем выбранный
+      saveCurrentToActive();
+      loadVitrazh(v);
+    }
     return;
   }
-  // Show completed vitrazh in fullscreen overlay
+  // Завершённый витраж — полноэкранный просмотр
   showFullscreenVitrazh(v);
 }
 
@@ -1894,13 +2185,9 @@ function showFullscreenVitrazh(v){
   svgWrap.appendChild(svg);
   overlay.appendChild(svgWrap);
 
-  // Insight
-  if(v.insight){
-    const ins = document.createElement('div');
-    ins.style.cssText = 'margin:0 18px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;';
-    ins.innerHTML = `<div style="font-size:11px;font-weight:600;color:var(--accent2);letter-spacing:.07em;margin-bottom:8px;">✦ ИНСАЙТ ПУТИ</div><div style="font-size:14px;color:var(--text);line-height:1.6;">${v.insight}</div>`;
-    overlay.appendChild(ins);
-  }
+  // Insight — сворачиваемый блок с фото/аудио и кнопкой редактирования
+  const insBlock = buildInsightBlock(v, {compact:false, showEdit:true});
+  overlay.appendChild(insBlock);
 
   // History list
   if(v.shardMemos){
