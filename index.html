@@ -7,8 +7,30 @@
 <title>Витраж — Собери свою новую жизнь</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cinzel:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+/* Убираем синий прямоугольник подсветки касания и случайное выделение
+   текста при быстрых тапах (мобильные браузеры / Telegram WebView). */
+*{
+  -webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none;
+}
+/* Интерактивные элементы не выделяются как текст */
+.sphere-opt, .btn, .ni, .gal-card, .add-card, .gal-filter-btn,
+.sphere-emoji, .sphere-name, .sphere-desc, .ob-dot, button, [onclick], svg, .tab-bar,
+.gal-del-btn, #memo-grabber, .action-num, .opt-pill, .act-card,
+.upload-zone, .toggle, .vg-wrap, .nav, .ni-ic{
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  -ms-user-select:none;
+  user-select:none;
+  touch-action:manipulation; /* убирает 300мс задержку и ожидание double-tap zoom */
+}
+/* Поля ввода и textarea — выделение оставляем (там оно нужно) */
+input, textarea, .ob-sub, .ob-title, [contenteditable]{
+  -webkit-user-select:text;
+  user-select:text;
+}
 :root{
   --bg:#07080f;--bg2:#0d0f1a;--bg3:#13151f;
   --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);
@@ -24,7 +46,7 @@
   --pad-top: calc(var(--safe-top) + var(--tg-top));
   --pad-bottom: calc(var(--safe-bottom) + var(--tg-bottom));
 }
-html,body{height:100%;background:#03040a;font-family:'Inter',sans-serif;color:var(--text);overflow:hidden;}
+html,body{height:100%;background:#03040a;font-family:'Onest',-apple-system,sans-serif;color:var(--text);overflow:hidden;}
 
 /* ══ SCREENS ══ */
 .screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity .5s,transform .5s;z-index:1;}
@@ -84,7 +106,7 @@ body.tg-mode #ob-screen{padding:0;}
 body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 .ob-icon{font-size:64px;text-align:center;filter:drop-shadow(0 0 20px rgba(124,111,255,0.5));}
 .ob-eyebrow{font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;text-align:center;}
-.ob-title{font-size:28px;font-weight:600;letter-spacing:-.6px;line-height:1.2;text-align:center;font-family:'Cinzel',serif;}
+.ob-title{font-size:28px;font-weight:700;letter-spacing:-.8px;line-height:1.18;text-align:center;font-family:'Onest',sans-serif;}
 .ob-sub{font-size:14px;color:var(--text2);line-height:1.7;text-align:center;}
 .ob-dots{display:flex;gap:6px;justify-content:center;}
 .ob-dot{width:6px;height:6px;border-radius:50%;background:var(--bg3);transition:all .3s;}
@@ -108,6 +130,14 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 
 /* Settings screen components */
 .opt-pill{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;}
+.time-chip{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:7px 12px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;transition:all .15s;}
+.time-chip:hover{border-color:var(--accent);color:var(--text);}
+.time-chip.sel{background:var(--accent);border-color:var(--accent);color:#fff;}
+.suggest-chip{background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.3);border-radius:20px;padding:8px 13px;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
+.suggest-chip:hover{background:rgba(124,111,255,.2);border-color:var(--accent);}
+.suggest-chip:active{transform:scale(.95);}
+.suggest-chip.used{opacity:.35;pointer-events:none;}
+.suggest-chip .plus{color:var(--accent2);font-weight:600;}
 .opt-pill:hover{border-color:var(--border2);}
 .opt-pill.sel{border-color:var(--accent);background:rgba(124,111,255,.12);}
 .opt-pill-title{font-size:16px;font-weight:600;}
@@ -242,19 +272,41 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
   <div class="status-bar"><span class="sb-time" id="ob-clk">9:41</span><span class="sb-ic">●●● WiFi ■■■</span></div>
 
   <!-- Шаг 0: приветствие -->
-  <div class="ob-step on" id="ob0" style="justify-content:flex-start;gap:16px;">
+  <div class="ob-step on" id="ob0" style="justify-content:flex-start;gap:22px;">
     <div style="text-align:center;">
-      <div class="ob-icon" style="font-size:72px;margin-bottom:12px;font-family:Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif;">🪟</div>
-      <div class="ob-eyebrow" style="margin-bottom:14px;">Добро пожаловать</div>
-      <div class="ob-title" style="font-size:26px;margin-bottom:16px;">Собери свою лучшую жизнь по кусочкам</div>
-      <div class="ob-sub">Каждое выполненное действие — осколок витража. Выполняй действие и открывай кусочек витража. Собери все — и увидишь тайный образ.</div>
+      <div style="margin:0 auto 16px;width:84px;height:84px;filter:drop-shadow(0 0 22px rgba(124,111,255,.55));">
+        <svg viewBox="0 0 84 110" width="84" height="84" style="display:block;margin:0 auto;overflow:visible;">
+          <defs>
+            <linearGradient id="vg-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient>
+            <linearGradient id="vg-vio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient>
+            <linearGradient id="vg-teal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient>
+            <linearGradient id="vg-rose" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient>
+          </defs>
+          <!-- арочное окно: рамка -->
+          <path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="#c8a86a" stroke-width="3.5" stroke-linejoin="round"/>
+          <!-- осколки -->
+          <path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#vg-sky)"/>
+          <path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#vg-vio)"/>
+          <path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#vg-teal)"/>
+          <path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#vg-rose)" opacity=".92"/>
+          <path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#vg-sky)" opacity=".85"/>
+          <path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#vg-vio)" opacity=".88"/>
+          <!-- звезда-блик -->
+          <path d="M42,30 l2.4,5.6 l5.6,2.4 l-5.6,2.4 l-2.4,5.6 l-2.4,-5.6 l-5.6,-2.4 l5.6,-2.4 Z" fill="#fff3d0"/>
+          <!-- свинцовые линии -->
+          <path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="ob-eyebrow" style="margin-bottom:16px;">Добро пожаловать</div>
+      <div class="ob-title" style="font-size:26px;margin-bottom:18px;">Собери свою лучшую жизнь по кусочкам</div>
+      <div class="ob-sub" style="font-size:15px;line-height:1.65;max-width:300px;margin:0 auto;text-wrap:balance;">Каждое выполненное действие — осколок витража. Открывай кусочки один за другим. Собери все — и увидишь тайный образ</div>
     </div>
-    <div style="background:linear-gradient(135deg,rgba(124,111,255,.12),rgba(45,212,191,.08));border:1px solid rgba(124,111,255,.25);border-radius:20px;padding:20px 18px;display:flex;flex-direction:column;gap:12px;">
-      <div style="display:flex;align-items:center;gap:12px;"><div style="font-size:26px;">✦</div><div><div style="font-size:14px;font-weight:600;">Открывай осколки</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">Каждое выполненное действие — один осколок</div></div></div>
-      <div style="display:flex;align-items:center;gap:12px;"><div style="font-size:26px;">🎨</div><div><div style="font-size:14px;font-weight:600;">Собирай образ</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">Витраж складывается из твоих усилий</div></div></div>
-      <div style="display:flex;align-items:center;gap:12px;"><div style="font-size:26px;">📖</div><div><div style="font-size:14px;font-weight:600;">Добавляй заметки</div><div style="font-size:12px;color:var(--text2);margin-top:2px;">Фото, текст и аудио — памятник трансформации</div></div></div>
+    <div style="background:linear-gradient(135deg,rgba(124,111,255,.12),rgba(45,212,191,.08));border:1px solid rgba(124,111,255,.25);border-radius:20px;padding:22px 20px;display:flex;flex-direction:column;gap:18px;">
+      <div style="display:flex;align-items:center;gap:14px;"><div style="font-size:26px;width:30px;text-align:center;flex-shrink:0;">✦</div><div><div style="font-size:14px;font-weight:600;">Открывай осколки</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Каждое выполненное действие — один осколок</div></div></div>
+      <div style="display:flex;align-items:center;gap:14px;"><div style="font-size:26px;width:30px;text-align:center;flex-shrink:0;">🎨</div><div><div style="font-size:14px;font-weight:600;">Собирай образ</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Витраж складывается из твоих усилий</div></div></div>
+      <div style="display:flex;align-items:center;gap:14px;"><div style="font-size:26px;width:30px;text-align:center;flex-shrink:0;">📖</div><div><div style="font-size:14px;font-weight:600;">Добавляй заметки</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Фото, текст и аудио — хронология твоей трансформации</div></div></div>
     </div>
-    <button class="btn btn-primary" onclick="nextOb()">Начать ритуал →</button>
+    <button class="btn btn-primary" onclick="nextOb()" style="margin-top:6px;">Начать ритуал →</button>
     <div class="ob-dots" style="margin-top:4px;"><div class="ob-dot on"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
   </div>
 
@@ -278,20 +330,17 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
   <!-- Шаг 2: действия -->
   <div class="ob-step" id="ob2">
     <div class="ob-eyebrow">Шаг 2 из 3</div>
-    <div class="ob-title" style="font-size:22px;">Добавь 1–3 действия</div>
-    <div class="ob-sub" style="font-size:13px;">Что ты будешь делать каждый день? Каждое выполненное действие открывает осколок витража.</div>
-    <div id="act-list-wrap" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;"></div>
-    <button class="btn btn-ghost" onclick="addActionField()" style="margin-top:0;font-size:13px;padding:10px;">+ Добавить действие</button>
+    <div class="ob-title" style="font-size:22px;">Добавь 1-7 действий</div>
+    <div class="ob-sub" style="font-size:15px;line-height:1.65;max-width:300px;margin:0 auto;text-wrap:balance;">Что ты будешь делать каждый день? Каждое выполненное действие открывает осколок витража</div>
+    <div id="act-list-wrap" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;"></div>
+    <button class="btn btn-ghost" id="add-action-btn" onclick="addActionField()" style="margin-top:0;font-size:13px;padding:10px;">+ Добавить действие</button>
 
-    <!-- Загрузка своего изображения -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
-      <div style="font-size:12px;font-weight:600;color:var(--accent2);margin-bottom:8px;">✦ Свой образ витража (необязательно)</div>
-      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('img-input').click()">
-        <input type="file" id="img-input" accept="image/*" onchange="handleImageUpload(event)">
-        <div class="uz-icon" id="uz-icon">🖼️</div>
-        <div class="uz-title" id="uz-title">Загрузить своё изображение</div>
-        <div class="uz-sub" id="uz-sub">Оно превратится в витраж-пазл</div>
+    <!-- Подсказки действий для выбранной сферы -->
+    <div id="act-suggest-wrap" style="display:none;">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:9px;display:flex;align-items:center;gap:6px;">
+        <span style="color:var(--accent2);">✦</span> Идеи для твоей сферы — нажми, чтобы добавить
       </div>
+      <div id="act-suggest-chips" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
     </div>
 
     <button class="btn btn-primary" onclick="nextOb()">Дальше →</button>
@@ -333,12 +382,21 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
         <div style="font-size:13px;font-weight:600;">🔔 Напоминание от Мастера</div>
         <div class="toggle on" id="reminder-toggle" onclick="toggleReminder()"><div class="toggle-knob"></div></div>
       </div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Мастер напомнит закрасить осколок в выбранное время</div>
-      <div id="reminder-time-row" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
-        <div class="opt-pill sm" data-val="09:00" onclick="selSetting(this,'reminderTime','09:00')"><div class="opt-pill-title sm">09:00</div></div>
-        <div class="opt-pill sm" data-val="14:00" onclick="selSetting(this,'reminderTime','14:00')"><div class="opt-pill-title sm">14:00</div></div>
-        <div class="opt-pill sm sel" data-val="21:00" onclick="selSetting(this,'reminderTime','21:00')"><div class="opt-pill-title sm">21:00</div></div>
-        <div class="opt-pill sm" data-val="22:30" onclick="selSetting(this,'reminderTime','22:30')"><div class="opt-pill-title sm">22:30</div></div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Мастер напомнит закрасить осколок в выбранное время</div>
+      <div id="reminder-time-row">
+        <!-- Точный выбор времени через нативный селектор -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="font-size:13px;color:var(--text2);">Время:</span>
+          <input type="time" id="reminder-time-input" value="21:00" onchange="onReminderTimeChange(this.value)"
+            style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;font-size:16px;color:var(--text);font-family:inherit;outline:none;color-scheme:dark;">
+        </div>
+        <!-- Быстрый выбор -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button type="button" class="time-chip" onclick="setReminderQuick('09:00')">09:00</button>
+          <button type="button" class="time-chip" onclick="setReminderQuick('14:00')">14:00</button>
+          <button type="button" class="time-chip" onclick="setReminderQuick('21:00')">21:00</button>
+          <button type="button" class="time-chip" onclick="setReminderQuick('22:30')">22:30</button>
+        </div>
       </div>
     </div>
 
@@ -396,7 +454,7 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
       </div>
     </div>
     <div class="nav">
-      <button class="ni on" onclick="switchTab('main',this)"><span class="ni-ic">🪟</span>Витраж</button>
+      <button class="ni on" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
       <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic">🏛</span>Собор</button>
       <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
     </div>
@@ -414,7 +472,7 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
       <div id="gallery-list"></div>
     </div>
     <div class="nav">
-      <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic">🪟</span>Витраж</button>
+      <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
       <button class="ni on" onclick="switchTab('gallery',this)"><span class="ni-ic">🏛</span>Собор</button>
       <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
     </div>
@@ -453,15 +511,31 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
       <div class="menu-item" onclick="resetApp()">🔄<span>Начать заново</span><span class="mi-arrow">›</span></div>
     </div>
     <div class="nav">
-      <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic">🪟</span>Витраж</button>
+      <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
       <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic">🏛</span>Собор</button>
       <button class="ni on" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
     </div>
   </div>
 
+<!-- ══ ВЫБОР ИСТОЧНИКА ФОТО (камера / галерея) ══ -->
+<div id="photo-choice" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closePhotoChoice()">
+  <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:16px;padding-bottom:calc(16px + var(--pad-bottom));width:100%;max-width:420px;">
+    <div style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;"></div>
+    <div style="font-size:15px;font-weight:600;text-align:center;margin-bottom:14px;">Добавить фото</div>
+    <button type="button" onclick="choosePhotoSource('camera')" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:15px;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:22px;">📸</span> Сделать снимок
+    </button>
+    <button type="button" onclick="choosePhotoSource('gallery')" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:15px;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+      <span style="font-size:22px;">🖼️</span> Выбрать из галереи
+    </button>
+    <button type="button" onclick="closePhotoChoice()" style="width:100%;background:none;border:none;padding:12px;font-size:14px;color:var(--text2);cursor:pointer;font-family:inherit;">Отмена</button>
+  </div>
+</div>
+
 <!-- ══ SHARD MEMO MODAL ══ -->
 <div id="memo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:flex-end;justify-content:center;">
-  <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;max-height:85vh;overflow-y:auto;">
+  <div id="memo-sheet" style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;max-height:85vh;overflow-y:auto;transition:transform .25s ease;">
+    <div id="memo-grabber" style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:-6px auto 12px;cursor:grab;"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
       <div style="font-size:16px;font-weight:600;" id="memo-title">Осколок #1</div>
       <button onclick="closeMemo()" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;">✕</button>
@@ -473,16 +547,18 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
       <div id="memo-text-view" style="background:var(--bg3);border-radius:12px;padding:12px;font-size:14px;line-height:1.6;margin-bottom:8px;display:none;"></div>
       <img id="memo-photo-view" style="width:100%;border-radius:12px;margin-bottom:8px;display:none;" src="">
       <audio id="memo-audio-view" controls style="width:100%;display:none;"></audio>
+      <button id="memo-audio-del" onclick="deleteMemoAudio()" style="display:none;background:none;border:none;color:var(--rose);cursor:pointer;font-size:12px;margin-top:4px;font-family:inherit;">✕ Удалить голосовое</button>
     </div>
     <!-- Add/edit memo -->
     <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Добавить впечатление</div>
     <textarea id="memo-text" placeholder="Что ты почувствовал? Что изменилось?" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;color:var(--text);font-family:inherit;resize:vertical;min-height:80px;outline:none;margin-bottom:8px;"></textarea>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      <label for-memo="1" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);" id="memo-photo-label">
-        📷 Фото<input type="file" accept="image/*" style="display:none;" onchange="memoPhotoChange(event)">
-      </label>
+      <button type="button" onclick="openPhotoChoice('memo')" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);font-family:inherit;">📷 Фото</button>
       <button onclick="startMemoAudio()" id="memo-audio-btn" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;">🎙 Запись</button>
     </div>
+    <!-- Скрытые поля: камера и галерея -->
+    <input type="file" id="memo-photo-camera" accept="image/*" capture="environment" style="display:none;" onchange="memoPhotoChange(event)">
+    <input type="file" id="memo-photo-gallery" accept="image/*" style="display:none;" onchange="memoPhotoChange(event)">
     <div id="memo-photo-preview" style="display:none;margin-bottom:8px;"><img id="memo-photo-img" style="width:100%;border-radius:12px;" src=""><button onclick="clearMemoPhoto()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;margin-top:4px;">✕ Удалить фото</button></div>
     <div id="memo-audio-status" style="display:none;font-size:12px;color:var(--teal);margin-bottom:8px;"></div>
     <button class="btn btn-primary" onclick="saveMemo()" style="font-size:14px;padding:13px;">Сохранить</button>
@@ -500,13 +576,17 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
     <div style="font-size:13px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Главный инсайт пути</div>
     <textarea id="comp-insight" placeholder="Что изменилось в тебе? Главная мысль, эмоция, открытие..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;color:var(--text);font-family:inherit;resize:vertical;min-height:90px;outline:none;margin-bottom:10px;"></textarea>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      <label style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);">
-        📷 Фото<input type="file" accept="image/*" style="display:none;" onchange="compPhotoChange(event)">
-      </label>
+      <button type="button" onclick="openPhotoChoice('comp')" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);font-family:inherit;">📷 Фото</button>
       <button onclick="startCompAudio()" id="comp-audio-btn" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;">🎙 Запись</button>
     </div>
+    <input type="file" id="comp-photo-camera" accept="image/*" capture="environment" style="display:none;" onchange="compPhotoChange(event)">
+    <input type="file" id="comp-photo-gallery" accept="image/*" style="display:none;" onchange="compPhotoChange(event)">
     <div id="comp-photo-preview" style="display:none;margin-bottom:10px;"><img id="comp-photo-img" style="width:100%;border-radius:12px;" src=""><button onclick="clearCompPhoto()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;margin-top:4px;">✕ Удалить фото</button></div>
     <div id="comp-audio-status" style="display:none;font-size:12px;color:var(--teal);margin-bottom:10px;"></div>
+    <div id="comp-audio-wrap" style="display:none;margin-bottom:10px;">
+      <audio id="comp-audio-play" controls style="width:100%;"></audio>
+      <button onclick="deleteCompAudio()" style="background:none;border:none;color:var(--rose);cursor:pointer;font-size:12px;margin-top:4px;font-family:inherit;">✕ Удалить голосовое</button>
+    </div>
     <button class="btn btn-primary" onclick="saveCompletion()" style="margin-bottom:10px;">Сохранить ✦</button>
     <button class="btn btn-ghost" onclick="closeCompletion()" style="font-size:13px;padding:11px;">Позже</button>
   </div>
@@ -591,7 +671,7 @@ function updateClocks(){
   const el=document.getElementById('app-clk');
   if(el)el.textContent=t;
   const h=now.getHours();
-  const greet=h<12?'Доброе утро ✦':h<17?'Добрый день ✦':'Добрый вечер ✦';
+  const greet=h<5?'Доброй ночи ✦':h<12?'Доброе утро ✦':h<17?'Добрый день ✦':h<23?'Добрый вечер ✦':'Доброй ночи ✦';
   const gel=document.getElementById('main-greeting');
   if(gel)gel.textContent=greet;
   const days=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
@@ -600,6 +680,8 @@ function updateClocks(){
   if(del)del.textContent=days[now.getDay()]+', '+now.getDate()+' '+months[now.getMonth()];
 }
 updateClocks();
+// Подсветить чип быстрого выбора времени по умолчанию (после инициализации settings)
+setTimeout(()=>{ try{ syncReminderChips((typeof settings!=='undefined'&&settings.reminderTime)||'21:00'); }catch(e){} }, 0);
 setInterval(updateClocks,30000);
 
 /* ══ ONBOARDING ══ */
@@ -851,6 +933,26 @@ function toggleReminder(){
   document.getElementById('reminder-time-row').style.pointerEvents = settings.reminderOn ? 'auto' : 'none';
 }
 
+// Точное время уведомления из нативного селектора
+function onReminderTimeChange(value){
+  if(!value) return;
+  settings.reminderTime=value;
+  syncReminderChips(value);
+}
+// Быстрый выбор времени — заполняет input и сохраняет
+function setReminderQuick(value){
+  settings.reminderTime=value;
+  const inp=document.getElementById('reminder-time-input');
+  if(inp) inp.value=value;
+  syncReminderChips(value);
+}
+// Подсвечиваем чип, если он совпадает с выбранным временем
+function syncReminderChips(value){
+  document.querySelectorAll('.time-chip').forEach(c=>{
+    c.classList.toggle('sel', c.textContent.trim()===value);
+  });
+}
+
 function addMemoIndicators(svg){
   if(!svg||!app.shardMemos) return;
   const polys=getShardPolygons(vitrazh_W,vitrazh_H);
@@ -920,6 +1022,7 @@ function startApp(){
   document.getElementById('ob-screen').classList.add('hidden');
   document.getElementById('app-screen').classList.remove('hidden');
   initMainScreen();
+  scheduleSave();
 }
 
 /* ══ МНОЖЕСТВЕННЫЕ ВИТРАЖИ ══ */
@@ -948,6 +1051,7 @@ function snapshotCurrentVitrazh(){
 function saveCurrentToActive(){
   const snap=snapshotCurrentVitrazh();
   if(!snap) return;
+  scheduleSave();
   const idx=app.activeVitrazhi.findIndex(v=>v.id===snap.id);
   if(idx>=0) app.activeVitrazhi[idx]=snap;
   else app.activeVitrazhi.push(snap);
@@ -979,6 +1083,7 @@ function loadVitrazh(snap){
   document.getElementById('main-done-banner').classList.remove('show');
   switchTab('main',document.querySelector('.ni'));
   initMainScreen();
+  scheduleSave();
 }
 
 // Запускает создание нового витража (новая сфера) — сохраняет текущий
@@ -1487,7 +1592,13 @@ function addMemoIndicators(svg){
 }
 
 function tapShard(idx, e){
-  if(app.shards[idx]) return;
+  if(app.shards[idx]){
+    // Осколок уже открыт. Если к нему есть заметка (текст/фото/аудио) —
+    // открываем её для просмотра по тапу на сам осколок (а не только по точке).
+    const m=app.shardMemos[idx];
+    if(m && (m.text||m.photo||m.audioUrl)){ openMemoModal(idx); }
+    return;
+  }
 
   // Дневной лимит осколков
   if(settings.dailyLimit>0 && app.shardsToday>=settings.dailyLimit){
@@ -1537,23 +1648,54 @@ function tapShard(idx, e){
 
   // Витраж завершён?
   const done=app.shards.filter(Boolean).length;
-  if(done===TOTAL){
+  const isFinalShard=(done===TOTAL);
+  if(isFinalShard){
     document.getElementById('main-vcard').classList.add('glow');
     document.getElementById('main-done-banner').classList.add('show');
     const endMsgs=['Витраж завершён! Образ открыт полностью.','Мастер восхищён. Весь свет на месте.'];
     document.getElementById('master-msg').textContent=endMsgs[Math.floor(Math.random()*endMsgs.length)];
-    setTimeout(()=>{
-      document.getElementById('comp-title').textContent='Витраж «'+app.sphereName+'» завершён!';
-      document.getElementById('completion-modal').style.display='flex';
-    }, 800);
+    // Засчитываем витраж как завершённый СРАЗУ — независимо от того,
+    // добавит пользователь инсайт или нажмёт «Позже».
+    registerCompletedVitrazh();
   }
 
   buildActionsList();
   updateUI();
   updateGallery();
 
-  // Открываем модалку заметки — небольшая задержка чтобы дать анимациям осесть
+  // Сначала — модалка заметки к осколку.
+  // Если это финальный осколок, окно инсайта откроем ПОСЛЕ закрытия заметки.
+  _pendingCompletion = isFinalShard;
   setTimeout(()=>{ if(app.shards[idx]) openMemoModal(idx); }, 650);
+  scheduleSave();
+}
+
+// Переносит ТЕКУЩИЙ витраж в список завершённых (без инсайта).
+// Инсайт можно добавить позже. Возвращает completedAt-id записи.
+let _justCompletedId = null;
+function registerCompletedVitrazh(){
+  const completedAt = new Date().toLocaleString('ru');
+  app.completed.push({
+    name:'Витраж '+app.sphereName,
+    sphere:app.sphere,
+    sphereName:app.sphereName,
+    emoji:app.sphereEmoji,
+    shards:[...app.shards],
+    shardColors:[...app.shardColors],
+    shardMemos:[...app.shardMemos],
+    shardDates:[...app.shardDates],
+    vTotal:app.vTotal||TOTAL,
+    total:app.vTotal||TOTAL,
+    customImage:app.customImage,
+    isPresetImage:app.isPresetImage,
+    insight:null, insightPhoto:null, insightAudio:null,
+    completedAt
+  });
+  _justCompletedId = completedAt;
+  // Текущий витраж больше не «активный» — он завершён.
+  // Подгружаем следующий незавершённый, если есть, иначе сбрасываем текущий.
+  app.activeId = null;
+  document.getElementById('g-comp').textContent=app.completed.length;
 }
 
 function buildActionsList(){
@@ -1659,35 +1801,138 @@ function spawnParticles(x,y){
 }
 
 function resetApp(){
-  if(confirm('Начать заново? Весь прогресс будет сброшен.')) location.reload();
+  if(confirm('Начать заново? Весь прогресс будет полностью удалён без возможности восстановления.')){
+    clearAllProgress();
+    // Небольшая задержка чтобы успели очиститься ключи облака, затем перезагрузка
+    setTimeout(()=>location.reload(), 300);
+  }
 }
 
 
 /* ══ DYNAMIC ACTIONS IN OB2 ══ */
+// Примеры действий по сферам — подсказка в placeholder, чтобы было понятно, что вводить
+const ACTION_EXAMPLES = {
+  sleep:   ['Например: лечь спать до 23:00', 'Например: без телефона за час до сна', 'Например: проветрить комнату', 'Например: не пить кофе после 16:00', 'Например: подъём в одно время', 'Например: тёплый душ перед сном', 'Например: 10 минут чтения'],
+  sport:   ['Например: зарядка 10 минут', 'Например: 10 000 шагов', 'Например: 20 отжиманий', 'Например: растяжка вечером', 'Например: тренировка 30 минут', 'Например: подняться по лестнице', 'Например: планка 1 минута'],
+  work:    ['Например: 2 часа без отвлечений', 'Например: главная задача дня', 'Например: убрать соцсети до обеда', 'Например: план на завтра', 'Например: 25 минут фокуса', 'Например: разобрать почту', 'Например: 30 минут учёбы'],
+  calm:    ['Например: медитация 10 минут', 'Например: дыхание 5 минут', 'Например: прогулка без телефона', 'Например: дневник благодарности', 'Например: цифровая тишина час', 'Например: побыть в тишине', 'Например: записать три радости'],
+  food:    ['Например: завтрак без сахара', 'Например: 2 литра воды', 'Например: овощи в каждый приём', 'Например: без перекусов после 20:00', 'Например: домашняя еда', 'Например: без фастфуда', 'Например: фрукт вместо сладкого'],
+  creative:['Например: рисовать 15 минут', 'Например: написать страницу', 'Например: сыграть мелодию', 'Например: новая идея в блокнот', 'Например: 20 минут творчества', 'Например: сделать фото дня', 'Например: учить новое слово'],
+};
+function actionPlaceholder(index){
+  const ex = ACTION_EXAMPLES[app.sphere];
+  if(ex && ex[index]) return ex[index];
+  return 'Например: моё ежедневное действие';
+}
+
+const MAX_ACTIONS = 7;
 function addActionField(){
   const wrap=document.getElementById('act-list-wrap');
-  if(wrap.children.length>=30) return;
-  const num=wrap.children.length+1;
+  if(wrap.children.length>=MAX_ACTIONS) return;
+  const idx=wrap.children.length; // 0-based
+  const num=idx+1;
+  const isFirst=(idx===0);
   const row=document.createElement('div');
   row.className='action-inp-row';
   row.style.cssText='display:flex;align-items:center;gap:10px;';
+  // У первого действия НЕ показываем крестик удаления (его можно оставить пустым,
+  // но нельзя удалить — это обязательное основное действие).
+  const delBtn = isFirst ? '' :
+    `<button onclick="this.parentElement.remove();renumberActions();updateAddBtn();" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;">✕</button>`;
   row.innerHTML=`<span class="action-num" style="min-width:22px;color:var(--text3);font-size:14px;">${num}</span>
-    <input class="action-inp dyn-act-input" placeholder="Действие ${num}" style="flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;">
-    <button onclick="this.parentElement.remove();renumberActions();" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;">✕</button>`;
+    <input class="action-inp dyn-act-input" placeholder="${actionPlaceholder(idx)}" style="flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;">
+    ${delBtn}`;
   wrap.appendChild(row);
   row.querySelector('input').focus();
+  updateAddBtn();
 }
 function renumberActions(){
   const rows=document.querySelectorAll('#act-list-wrap .action-inp-row');
   rows.forEach((r,i)=>{
     const num=r.querySelector('.action-num');
     if(num) num.textContent=i+1;
+    // Обновляем placeholder под новый порядковый номер/сферу
+    const inp=r.querySelector('.dyn-act-input');
+    if(inp && !inp.value) inp.placeholder=actionPlaceholder(i);
   });
+  updateAddBtn();
+  if(typeof renderSuggestChips==='function') renderSuggestChips();
+}
+// Прячем кнопку «+ Добавить действие» при достижении лимита
+function updateAddBtn(){
+  const wrap=document.getElementById('act-list-wrap');
+  const btn=document.getElementById('add-action-btn');
+  if(!wrap||!btn) return;
+  btn.style.display = wrap.children.length>=MAX_ACTIONS ? 'none' : '';
 }
 // Add first field automatically when screen 2 shows
 function initActFields(){
   const wrap=document.getElementById('act-list-wrap');
-  if(wrap && wrap.children.length===0) addActionField();
+  if(wrap && wrap.children.length===0){ addActionField(); }
+  else {
+    // Обновляем placeholder под выбранную сферу (если вернулись и сменили её)
+    const rows=document.querySelectorAll('#act-list-wrap .action-inp-row');
+    rows.forEach((r,i)=>{
+      const inp=r.querySelector('.dyn-act-input');
+      if(inp && !inp.value) inp.placeholder=actionPlaceholder(i);
+    });
+  }
+  updateAddBtn();
+  renderSuggestChips();
+}
+
+/* ══ ПОДСКАЗКИ ДЕЙСТВИЙ (бесплатные идеи для сферы) ══ */
+// Чистые названия действий (без «Например: ») для чипов-подсказок
+function suggestionList(){
+  const ex = ACTION_EXAMPLES[app.sphere] || [];
+  return ex.map(s => s.replace(/^Например:\s*/, ''));
+}
+// Текущие введённые действия (в нижнем регистре) — чтобы не предлагать дубли
+function currentActionValues(){
+  return Array.from(document.querySelectorAll('.dyn-act-input'))
+    .map(i => i.value.trim().toLowerCase())
+    .filter(Boolean);
+}
+function renderSuggestChips(){
+  const wrap = document.getElementById('act-suggest-wrap');
+  const cont = document.getElementById('act-suggest-chips');
+  if(!wrap || !cont) return;
+  const sugg = suggestionList();
+  if(!sugg.length){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  cont.innerHTML='';
+  const used = currentActionValues();
+  sugg.forEach(text=>{
+    const chip=document.createElement('button');
+    chip.type='button';
+    chip.className='suggest-chip'+(used.includes(text.toLowerCase())?' used':'');
+    chip.innerHTML=`<span class="plus">+</span> ${text}`;
+    chip.onclick=()=>addSuggestedAction(text);
+    cont.appendChild(chip);
+  });
+}
+// Добавляет действие из подсказки: в первое пустое поле или новое
+function addSuggestedAction(text){
+  const inputs = Array.from(document.querySelectorAll('.dyn-act-input'));
+  // Уже добавлено? — выходим
+  if(inputs.some(i=>i.value.trim().toLowerCase()===text.toLowerCase())) return;
+  // Ищем первое пустое поле
+  let target = inputs.find(i=>!i.value.trim());
+  if(target){
+    target.value=text;
+  } else {
+    // Все поля заняты — добавляем новое (если не достигнут лимит)
+    const wrap=document.getElementById('act-list-wrap');
+    if(wrap.children.length>=MAX_ACTIONS){
+      // Лимит — мягко подсказываем
+      return;
+    }
+    addActionField();
+    const newInputs=document.querySelectorAll('.dyn-act-input');
+    newInputs[newInputs.length-1].value=text;
+  }
+  renumberActions();
+  renderSuggestChips(); // обновляем состояние чипов (отметить использованные)
 }
 
 /* ══ MEMO MODAL ══ */
@@ -1702,11 +1947,12 @@ function openMemoModal(idx){
   const tv=document.getElementById('memo-text-view');
   const pv=document.getElementById('memo-photo-view');
   const av=document.getElementById('memo-audio-view');
+  const adel=document.getElementById('memo-audio-del');
   if(m.text||m.photo||m.audioUrl){
     cv.style.display='block';
     if(m.text){tv.style.display='block';tv.textContent=m.text;}else{tv.style.display='none';}
-    if(m.photo){pv.style.display='block';document.getElementById('memo-photo-view').querySelector('img').src=m.photo;}else{pv.style.display='none';}
-    if(m.audioUrl){av.style.display='block';av.src=m.audioUrl;}else{av.style.display='none';}
+    if(m.photo){pv.style.display='block';pv.src=m.photo;}else{pv.style.display='none';}
+    if(m.audioUrl){av.style.display='block';av.src=m.audioUrl;adel.style.display='block';}else{av.style.display='none';adel.style.display='none';}
   } else {cv.style.display='none';}
   // Reset edit fields
   document.getElementById('memo-text').value=m.text||'';
@@ -1716,9 +1962,9 @@ function openMemoModal(idx){
   const modal=document.getElementById('memo-modal');
   modal.style.display='flex';
 }
+let _pendingCompletion = false; // на финальном осколке: открыть инсайт после закрытия заметки
 function closeMemo(){
   document.getElementById('memo-modal').style.display='none';
-  // Restore edit fields in case they were hidden for archived view
   const mt=document.getElementById('memo-text');
   if(mt) mt.style.display='';
   const ab=document.getElementById('memo-audio-btn');
@@ -1726,7 +1972,50 @@ function closeMemo(){
   const phl=document.getElementById('memo-photo-label'); if(phl) phl.style.display='';
   const sb=document.querySelector('#memo-modal .btn-primary');
   if(sb) sb.textContent='Сохранить';
+
+  // Если только что закрыли заметку финального осколка — теперь показываем инсайт
+  if(_pendingCompletion){
+    _pendingCompletion = false;
+    setTimeout(()=>{
+      document.getElementById('comp-title').textContent='Витраж «'+app.sphereName+'» завершён!';
+      document.getElementById('completion-modal').style.display='flex';
+    }, 350);
+  }
 }
+function deleteMemoAudio(){  const idx=app.currentMemoIdx;
+  if(idx<0||!app.shardMemos[idx]) return;
+  if(!confirm('Удалить голосовое сообщение из этой заметки?')) return;
+  app.shardMemos[idx].audioUrl=null;
+  app.memoAudioUrl=null;
+  // Если в заметке больше ничего нет — очищаем её
+  const m=app.shardMemos[idx];
+  if(!m.text && !m.photo && !m.audioUrl) app.shardMemos[idx]=null;
+  document.getElementById('memo-audio-view').style.display='none';
+  document.getElementById('memo-audio-del').style.display='none';
+  saveProgress();
+  // Перерисовываем витраж (индикатор заметки мог исчезнуть)
+  if(typeof rebuildVitrazh==='function') rebuildVitrazh();
+}
+/* ══ ВЫБОР ИСТОЧНИКА ФОТО ══ */
+let _photoTarget = null; // 'memo' | 'comp'
+function openPhotoChoice(target){
+  _photoTarget = target;
+  document.getElementById('photo-choice').style.display='flex';
+}
+function closePhotoChoice(){
+  document.getElementById('photo-choice').style.display='none';
+}
+function choosePhotoSource(source){
+  closePhotoChoice();
+  // Выбираем нужный скрытый input: камера (capture) или галерея
+  const id = _photoTarget + '-photo-' + source; // напр. memo-photo-camera
+  const input = document.getElementById(id);
+  if(input){
+    input.value=''; // сброс, чтобы повторный выбор того же файла сработал
+    input.click();
+  }
+}
+
 function memoPhotoChange(e){
   const file=e.target.files[0]; if(!file)return;
   const r=new FileReader();
@@ -1740,12 +2029,31 @@ function memoPhotoChange(e){
 }
 function clearMemoPhoto(){ app.memoPhotoData=null; document.getElementById('memo-photo-preview').style.display='none'; }
 let _memoRecording=false;
+
+/* ══ ОБЩИЙ ДОСТУП К МИКРОФОНУ ══
+   Запрашиваем разрешение ОДИН раз и держим поток живым,
+   чтобы браузер больше не переспрашивал при каждой записи. */
+let _sharedMicStream=null;
+function getMicStream(){
+  // Если поток уже есть и активен — переиспользуем (без повторного запроса)
+  if(_sharedMicStream && _sharedMicStream.active){
+    return Promise.resolve(_sharedMicStream);
+  }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    return Promise.reject(new Error('no-media'));
+  }
+  return navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    _sharedMicStream=stream;
+    return stream;
+  });
+}
+// Поток НЕ останавливаем после записи (чтобы не терять разрешение).
+// Эта функция-заглушка оставлена для совместимости вызовов.
+function releaseMicStream(stream){ /* намеренно не глушим — держим разрешение */ }
+
 function startMemoAudio(){
   if(_memoRecording){ stopMemoAudio(); return; }
-  if(!navigator.mediaDevices){
-    alert('Запись недоступна в этом браузере');return;
-  }
-  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+  getMicStream().then(stream=>{
     _memoRecording=true;
     document.getElementById('memo-audio-btn').textContent='⏹ Остановить';
     document.getElementById('memo-audio-status').style.display='block';
@@ -1757,8 +2065,14 @@ function startMemoAudio(){
     rec.onstop=()=>{
       const blob=new Blob(chunks,{type:'audio/webm'});
       app.memoAudioUrl=URL.createObjectURL(blob);
-      document.getElementById('memo-audio-status').textContent='✓ Запись готова';
-      stream.getTracks().forEach(t=>t.stop());
+      // Показываем плеер с возможностью удалить
+      const cv=document.getElementById('memo-content-view');
+      const av=document.getElementById('memo-audio-view');
+      const adel=document.getElementById('memo-audio-del');
+      cv.style.display='block';
+      av.style.display='block'; av.src=app.memoAudioUrl;
+      adel.style.display='block';
+      document.getElementById('memo-audio-status').style.display='none';
       _memoRecording=false;
     };
     rec.start();
@@ -1780,6 +2094,9 @@ function saveMemo(){
     date: app.shardDates[idx]||new Date().toLocaleString('ru')
   };
   closeMemo();
+  // Перерисовываем витраж сразу — чтобы жёлтая точка-индикатор появилась немедленно
+  if(typeof rebuildVitrazh==='function') rebuildVitrazh();
+  saveProgress();
 }
 
 /* ══ COMPLETION ══ */
@@ -1799,8 +2116,7 @@ function clearCompPhoto(){ app.compPhotoData=null; document.getElementById('comp
 let _compRecording=false;
 function startCompAudio(){
   if(_compRecording){ stopCompAudio(); return; }
-  if(!navigator.mediaDevices){ alert('Запись недоступна в этом браузере'); return; }
-  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+  getMicStream().then(stream=>{
     _compRecording=true;
     document.getElementById('comp-audio-btn').textContent='⏹ Остановить';
     document.getElementById('comp-audio-status').style.display='block';
@@ -1812,8 +2128,11 @@ function startCompAudio(){
     rec.onstop=()=>{
       const blob=new Blob(chunks,{type:'audio/webm'});
       app.compAudioUrl=URL.createObjectURL(blob);
-      document.getElementById('comp-audio-status').textContent='✓ Запись готова';
-      stream.getTracks().forEach(t=>t.stop());
+      document.getElementById('comp-audio-status').style.display='none';
+      const aw=document.getElementById('comp-audio-wrap');
+      aw.style.display='block';
+      document.getElementById('comp-audio-play').src=app.compAudioUrl;
+      releaseMicStream(stream);
       _compRecording=false;
     };
     rec.start();
@@ -1826,6 +2145,13 @@ function stopCompAudio(){
 
 function closeCompletion(){
   document.getElementById('completion-modal').style.display='none';
+  // Если это было завершение нового витража (не редактирование) —
+  // витраж уже засчитан, просто переключаемся дальше без инсайта.
+  if(_compEditId===null && _justCompletedId!==null){
+    finishCurrentAfterCompletion();
+    updateGallery();
+    saveProgress();
+  }
   _compEditId=null;
 }
 
@@ -1846,15 +2172,33 @@ function openInsightEditor(v){
   } else {
     document.getElementById('comp-photo-preview').style.display='none';
   }
-  // audio status
+  // audio playback + delete
+  const aw=document.getElementById('comp-audio-wrap');
   if(v.insightAudio){
-    document.getElementById('comp-audio-status').style.display='block';
-    document.getElementById('comp-audio-status').textContent='✓ Аудио есть';
+    document.getElementById('comp-audio-status').style.display='none';
+    aw.style.display='block';
+    document.getElementById('comp-audio-play').src=v.insightAudio;
   } else {
+    aw.style.display='none';
     document.getElementById('comp-audio-status').style.display='none';
   }
   document.getElementById('comp-audio-btn').textContent='🎙 Запись';
   document.getElementById('completion-modal').style.display='flex';
+}
+
+function deleteCompAudio(){
+  if(!confirm('Удалить голосовое сообщение из инсайта?')) return;
+  app.compAudioUrl=null;
+  if(_editedVitrazh){ _editedVitrazh.insightAudio=null; }
+  document.getElementById('comp-audio-wrap').style.display='none';
+  document.getElementById('comp-audio-status').style.display='none';
+  // Если редактируем существующий завершённый витраж — сохраняем сразу
+  if(_compEditId!==null){
+    const vv=app.completed.find(c=>c.completedAt===_compEditId);
+    if(vv){ vv.insightAudio=null; }
+    saveProgress();
+    updateGallery();
+  }
 }
 
 function saveCompletion(){
@@ -1863,46 +2207,27 @@ function saveCompletion(){
   const audio=app.compAudioUrl||null;
 
   if(_compEditId!==null){
-    // Редактируем существующий завершённый витраж
+    // Редактируем существующий завершённый витраж (через «изменить» позже)
     const v=app.completed.find(c=>c.completedAt===_compEditId);
-    if(v){
-      v.insight=insight;
-      v.insightPhoto=photo;
-      v.insightAudio=audio;
-    }
+    if(v){ v.insight=insight; v.insightPhoto=photo; v.insightAudio=audio; }
     _compEditId=null;
-  } else {
-    // Новый завершённый витраж
-    app.completed.push({
-      name:'Витраж '+app.sphereName,
-      sphere:app.sphere,
-      sphereName:app.sphereName,
-      emoji:app.sphereEmoji,
-      shards:[...app.shards],
-      shardColors:[...app.shardColors],
-      shardMemos:[...app.shardMemos],
-      shardDates:[...app.shardDates],
-      vTotal:app.vTotal||TOTAL,
-      total:app.vTotal||TOTAL,
-      customImage:app.customImage,
-      isPresetImage:app.isPresetImage,
-      insight,
-      insightPhoto:photo,
-      insightAudio:audio,
-      completedAt:new Date().toLocaleString('ru')
-    });
-    // Текущий витраж завершён — убираем его как активный
-    app.activeId=null;
+  } else if(_justCompletedId!==null){
+    // Только что завершённый витраж уже в списке — просто добавляем инсайт
+    const v=app.completed.find(c=>c.completedAt===_justCompletedId);
+    if(v){ v.insight=insight; v.insightPhoto=photo; v.insightAudio=audio; }
+    finishCurrentAfterCompletion();
   }
 
   // Сброс полей модалки
   app.compPhotoData=null; app.compAudioUrl=null;
   document.getElementById('comp-photo-preview').style.display='none';
   document.getElementById('comp-audio-status').style.display='none';
+  document.getElementById('comp-audio-wrap').style.display='none';
 
   document.getElementById('g-comp').textContent=app.completed.length;
   document.getElementById('completion-modal').style.display='none';
   updateGallery();
+  saveProgress();
 
   // Если открыт полноэкранный просмотр этого витража — обновляем его
   const overlay=document.getElementById('vitrazh-overlay');
@@ -1910,6 +2235,18 @@ function saveCompletion(){
     showFullscreenVitrazh(_editedVitrazh);
   }
   _editedVitrazh=null;
+}
+
+// После завершения текущего витража — переключаемся на следующий незавершённый
+// или сбрасываем текущий витраж в пустое состояние.
+function finishCurrentAfterCompletion(){
+  _justCompletedId = null;
+  if(app.activeVitrazhi && app.activeVitrazhi.length){
+    const next = app.activeVitrazhi.shift();
+    loadVitrazh(next);
+  } else {
+    resetCurrentVitrazhState();
+  }
 }
 
 /* ══ GALLERY: full rewrite with filter + completed vitrazhi + history ══ */
@@ -1932,7 +2269,10 @@ function updateGallery(){
   const el=document.getElementById('g-pct');
   if(el) el.textContent=pct+'%';
   const gc=document.getElementById('g-count');
-  if(gc) gc.textContent=1+app.completed.length;
+  if(gc){
+    const currentActive = (app.sphere && done<TOTAL) ? 1 : 0;
+    gc.textContent = currentActive + app.activeVitrazhi.length + app.completed.length;
+  }
 
   // ── Filter buttons ──
   const filterBar=document.createElement('div');
@@ -1950,23 +2290,27 @@ function updateGallery(){
 
   // ── Active vitrazhi: текущий + сохранённые ──
   if(galleryFilter!=='done'){
-    // Текущий отображаемый витраж
-    const card=createGalleryCard({
-      id: app.activeId,
-      name:'Витраж '+app.sphereName,
-      sphere:app.sphere,
-      sphereName:app.sphereName,
-      emoji:app.sphereEmoji,
-      shards:app.shards,
-      shardColors:app.shardColors,
-      shardMemos:app.shardMemos,
-      shardDates:app.shardDates,
-      done,total:TOTAL,
-      isActive:true,
-      isCurrent:true,
-      insight:null
-    });
-    list.appendChild(card);
+    // Текущий витраж показываем как активный ТОЛЬКО если он не завершён
+    // (завершённый уже находится в app.completed и не должен дублироваться)
+    const currentDone = app.sphere && done<TOTAL;
+    if(currentDone){
+      const card=createGalleryCard({
+        id: app.activeId,
+        name:'Витраж '+app.sphereName,
+        sphere:app.sphere,
+        sphereName:app.sphereName,
+        emoji:app.sphereEmoji,
+        shards:app.shards,
+        shardColors:app.shardColors,
+        shardMemos:app.shardMemos,
+        shardDates:app.shardDates,
+        done,total:TOTAL,
+        isActive:true,
+        isCurrent:true,
+        insight:null
+      });
+      list.appendChild(card);
+    }
     // Остальные незавершённые витражи
     app.activeVitrazhi.forEach(v=>{
       const vdone=v.shards.filter(Boolean).length;
@@ -1992,10 +2336,57 @@ function updateGallery(){
   if(galleryFilter!=='done'){
     const addCard=document.createElement('div');
     addCard.className='add-card';
-    addCard.innerHTML='<span style="font-size:20px;">+</span><span>Новая сфера жизни</span>';
+    addCard.innerHTML='<span style="font-size:20px;">+</span><span>Добавить новый витраж</span>';
     addCard.onclick=()=>startNewVitrazh();
     list.appendChild(addCard);
   }
+}
+
+function deleteVitrazh(v){
+  const label = v.name || 'этот витраж';
+  if(!confirm(`Удалить «${label}»? Это действие необратимо.`)) return;
+
+  if(v.isActive && v.isCurrent){
+    // Удаляем текущий отображаемый витраж.
+    // Если есть другие активные — делаем текущим первый из них.
+    if(app.activeVitrazhi && app.activeVitrazhi.length){
+      const next = app.activeVitrazhi.shift();
+      loadVitrazh(next); // станет текущим
+    } else if(app.completed && app.completed.length){
+      // Активных больше нет — сбрасываем текущий, показываем галерею
+      resetCurrentVitrazhState();
+      switchTab('gallery', null);
+    } else {
+      // Вообще ничего не осталось — на онбординг
+      clearAllProgress();
+      setTimeout(()=>location.reload(), 200);
+      return;
+    }
+  } else if(v.isActive && !v.isCurrent){
+    // Удаляем сохранённый незавершённый витраж
+    app.activeVitrazhi = app.activeVitrazhi.filter(x=>x.id!==v.id);
+  } else {
+    // Удаляем завершённый витраж
+    app.completed = app.completed.filter(x=>x.completedAt!==v.completedAt);
+    document.getElementById('g-comp').textContent=app.completed.length;
+  }
+
+  updateGallery();
+  saveProgress();
+}
+
+// Сбрасывает состояние текущего витража (без онбординга) — после удаления единственного активного
+function resetCurrentVitrazhState(){
+  app.sphere=null; app.sphereName=''; app.sphereEmoji='🌙'; app.sphereColor='#4a80d0';
+  app.actions=[];
+  app.shards=new Array(TOTAL).fill(false);
+  app.shardColors=new Array(TOTAL).fill(null);
+  app.shardMemos=new Array(TOTAL).fill(null);
+  app.shardDates=new Array(TOTAL).fill(null);
+  app.todayDone=new Set(); app.shardsToday=0;
+  app.customImage=null; app.isPresetImage=false;
+  app.activeId=null;
+  __imgReady=false; __imgCanvas=null; __imgCtx=null;
 }
 
 function createGalleryCard(v){
@@ -2017,8 +2408,18 @@ function createGalleryCard(v){
         <div style="font-size:15px;font-weight:600;">${v.emoji} ${v.name}</div>
         <div style="font-size:12px;color:var(--text2);margin-top:2px;">${v.done} из ${v.total} открыто${v.isActive?'':' · завершён '+( v.completedAt||'')} </div>
       </div>
-      <div style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:${badgeColor};color:${badgeTextColor};">${badge}</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:${badgeColor};color:${badgeTextColor};">${badge}</div>
+        <button class="gal-del-btn" title="Удалить витраж" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;transition:color .2s;">🗑</button>
+      </div>
     </div>`;
+  // Кнопка удаления
+  const delBtn=card.querySelector('.gal-del-btn');
+  if(delBtn){
+    delBtn.onmouseenter=()=>delBtn.style.color='var(--rose)';
+    delBtn.onmouseleave=()=>delBtn.style.color='var(--text3)';
+    delBtn.onclick=(e)=>{ e.stopPropagation(); deleteVitrazh(v); };
+  }
 
   // Mini vitrazh SVG
   const miniWrap=document.createElement('div');
@@ -2128,51 +2529,68 @@ function buildInsightBlock(v, opts){
     return block;
   }
 
-  // ── Текст с возможностью сворачивания ──
-  if(v.insight){
-    const COLLAPSE_LIMIT = 160; // символов до сворачивания
-    const isLong = v.insight.length > COLLAPSE_LIMIT;
-    const textEl = document.createElement('div');
-    textEl.style.cssText = 'font-size:14px;color:var(--text);line-height:1.6;white-space:pre-wrap;';
+  // ── Контейнер всего содержимого инсайта (можно свернуть целиком) ──
+  // Сворачивание нужно, если контента много: длинный текст, фото или аудио.
+  const COLLAPSE_LIMIT = 160;
+  const longText = v.insight && v.insight.length > COLLAPSE_LIMIT;
+  const heavy = !!v.insightPhoto || !!v.insightAudio || longText;
 
-    if(isLong){
-      let expanded = false;
-      const shortText = v.insight.slice(0, COLLAPSE_LIMIT).trim() + '…';
-      const render = ()=>{
-        textEl.textContent = expanded ? v.insight : shortText;
-        toggle.textContent = expanded ? 'Свернуть ▴' : 'Читать полностью ▾';
-      };
-      const toggle = document.createElement('button');
-      toggle.style.cssText = 'background:none;border:none;color:var(--accent2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;padding:6px 0 0;display:block;';
-      toggle.onclick = (e)=>{ e.stopPropagation(); expanded=!expanded; render(); };
-      render();
-      block.appendChild(textEl);
-      block.appendChild(toggle);
+  const contentWrap = document.createElement('div');
+  // Когда свёрнуто — ограничиваем высоту и скрываем переполнение
+  let collapsed = heavy; // по умолчанию свёрнуто, если контента много
+  function applyCollapse(){
+    if(collapsed){
+      contentWrap.style.maxHeight = '78px';
+      contentWrap.style.overflow = 'hidden';
+      contentWrap.style.maskImage = 'linear-gradient(to bottom, #000 55%, transparent)';
+      contentWrap.style.webkitMaskImage = 'linear-gradient(to bottom, #000 55%, transparent)';
     } else {
-      textEl.textContent = v.insight;
-      block.appendChild(textEl);
+      contentWrap.style.maxHeight = 'none';
+      contentWrap.style.overflow = 'visible';
+      contentWrap.style.maskImage = 'none';
+      contentWrap.style.webkitMaskImage = 'none';
     }
   }
 
-  // ── Фото ──
+  // Текст
+  if(v.insight){
+    const textEl = document.createElement('div');
+    textEl.style.cssText = 'font-size:14px;color:var(--text);line-height:1.6;white-space:pre-wrap;';
+    textEl.textContent = v.insight;
+    contentWrap.appendChild(textEl);
+  }
+  // Фото
   if(v.insightPhoto){
     const img = document.createElement('img');
     img.src = v.insightPhoto;
     img.style.cssText = 'width:100%;border-radius:10px;margin-top:10px;display:block;';
-    block.appendChild(img);
+    contentWrap.appendChild(img);
   }
-
-  // ── Аудио ──
+  // Аудио
   if(v.insightAudio){
     const audioRow = document.createElement('div');
     audioRow.style.cssText = 'margin-top:10px;';
     audioRow.innerHTML = '<div style="font-size:11px;color:var(--text3);margin-bottom:4px;">🎙 Голосовое впечатление</div>';
     const audio = document.createElement('audio');
-    audio.src = v.insightAudio;
-    audio.controls = true;
-    audio.style.cssText = 'width:100%;';
+    audio.src = v.insightAudio; audio.controls = true; audio.style.cssText = 'width:100%;';
     audioRow.appendChild(audio);
-    block.appendChild(audioRow);
+    contentWrap.appendChild(audioRow);
+  }
+  block.appendChild(contentWrap);
+
+  // Кнопка свернуть/развернуть — показываем только если контента много
+  if(heavy){
+    applyCollapse();
+    const toggle = document.createElement('button');
+    toggle.style.cssText = 'background:none;border:none;color:var(--accent2);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;padding:8px 0 0;display:block;';
+    toggle.textContent = 'Развернуть ▾';
+    toggle.onclick = (e)=>{
+      e.stopPropagation();
+      collapsed = !collapsed;
+      applyCollapse();
+      toggle.textContent = collapsed ? 'Развернуть ▾' : 'Свернуть ▴';
+    };
+    block.appendChild(toggle);
   }
 
   return block;
@@ -2318,6 +2736,344 @@ function showArchivedMemo(v, idx){
   if(saveBtn) saveBtn.textContent='Закрыть';
   document.getElementById('memo-modal').style.display='flex';
 }
+
+
+/* ══ СВАЙП ВНИЗ ДЛЯ ЗАКРЫТИЯ МОДАЛКИ ЗАМЕТКИ ══ */
+(function initSwipeToClose(){
+  function attach(){
+    const modal=document.getElementById('memo-modal');
+    const sheet=document.getElementById('memo-sheet');
+    if(!modal||!sheet) return;
+    let startY=0, curY=0, dragging=false, startedAtTop=false;
+
+    function onStart(e){
+      const t=e.touches?e.touches[0]:e;
+      startY=t.clientY; curY=startY;
+      // Свайп закрывает только если контент прокручен в самый верх
+      startedAtTop = sheet.scrollTop<=0;
+      dragging=true;
+      sheet.style.transition='none';
+    }
+    function onMove(e){
+      if(!dragging) return;
+      const t=e.touches?e.touches[0]:e;
+      curY=t.clientY;
+      const dy=curY-startY;
+      if(dy>0 && startedAtTop){
+        sheet.style.transform=`translateY(${dy}px)`;
+        if(e.cancelable) e.preventDefault();
+      }
+    }
+    function onEnd(){
+      if(!dragging) return;
+      dragging=false;
+      const dy=curY-startY;
+      sheet.style.transition='transform .25s ease';
+      if(dy>110 && startedAtTop){
+        // Достаточно протянул вниз — закрываем
+        sheet.style.transform=`translateY(100%)`;
+        setTimeout(()=>{ closeMemo(); sheet.style.transform=''; }, 200);
+      } else {
+        sheet.style.transform='';
+      }
+    }
+
+    // Тач (мобильные)
+    sheet.addEventListener('touchstart', onStart, {passive:true});
+    sheet.addEventListener('touchmove', onMove, {passive:false});
+    sheet.addEventListener('touchend', onEnd);
+    // Мышь (для теста на десктопе через grabber)
+    const grab=document.getElementById('memo-grabber');
+    if(grab){
+      grab.addEventListener('mousedown', e=>{ onStart(e);
+        const mm=ev=>onMove(ev), mu=ev=>{ onEnd(); document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
+        document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu);
+      });
+    }
+  }
+  if(document.readyState!=='loading') attach();
+  else document.addEventListener('DOMContentLoaded', attach);
+})();
+
+
+/* ══════════════════════════════════════════════
+   СОХРАНЕНИЕ ПРОГРЕССА (persistence)
+   Два уровня:
+   1) Telegram CloudStorage — синхронизация между устройствами (лимит 4КБ/ключ)
+   2) localStorage — запасной вариант + хранилище медиа (фото/аудио)
+   Игровой прогресс (витражи, осколки, заметки-текст, инсайты) хранится надёжно.
+   Медиа (фото/аудио) сохраняются по возможности, пока есть место.
+══════════════════════════════════════════════ */
+const STORAGE_KEY = 'vitrazh_progress_v1';
+const STORAGE_MEDIA_KEY = 'vitrazh_media_v1';
+let _saveTimer = null;
+let _restoredSilently = false;
+
+// Собираем "лёгкое" состояние (без тяжёлых медиа) — основной прогресс
+function serializeProgress(){
+  // Очищаем медиа из заметок для лёгкой версии (оставляем флаги наличия)
+  function lightMemos(memos){
+    if(!memos) return [];
+    return memos.map(m=>{
+      if(!m) return null;
+      return {
+        text: m.text||'',
+        photo: m.photo? '__MEDIA__':null,    // ссылка-заглушка, реальное — в медиа-хранилище
+        audioUrl: m.audioUrl? '__MEDIA__':null,
+        date: m.date||null
+      };
+    });
+  }
+  function lightVitrazh(v){
+    return {
+      id:v.id, name:v.name, sphere:v.sphere, sphereName:v.sphereName,
+      sphereEmoji:v.sphereEmoji||v.emoji, emoji:v.emoji||v.sphereEmoji, sphereColor:v.sphereColor,
+      actions:v.actions||[], shards:v.shards, shardColors:v.shardColors,
+      shardMemos:lightMemos(v.shardMemos), shardDates:v.shardDates,
+      customImage: v.isPresetImage? v.customImage : (v.customImage?'__MEDIA__':null),
+      isPresetImage:v.isPresetImage||false,
+      streak:v.streak||0, light:v.light||0, totalDone:v.totalDone||0,
+      shardsToday:v.shardsToday||0, todayDone:v.todayDone||[],
+      vTotal:v.vTotal||30, total:v.total||v.vTotal||30,
+      insight:v.insight||null,
+      insightPhoto: v.insightPhoto?'__MEDIA__':null,
+      insightAudio: v.insightAudio?'__MEDIA__':null,
+      completedAt:v.completedAt||null
+    };
+  }
+  return {
+    v:1,
+    sphere:app.sphere, sphereName:app.sphereName, sphereEmoji:app.sphereEmoji, sphereColor:app.sphereColor,
+    actions:app.actions,
+    shards:app.shards, shardColors:app.shardColors,
+    shardMemos:lightMemos(app.shardMemos), shardDates:app.shardDates,
+    todayDone:[...app.todayDone], shardsToday:app.shardsToday,
+    streak:app.streak, light:app.light, totalDone:app.totalDone,
+    customImage: app.isPresetImage? app.customImage : (app.customImage?'__MEDIA__':null),
+    isPresetImage:app.isPresetImage,
+    activeId:app.activeId, vTotal:app.vTotal||TOTAL,
+    TOTAL:TOTAL,
+    completed:(app.completed||[]).map(lightVitrazh),
+    activeVitrazhi:(app.activeVitrazhi||[]).map(lightVitrazh),
+    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn},
+    started: !document.getElementById('app-screen').classList.contains('hidden')
+  };
+}
+
+// Собираем медиа отдельно (фото/аудио) — для localStorage
+function serializeMedia(){
+  const media = {};
+  let counter = 0;
+  function collectMemoMedia(memos, prefix){
+    if(!memos) return;
+    memos.forEach((m,i)=>{
+      if(!m) return;
+      if(m.photo && m.photo!=='__MEDIA__'){ media[prefix+'_p'+i]=m.photo; }
+      if(m.audioUrl && m.audioUrl!=='__MEDIA__'){ media[prefix+'_a'+i]=m.audioUrl; }
+    });
+  }
+  collectMemoMedia(app.shardMemos, 'cur');
+  if(app.customImage && !app.isPresetImage){ media['cur_img']=app.customImage; }
+  (app.completed||[]).forEach((v,vi)=>{
+    collectMemoMedia(v.shardMemos, 'c'+vi);
+    if(v.customImage && !v.isPresetImage){ media['c'+vi+'_img']=v.customImage; }
+    if(v.insightPhoto){ media['c'+vi+'_ip']=v.insightPhoto; }
+    if(v.insightAudio){ media['c'+vi+'_ia']=v.insightAudio; }
+  });
+  (app.activeVitrazhi||[]).forEach((v,vi)=>{
+    collectMemoMedia(v.shardMemos, 'a'+vi);
+    if(v.customImage && !v.isPresetImage){ media['a'+vi+'_img']=v.customImage; }
+  });
+  return media;
+}
+
+// ── СОХРАНЕНИЕ ──
+function saveProgress(){
+  let json;
+  try{ json = JSON.stringify(serializeProgress()); }
+  catch(e){ console.warn('serialize failed', e); return; }
+
+  // 1) localStorage — основное хранилище (быстро, надёжно)
+  try{ localStorage.setItem(STORAGE_KEY, json); }catch(e){ /* переполнение — не критично */ }
+
+  // 2) Медиа в localStorage (по возможности)
+  try{
+    const media = serializeMedia();
+    localStorage.setItem(STORAGE_MEDIA_KEY, JSON.stringify(media));
+  }catch(e){ /* медиа не поместились — прогресс всё равно сохранён */ }
+
+  // 3) Telegram CloudStorage — синхронизация между устройствами
+  saveToCloud(json);
+}
+
+// Дебаунс — не сохраняем чаще раза в ~1.5 сек
+function scheduleSave(){
+  if(_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(saveProgress, 1200);
+}
+
+// Telegram CloudStorage: значение > 4КБ режем на чанки по ключам
+function saveToCloud(json){
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if(!tg || !tg.CloudStorage) return;
+  try{
+    const CHUNK = 3800; // запас под лимит 4096
+    const chunks = [];
+    for(let i=0;i<json.length;i+=CHUNK){ chunks.push(json.slice(i,i+CHUNK)); }
+    // Не больше ~250 чанков (≈950КБ) — больше в CloudStorage не имеет смысла
+    if(chunks.length > 250){ return; } // слишком большой прогресс для облака — остаётся localStorage
+    tg.CloudStorage.setItem(STORAGE_KEY+'_n', String(chunks.length), ()=>{});
+    chunks.forEach((c,i)=>{ tg.CloudStorage.setItem(STORAGE_KEY+'_'+i, c, ()=>{}); });
+  }catch(e){ /* облако недоступно — localStorage остаётся */ }
+}
+
+// ── ЗАГРУЗКА ──
+// Возвращает Promise с распарсенным прогрессом (или null)
+function loadProgress(){
+  return new Promise((resolve)=>{
+    const tg = window.Telegram && window.Telegram.WebApp;
+    // Сначала пробуем облако (если в Telegram), иначе localStorage
+    if(tg && tg.CloudStorage){
+      tg.CloudStorage.getItem(STORAGE_KEY+'_n', (err, nStr)=>{
+        const n = parseInt(nStr||'0',10);
+        if(!err && n>0){
+          const keys = [];
+          for(let i=0;i<n;i++) keys.push(STORAGE_KEY+'_'+i);
+          tg.CloudStorage.getItems(keys, (err2, values)=>{
+            if(!err2 && values){
+              let json='';
+              for(let i=0;i<n;i++){ json += (values[STORAGE_KEY+'_'+i]||''); }
+              const parsed = tryParse(json);
+              if(parsed){ resolve(parsed); return; }
+            }
+            resolve(loadFromLocal());
+          });
+        } else {
+          resolve(loadFromLocal());
+        }
+      });
+      // Таймаут на случай зависания облака — берём localStorage
+      setTimeout(()=>{ resolve(loadFromLocal()); }, 1500);
+    } else {
+      resolve(loadFromLocal());
+    }
+  });
+}
+
+function tryParse(s){ try{ return JSON.parse(s); }catch(e){ return null; } }
+function loadFromLocal(){
+  try{ return tryParse(localStorage.getItem(STORAGE_KEY)); }catch(e){ return null; }
+}
+function loadMedia(){
+  try{ return tryParse(localStorage.getItem(STORAGE_MEDIA_KEY))||{}; }catch(e){ return {}; }
+}
+
+// Восстанавливаем медиа обратно в заметки/изображения по заглушкам '__MEDIA__'
+function rehydrateMedia(data, media){
+  function fixMemos(memos, prefix){
+    if(!memos) return memos;
+    return memos.map((m,i)=>{
+      if(!m) return null;
+      const out = {text:m.text||'', date:m.date||null, photo:null, audioUrl:null};
+      out.photo = (m.photo==='__MEDIA__') ? (media[prefix+'_p'+i]||null) : m.photo;
+      out.audioUrl = (m.audioUrl==='__MEDIA__') ? (media[prefix+'_a'+i]||null) : m.audioUrl;
+      return out;
+    });
+  }
+  if(data.customImage==='__MEDIA__') data.customImage = media['cur_img']||null;
+  data.shardMemos = fixMemos(data.shardMemos, 'cur');
+  (data.completed||[]).forEach((v,vi)=>{
+    v.shardMemos = fixMemos(v.shardMemos, 'c'+vi);
+    if(v.customImage==='__MEDIA__') v.customImage = media['c'+vi+'_img']||null;
+    if(v.insightPhoto==='__MEDIA__') v.insightPhoto = media['c'+vi+'_ip']||null;
+    if(v.insightAudio==='__MEDIA__') v.insightAudio = media['c'+vi+'_ia']||null;
+  });
+  (data.activeVitrazhi||[]).forEach((v,vi)=>{
+    v.shardMemos = fixMemos(v.shardMemos, 'a'+vi);
+    if(v.customImage==='__MEDIA__') v.customImage = media['a'+vi+'_img']||null;
+  });
+  return data;
+}
+
+// Применяем загруженный прогресс к состоянию app
+function applyProgress(data){
+  const media = loadMedia();
+  data = rehydrateMedia(data, media);
+
+  app.sphere=data.sphere; app.sphereName=data.sphereName||'';
+  app.sphereEmoji=data.sphereEmoji||'🌙'; app.sphereColor=data.sphereColor||'#4a80d0';
+  app.actions=data.actions||[];
+  app.shards=data.shards||[]; app.shardColors=data.shardColors||[];
+  app.shardMemos=data.shardMemos||[]; app.shardDates=data.shardDates||[];
+  app.todayDone=new Set(data.todayDone||[]); app.shardsToday=data.shardsToday||0;
+  app.streak=data.streak||0; app.light=data.light||0; app.totalDone=data.totalDone||0;
+  app.customImage=data.customImage||null; app.isPresetImage=data.isPresetImage||false;
+  app.activeId=data.activeId||null;
+  app.vTotal=data.vTotal||30;
+  app.completed=data.completed||[];
+  app.activeVitrazhi=data.activeVitrazhi||[];
+  if(data.settings){
+    settings.shardCount=data.settings.shardCount||30;
+    settings.dailyLimit=data.settings.dailyLimit||0;
+    settings.reminderTime=data.settings.reminderTime||'21:00';
+    settings.reminderOn=data.settings.reminderOn!==false;
+  }
+  TOTAL = data.TOTAL || data.vTotal || 30;
+
+  // Если был активный витраж с фото-пресетом — переинициализируем пиксели
+  if(app.customImage){ try{ loadCustomImagePixels(app.customImage); }catch(e){} }
+}
+
+// ── ПОЛНЫЙ СБРОС (только из приложения) ──
+function clearAllProgress(){
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  try{ localStorage.removeItem(STORAGE_MEDIA_KEY); }catch(e){}
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if(tg && tg.CloudStorage){
+    try{
+      tg.CloudStorage.getKeys((err, keys)=>{
+        if(!err && keys){
+          const toRemove = keys.filter(k=>k.indexOf(STORAGE_KEY)===0);
+          if(toRemove.length) tg.CloudStorage.removeItems(toRemove, ()=>{});
+        }
+      });
+    }catch(e){}
+  }
+}
+
+// ── ИНИЦИАЛИЗАЦИЯ ПРИ СТАРТЕ ──
+// Загружаем прогресс и решаем какой экран показать
+function bootWithProgress(){
+  loadProgress().then((data)=>{
+    if(data && (data.started || (data.completed&&data.completed.length) || (data.shards&&data.shards.some(Boolean)))){
+      try{
+        applyProgress(data);
+        _restoredSilently = true;
+        // Показываем приложение сразу (молча, как будто не закрывал)
+        document.getElementById('ob-screen').classList.add('hidden');
+        document.getElementById('app-screen').classList.remove('hidden');
+        initMainScreen();
+      }catch(e){
+        console.warn('restore failed', e);
+        // При ошибке — обычный онбординг
+      }
+    }
+    // иначе — остаётся экран онбординга (по умолчанию)
+  });
+}
+
+// Сохраняем прогресс перед закрытием/скрытием страницы
+window.addEventListener('beforeunload', ()=>{ try{ saveProgress(); }catch(e){} });
+window.addEventListener('pagehide', ()=>{ try{ saveProgress(); }catch(e){} });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ try{ saveProgress(); }catch(e){} } });
+
+// Запускаем загрузку прогресса после полной инициализации страницы
+if(document.readyState==='complete' || document.readyState==='interactive'){
+  setTimeout(bootWithProgress, 50);
+} else {
+  window.addEventListener('DOMContentLoaded', ()=>setTimeout(bootWithProgress,50));
+}
+
 
 </script>
 </body>
