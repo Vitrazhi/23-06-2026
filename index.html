@@ -62,10 +62,11 @@ html,body{height:100%;background:#03040a;font-family:'Onest',-apple-system,sans-
 .scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
 .scroll::-webkit-scrollbar{display:none;}
 .nav{height:64px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;background:rgba(8,9,16,.97);backdrop-filter:blur(20px);flex-shrink:0;padding-bottom:calc(var(--pad-bottom) + 6px);box-sizing:content-box;}
-.ni{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 16px;border-radius:14px;border:none;background:none;color:var(--text3);font-family:inherit;font-size:10px;font-weight:500;letter-spacing:.04em;transition:all .2s;}
+.ni{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 16px;border-radius:14px;border:none;background:none;color:var(--text3);font-family:inherit;font-size:10px;font-weight:500;letter-spacing:.04em;transition:all .22s ease;}
 .ni:hover{background:rgba(255,255,255,.04);}
-.ni.on{color:var(--accent2);}
-.ni-ic{font-size:22px;line-height:1;}
+.ni.on{color:var(--accent2);font-weight:600;background:rgba(124,111,255,.12);}
+.ni.on .ni-ic{transform:translateY(-1px) scale(1.08);filter:drop-shadow(0 2px 8px rgba(124,111,255,.5));}
+.ni-ic{font-size:22px;line-height:1;transition:transform .22s ease,filter .22s ease;}
 
 /* ══════════════════════════════════════════════
    TELEGRAM / МОБИЛЬНЫЙ ПОЛНОЭКРАННЫЙ РЕЖИМ
@@ -260,9 +261,62 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 @keyframes ptf{0%{opacity:.9;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(0)}}
 .flash-el{position:fixed;border-radius:50%;pointer-events:none;z-index:9998;}
 @keyframes flashAnim{0%{transform:translate(-50%,-50%) scale(0);opacity:.85}55%{transform:translate(-50%,-50%) scale(2.6);opacity:.3}100%{transform:translate(-50%,-50%) scale(4.2);opacity:0}}
+/* ══ ПРЕДОТВРАЩЕНИЕ ВСПЫШКИ ЭКРАНА ПРИВЕТСТВИЯ ══
+   Прячем онбординг ДО первой отрисовки. Показываем нейтральную заставку.
+   Решение, что показывать, принимается в boot — тогда заставка убирается. */
+#ob-screen{opacity:0;transition:opacity .25s ease;}
+html.ob-ready #ob-screen{opacity:1;}
+html.has-saved-progress #ob-screen{display:none !important;}
+/* Нейтральная заставка поверх всего, пока решается какой экран показать */
+#boot-splash{position:fixed;inset:0;z-index:99999;background:radial-gradient(ellipse at 50% 35%, #1a1040 0%, #050310 65%);display:flex;align-items:center;justify-content:center;transition:opacity .3s ease;}
+html.boot-done #boot-splash{opacity:0;pointer-events:none;}
+#boot-splash svg{width:72px;height:72px;filter:drop-shadow(0 0 22px rgba(124,111,255,.5));animation:bootpulse 1.4s ease-in-out infinite;}
+@keyframes bootpulse{0%,100%{opacity:.7;transform:scale(.96)}50%{opacity:1;transform:scale(1.02)}}
 </style>
 </head>
 <body>
+<!-- Нейтральная заставка (витражная иконка) — скрывает мелькание онбординга -->
+<div id="boot-splash">
+  <svg viewBox="0 0 84 110" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bs1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient>
+      <linearGradient id="bs2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient>
+      <linearGradient id="bs3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient>
+      <linearGradient id="bs4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient>
+    </defs>
+    <path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="#c8a86a" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#bs1)"/>
+    <path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#bs2)"/>
+    <path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#bs3)"/>
+    <path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#bs4)" opacity=".92"/>
+    <path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#bs1)" opacity=".85"/>
+    <path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#bs2)" opacity=".88"/>
+    <path d="M42,30 l2.4,5.6 l5.6,2.4 l-5.6,2.4 l-2.4,5.6 l-2.4,-5.6 l-5.6,-2.4 l5.6,-2.4 Z" fill="#fff3d0"/>
+    <path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  </svg>
+</div>
+<script>
+/* ПРЕДОТВРАЩЕНИЕ «ВСПЫШКИ» ЭКРАНА ПРИВЕТСТВИЯ
+   Синхронно (до отрисовки) проверяем localStorage. Если прогресс есть —
+   сразу прячем экран онбординга, чтобы пользователь не увидел его мельком.
+   Полное восстановление состояния произойдёт чуть позже в bootWithProgress. */
+(function(){
+  try{
+    var raw = localStorage.getItem('vitrazh_progress_v1');
+    if(raw){
+      var d = JSON.parse(raw);
+      var hasProgress = d && (d.started || (d.completed && d.completed.length) ||
+                              (d.shards && d.shards.some(Boolean)));
+      if(hasProgress){
+        document.documentElement.classList.add('has-saved-progress');
+      }
+    }
+  }catch(e){}
+})();
+</script>
+<style>
+/* (правила перенесены в head выше) */
+</style>
 
 <!-- ══════════════════════════════════
      ONBOARDING
@@ -314,7 +368,7 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
   <div class="ob-step" id="ob1">
     <div class="ob-eyebrow">Шаг 1 из 3</div>
     <div class="ob-title" style="font-size:22px;">Выбери сферу жизни</div>
-    <div class="ob-sub" style="font-size:13px;">Первый витраж посвящён одной цели. За ней скрыт тайный образ.</div>
+    <div class="ob-sub" style="font-size:13px;">Первый витраж посвящён одной цели. За ней скрыт тайный образ</div>
     <div class="sphere-grid" id="sphere-grid">
       <div class="sphere-opt" onclick="selSphere(this,'sleep','🌙','Сон','#4a80d0')"><span class="sphere-emoji">🌙</span><div class="sphere-name">Сон</div><div class="sphere-desc">Режим и качество</div></div>
       <div class="sphere-opt" onclick="selSphere(this,'sport','⚡','Спорт','#30c090')"><span class="sphere-emoji">⚡</span><div class="sphere-name">Спорт</div><div class="sphere-desc">Движение и сила</div></div>
@@ -423,7 +477,7 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
     <div class="scroll">
       <div class="master-card">
         <div class="m-av">🧙</div>
-        <div><div class="m-name">МАСТЕР-ВИТРАЖИСТ</div><div class="m-msg" id="master-msg">Каждый осколок открывает часть тайного образа. Что скрывается за стеклом — узнаешь сам.</div></div>
+        <div><div class="m-name">МАСТЕР-ВИТРАЖИСТ</div><div class="m-msg" id="master-msg">Каждый осколок открывает часть тайного образа. Что скрывается за стеклом — узнаешь сам</div></div>
       </div>
       <div class="vcard" id="main-vcard">
         <div class="toast" id="main-toast">+10 ✦</div>
@@ -455,7 +509,7 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
     </div>
     <div class="nav">
       <button class="ni on" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
-      <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic">🏛</span>Собор</button>
+      <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="currentColor" opacity=".25"/><path d="M14 6.6v3"/><path d="M5 13c0-2 1.4-3.2 2.4-4M23 13c0-2-1.4-3.2-2.4-4" opacity=".0"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M5.5 14.5l2.5-1.2M22.5 14.5l-2.5-1.2"/><path d="M14 16.5c-.9 0-1.5.7-1.5 1.6V25h3v-6.9c0-.9-.6-1.6-1.5-1.6z" fill="currentColor" opacity=".25"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g></svg></span>Собор</button>
       <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
     </div>
   </div>
@@ -465,15 +519,15 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
     <div class="screen-header"><div class="sh-title">Собор</div><div class="sh-sub">Все твои витражи</div></div>
     <div class="scroll">
       <div class="stats-row" style="margin-top:4px;">
-        <div class="stat-card"><div class="sv ac" id="g-count">1</div><div class="sn">Витражей</div></div>
-        <div class="stat-card"><div class="sv gold" id="g-comp">0</div><div class="sn">Завершено</div></div>
-        <div class="stat-card"><div class="sv teal" id="g-pct">0%</div><div class="sn">Прогресс</div></div>
+        <div class="stat-card" style="cursor:pointer;" onclick="setGalleryFilter('all')"><div class="sv ac" id="g-count">1</div><div class="sn">Витражей</div></div>
+        <div class="stat-card" style="cursor:pointer;" onclick="setGalleryFilter('done')"><div class="sv gold" id="g-comp">0</div><div class="sn">Завершено</div></div>
+        <div class="stat-card" style="cursor:pointer;" onclick="setGalleryFilter('active')"><div class="sv teal" id="g-pct">0%</div><div class="sn">В работе</div></div>
       </div>
       <div id="gallery-list"></div>
     </div>
     <div class="nav">
       <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
-      <button class="ni on" onclick="switchTab('gallery',this)"><span class="ni-ic">🏛</span>Собор</button>
+      <button class="ni on" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="currentColor" opacity=".25"/><path d="M14 6.6v3"/><path d="M5 13c0-2 1.4-3.2 2.4-4M23 13c0-2-1.4-3.2-2.4-4" opacity=".0"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M5.5 14.5l2.5-1.2M22.5 14.5l-2.5-1.2"/><path d="M14 16.5c-.9 0-1.5.7-1.5 1.6V25h3v-6.9c0-.9-.6-1.6-1.5-1.6z" fill="currentColor" opacity=".25"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g></svg></span>Собор</button>
       <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
     </div>
   </div>
@@ -512,7 +566,7 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
     </div>
     <div class="nav">
       <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
-      <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic">🏛</span>Собор</button>
+      <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="currentColor" opacity=".25"/><path d="M14 6.6v3"/><path d="M5 13c0-2 1.4-3.2 2.4-4M23 13c0-2-1.4-3.2-2.4-4" opacity=".0"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M5.5 14.5l2.5-1.2M22.5 14.5l-2.5-1.2"/><path d="M14 16.5c-.9 0-1.5.7-1.5 1.6V25h3v-6.9c0-.9-.6-1.6-1.5-1.6z" fill="currentColor" opacity=".25"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g></svg></span>Собор</button>
       <button class="ni on" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
     </div>
   </div>
@@ -1018,9 +1072,10 @@ function startApp(){
     app.isPresetImage=false;
   }
 
-  // Переходим в приложение
+  // Переходим в приложение — сразу на сам витраж (вкладка «Витраж»), а не в «Собор»
   document.getElementById('ob-screen').classList.add('hidden');
   document.getElementById('app-screen').classList.remove('hidden');
+  switchTab('main', document.querySelector('.ni'));
   initMainScreen();
   scheduleSave();
 }
@@ -1603,8 +1658,8 @@ function tapShard(idx, e){
   // Дневной лимит осколков
   if(settings.dailyLimit>0 && app.shardsToday>=settings.dailyLimit){
     const msgs=[
-      `На сегодня лимит закрашенных осколков (${settings.dailyLimit}) достигнут. Возвращайся завтра — терпение тоже часть мастерства.`,
-      `Мастер советует беречь силы: сегодня уже закрашено ${settings.dailyLimit} из ${settings.dailyLimit}. До встречи завтра.`,
+      `На сегодня лимит закрашенных осколков (${settings.dailyLimit}) достигнут. Возвращайся завтра — терпение тоже часть мастерства`,
+      `Мастер советует беречь силы: сегодня уже закрашено ${settings.dailyLimit} из ${settings.dailyLimit}. До встречи завтра`,
     ];
     document.getElementById('master-msg').textContent=msgs[Math.floor(Math.random()*msgs.length)];
     return;
@@ -1639,9 +1694,9 @@ function tapShard(idx, e){
     app.streak++;
     document.getElementById('v-stk').textContent=app.streak;
     const masterMsgs=[
-      'День закрыт. Витраж светится твоим усилием.',
-      'Все осколки дня вложены. Продолжай — образ проясняется.',
-      'Стрик идёт! Каждый день ты ближе к полному витражу.',
+      'День закрыт. Витраж светится твоим усилием',
+      'Все осколки дня вложены. Продолжай — образ проясняется',
+      'Стрик идёт! Каждый день ты ближе к полному витражу',
     ];
     document.getElementById('master-msg').textContent=masterMsgs[Math.floor(Math.random()*masterMsgs.length)];
   }
@@ -1652,7 +1707,7 @@ function tapShard(idx, e){
   if(isFinalShard){
     document.getElementById('main-vcard').classList.add('glow');
     document.getElementById('main-done-banner').classList.add('show');
-    const endMsgs=['Витраж завершён! Образ открыт полностью.','Мастер восхищён. Весь свет на месте.'];
+    const endMsgs=['Витраж завершён! Образ открыт полностью','Мастер восхищён. Весь свет на месте'];
     document.getElementById('master-msg').textContent=endMsgs[Math.floor(Math.random()*endMsgs.length)];
     // Засчитываем витраж как завершённый СРАЗУ — независимо от того,
     // добавит пользователь инсайт или нажмёт «Позже».
@@ -1800,11 +1855,19 @@ function spawnParticles(x,y){
   }
 }
 
+let _resetting = false; // блокирует автосохранение во время сброса
 function resetApp(){
   if(confirm('Начать заново? Весь прогресс будет полностью удалён без возможности восстановления.')){
+    _resetting = true; // запрещаем любые saveProgress до перезагрузки
+    // Очищаем состояние в памяти, чтобы обработчики выгрузки не записали его обратно
+    try{
+      app.sphere=null; app.completed=[]; app.activeVitrazhi=[];
+      app.shards=[]; app.shardColors=[]; app.shardMemos=[]; app.shardDates=[];
+      app.activeId=null; app.customImage=null; app.isPresetImage=false;
+    }catch(e){}
     clearAllProgress();
-    // Небольшая задержка чтобы успели очиститься ключи облака, затем перезагрузка
-    setTimeout(()=>location.reload(), 300);
+    // Перезагрузка после того, как очистка облака успеет пройти
+    setTimeout(()=>location.reload(), 400);
   }
 }
 
@@ -1826,7 +1889,7 @@ function actionPlaceholder(index){
 }
 
 const MAX_ACTIONS = 7;
-function addActionField(){
+function addActionField(focusNew){
   const wrap=document.getElementById('act-list-wrap');
   if(wrap.children.length>=MAX_ACTIONS) return;
   const idx=wrap.children.length; // 0-based
@@ -1843,7 +1906,9 @@ function addActionField(){
     <input class="action-inp dyn-act-input" placeholder="${actionPlaceholder(idx)}" style="flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;">
     ${delBtn}`;
   wrap.appendChild(row);
-  row.querySelector('input').focus();
+  // Фокус (и клавиатуру) ставим ТОЛЬКО когда пользователь сам нажал «+ Добавить»,
+  // а не при авто-создании первого поля — чтобы клавиатура не выскакивала сразу.
+  if(focusNew){ row.querySelector('input').focus(); }
   updateAddBtn();
 }
 function renumberActions(){
@@ -2265,9 +2330,12 @@ function updateGallery(){
   list.innerHTML='';
 
   const done=app.shards.filter(Boolean).length;
-  const pct=Math.round(done/TOTAL*100);
   const el=document.getElementById('g-pct');
-  if(el) el.textContent=pct+'%';
+  if(el){
+    // Счётчик «В работе» — количество незавершённых витражей
+    const currentInProgress = (app.sphere && done<TOTAL) ? 1 : 0;
+    el.textContent = currentInProgress + app.activeVitrazhi.length;
+  }
   const gc=document.getElementById('g-count');
   if(gc){
     const currentActive = (app.sphere && done<TOTAL) ? 1 : 0;
@@ -2348,19 +2416,15 @@ function deleteVitrazh(v){
 
   if(v.isActive && v.isCurrent){
     // Удаляем текущий отображаемый витраж.
-    // Если есть другие активные — делаем текущим первый из них.
     if(app.activeVitrazhi && app.activeVitrazhi.length){
+      // Есть другие незавершённые — делаем текущим первый из них
       const next = app.activeVitrazhi.shift();
-      loadVitrazh(next); // станет текущим
-    } else if(app.completed && app.completed.length){
-      // Активных больше нет — сбрасываем текущий, показываем галерею
+      loadVitrazh(next);
+    } else {
+      // Других активных нет — просто очищаем текущий витраж.
+      // Раздел «Собор» останется (с завершёнными, если есть) + кнопка добавления.
       resetCurrentVitrazhState();
       switchTab('gallery', null);
-    } else {
-      // Вообще ничего не осталось — на онбординг
-      clearAllProgress();
-      setTimeout(()=>location.reload(), 200);
-      return;
     }
   } else if(v.isActive && !v.isCurrent){
     // Удаляем сохранённый незавершённый витраж
@@ -2889,6 +2953,7 @@ function serializeMedia(){
 
 // ── СОХРАНЕНИЕ ──
 function saveProgress(){
+  if(typeof _resetting!=='undefined' && _resetting) return; // идёт сброс — не сохраняем
   let json;
   try{ json = JSON.stringify(serializeProgress()); }
   catch(e){ console.warn('serialize failed', e); return; }
@@ -2908,6 +2973,7 @@ function saveProgress(){
 
 // Дебаунс — не сохраняем чаще раза в ~1.5 сек
 function scheduleSave(){
+  if(typeof _resetting!=='undefined' && _resetting) return;
   if(_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(saveProgress, 1200);
 }
@@ -3043,23 +3109,69 @@ function clearAllProgress(){
 
 // ── ИНИЦИАЛИЗАЦИЯ ПРИ СТАРТЕ ──
 // Загружаем прогресс и решаем какой экран показать
+function dismissSplash(){
+  document.documentElement.classList.add('boot-done');
+  // Удаляем заставку из DOM после анимации
+  setTimeout(()=>{ const s=document.getElementById('boot-splash'); if(s) s.remove(); }, 350);
+}
+function revealOnboarding(){
+  // Прогресса нет — показываем онбординг и убираем заставку
+  document.documentElement.classList.remove('has-saved-progress');
+  document.documentElement.classList.add('ob-ready');
+  dismissSplash();
+}
 function bootWithProgress(){
+  // ── БЫСТРЫЙ ПУТЬ: мгновенно восстанавливаем из localStorage (без ожидания облака) ──
+  const local = loadFromLocal();
+  const localHasProgress = local && (local.started || (local.completed&&local.completed.length) || (local.shards&&local.shards.some(Boolean)));
+  if(localHasProgress){
+    try{
+      applyProgress(local);
+      _restoredSilently = true;
+      document.getElementById('ob-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+      initMainScreen();
+      dismissSplash(); // показываем витраж, убираем заставку
+    }catch(e){ console.warn('local restore failed', e); }
+  }
+
+  // ── ФОНОВАЯ СВЕРКА С ОБЛАКОМ ──
   loadProgress().then((data)=>{
-    if(data && (data.started || (data.completed&&data.completed.length) || (data.shards&&data.shards.some(Boolean)))){
-      try{
-        applyProgress(data);
-        _restoredSilently = true;
-        // Показываем приложение сразу (молча, как будто не закрывал)
-        document.getElementById('ob-screen').classList.add('hidden');
-        document.getElementById('app-screen').classList.remove('hidden');
-        initMainScreen();
-      }catch(e){
-        console.warn('restore failed', e);
-        // При ошибке — обычный онбординг
+    const cloudHasProgress = data && (data.started || (data.completed&&data.completed.length) || (data.shards&&data.shards.some(Boolean)));
+    if(cloudHasProgress){
+      const score = p => (p.completed?p.completed.length:0)*1000 + (p.shards?p.shards.filter(Boolean).length:0) + (p.activeVitrazhi?p.activeVitrazhi.length:0)*100;
+      const cloudScore = score(data);
+      const localScore = local ? score(local) : -1;
+      if(!localHasProgress || cloudScore>localScore){
+        try{
+          applyProgress(data);
+          _restoredSilently = true;
+          document.getElementById('ob-screen').classList.add('hidden');
+          document.getElementById('app-screen').classList.remove('hidden');
+          initMainScreen();
+        }catch(e){ console.warn('cloud restore failed', e); }
       }
+      dismissSplash();
+    } else if(!localHasProgress){
+      // Нигде нет прогресса — показываем онбординг
+      revealOnboarding();
+    } else {
+      // localStorage уже показал витраж — заставку уже убрали
+      dismissSplash();
     }
-    // иначе — остаётся экран онбординга (по умолчанию)
+  }).catch(()=>{
+    if(!localHasProgress) revealOnboarding();
+    else dismissSplash();
   });
+
+  // Подстраховка: если облако зависло дольше 1.8с и локального прогресса нет —
+  // всё равно показываем онбординг, чтобы не зависнуть на заставке.
+  setTimeout(()=>{
+    if(!document.documentElement.classList.contains('boot-done')){
+      if(!localHasProgress) revealOnboarding();
+      else dismissSplash();
+    }
+  }, 1800);
 }
 
 // Сохраняем прогресс перед закрытием/скрытием страницы
@@ -3067,11 +3179,11 @@ window.addEventListener('beforeunload', ()=>{ try{ saveProgress(); }catch(e){} }
 window.addEventListener('pagehide', ()=>{ try{ saveProgress(); }catch(e){} });
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ try{ saveProgress(); }catch(e){} } });
 
-// Запускаем загрузку прогресса после полной инициализации страницы
+// Запускаем загрузку прогресса как можно раньше
 if(document.readyState==='complete' || document.readyState==='interactive'){
-  setTimeout(bootWithProgress, 50);
+  bootWithProgress();
 } else {
-  window.addEventListener('DOMContentLoaded', ()=>setTimeout(bootWithProgress,50));
+  window.addEventListener('DOMContentLoaded', bootWithProgress);
 }
 
 
