@@ -37,6 +37,7 @@ input, textarea, .ob-sub, .ob-title, [contenteditable]{
   --text:#eeedf8;--text2:#8e8cac;--text3:#4e4d68;
   --accent:#7c6fff;--accent2:#a78bfa;
   --gold:#f0c060;--teal:#38d9c0;--rose:#e87090;
+  --app-bg:#03040a;
   /* Safe-area: отступы под системные панели Telegram/iOS/Android.
      Берём максимум из env() (вырез/notch) и переменных Telegram WebApp. */
   --safe-top: max(env(safe-area-inset-top, 0px), 0px);
@@ -46,7 +47,19 @@ input, textarea, .ob-sub, .ob-title, [contenteditable]{
   --pad-top: calc(var(--safe-top) + var(--tg-top));
   --pad-bottom: calc(var(--safe-bottom) + var(--tg-bottom));
 }
-html,body{height:100%;background:#03040a;font-family:'Onest',-apple-system,sans-serif;color:var(--text);overflow:hidden;}
+/* ══ СВЕТЛАЯ ТЕМА ══ */
+html.light-theme{
+  --bg:#f4f3fa;--bg2:#ffffff;--bg3:#eeecf7;
+  --border:rgba(20,16,40,0.09);--border2:rgba(20,16,40,0.16);
+  --text:#1a1726;--text2:#5e5a76;--text3:#9a96b0;
+  --accent:#6d5fe8;--accent2:#7c5fd0;
+  --gold:#c79320;--teal:#1f9a8a;--rose:#c84870;
+  --app-bg:#e9e7f3;
+}
+html.light-theme body{background:var(--app-bg);}
+html.light-theme{--cs:light;--nav-bg:rgba(255,255,255,.97);}
+html.light-theme .phone{background:var(--bg);box-shadow:0 40px 120px rgba(80,70,140,0.25),0 0 0 1px rgba(20,16,40,0.06);border-color:rgba(20,16,40,0.1);}
+html,body{height:100%;background:var(--app-bg);font-family:'Onest',-apple-system,sans-serif;color:var(--text);overflow:hidden;transition:background .3s;}
 
 /* ══ SCREENS ══ */
 .screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity .5s,transform .5s;z-index:1;}
@@ -61,7 +74,7 @@ html,body{height:100%;background:#03040a;font-family:'Onest',-apple-system,sans-
 .sb-ic{font-size:11px;color:var(--text2);}
 .scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
 .scroll::-webkit-scrollbar{display:none;}
-.nav{height:64px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;background:rgba(8,9,16,.97);backdrop-filter:blur(20px);flex-shrink:0;padding-bottom:calc(var(--pad-bottom) + 6px);box-sizing:content-box;}
+.nav{height:64px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;background:var(--nav-bg,rgba(8,9,16,.97));backdrop-filter:blur(20px);flex-shrink:0;padding-bottom:calc(var(--pad-bottom) + 6px);box-sizing:content-box;}
 .ni{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 16px;border-radius:14px;border:none;background:none;color:var(--text3);font-family:inherit;font-size:10px;font-weight:500;letter-spacing:.04em;transition:all .22s ease;-webkit-tap-highlight-color:transparent;outline:none;}
 .ni:hover{background:rgba(255,255,255,.04);}
 .ni:focus,.ni:focus-visible,.ni:active{outline:none;}
@@ -69,6 +82,10 @@ html,body{height:100%;background:#03040a;font-family:'Onest',-apple-system,sans-
 .ni:not(.on):focus,.ni:not(.on):active{background:none;color:var(--text3);}
 .ni.on{color:var(--accent2);font-weight:600;background:rgba(124,111,255,.12);}
 .ni.on .ni-ic{transform:translateY(-1px) scale(1.08);filter:drop-shadow(0 2px 8px rgba(124,111,255,.5));}
+/* Двухслойные иконки: серый контур по умолчанию, цветное витражное стекло — когда раздел активен */
+.ni-ic .ic-color{display:none;}
+.ni.on .ni-ic .ic-grey{display:none;}
+.ni.on .ni-ic .ic-color{display:inline;}
 .ni-ic{font-size:22px;line-height:1;transition:transform .22s ease,filter .22s ease;}
 
 /* ══════════════════════════════════════════════
@@ -138,6 +155,10 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 /* Settings screen components */
 .opt-pill{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;}
 .time-chip{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:7px 12px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;transition:all .15s;}
+.set-chip{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px;font-size:14px;color:var(--text2);cursor:pointer;transition:all .15s;}
+.set-chip b{color:var(--text);font-weight:600;}
+.set-chip:hover{border-color:var(--border2);}
+.set-chip.sel{border-color:var(--accent);background:rgba(124,111,255,.12);}
 .time-chip:hover{border-color:var(--accent);color:var(--text);}
 .time-chip.sel{background:var(--accent);border-color:var(--accent);color:#fff;}
 .suggest-chip{background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.3);border-radius:20px;padding:8px 13px;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
@@ -206,6 +227,10 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 .prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .7s cubic-bezier(.22,1,.36,1);}
 .prog-lb{font-size:11px;color:var(--text2);white-space:nowrap;}
 .hint{font-size:11px;color:var(--text3);text-align:center;margin-top:7px;transition:opacity .5s;}
+.undo-bar{display:none;align-items:center;justify-content:center;gap:10px;margin-top:9px;padding:8px 12px;background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.25);border-radius:10px;font-size:12px;color:var(--text2);}
+.undo-bar.show{display:flex;animation:undoIn .25s ease;}
+.undo-bar button{background:none;border:none;color:var(--accent2);font-weight:600;font-size:12px;cursor:pointer;font-family:inherit;padding:2px 4px;}
+@keyframes undoIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* Done banner */
 .done-banner{display:none;background:linear-gradient(135deg,rgba(100,80,255,.18),rgba(45,200,180,.1));border:1px solid rgba(124,111,255,.4);border-radius:13px;padding:12px 14px;align-items:center;gap:9px;margin-top:10px;}
@@ -285,10 +310,10 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 <div id="boot-splash">
   <svg viewBox="0 0 84 110" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="bs1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient>
-      <linearGradient id="bs2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient>
-      <linearGradient id="bs3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient>
-      <linearGradient id="bs4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient>
+      <linearGradient id="bs1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient>
+      <linearGradient id="bs2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient>
+      <linearGradient id="bs3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient>
+      <linearGradient id="bs4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient>
     </defs>
     <path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="#c8a86a" stroke-width="3.5" stroke-linejoin="round"/>
     <path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#bs1)"/>
@@ -316,6 +341,10 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       if(hasProgress){
         document.documentElement.classList.add('has-saved-progress');
       }
+      // Тема — применяем сразу, до отрисовки, чтобы не было «вспышки»
+      if(d && d.settings && d.settings.theme==='light'){
+        document.documentElement.classList.add('light-theme');
+      }
     }
   }catch(e){}
 })();
@@ -337,10 +366,10 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div style="margin:0 auto 16px;width:84px;height:84px;filter:drop-shadow(0 0 22px rgba(124,111,255,.55));">
         <svg viewBox="0 0 84 110" width="84" height="84" style="display:block;margin:0 auto;overflow:visible;">
           <defs>
-            <linearGradient id="vg-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient>
-            <linearGradient id="vg-vio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient>
-            <linearGradient id="vg-teal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient>
-            <linearGradient id="vg-rose" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient>
+            <linearGradient id="vg-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient>
+            <linearGradient id="vg-vio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient>
+            <linearGradient id="vg-teal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient>
+            <linearGradient id="vg-rose" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient>
           </defs>
           <!-- арочное окно: рамка -->
           <path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="#c8a86a" stroke-width="3.5" stroke-linejoin="round"/>
@@ -377,11 +406,11 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <div class="ob-sub" style="font-size:13px;">Первый витраж посвящён одной цели. За ней скрыт тайный образ</div>
     <div class="sphere-grid" id="sphere-grid">
       <div class="sphere-opt" onclick="selSphere(this,'sleep','🌙','Сон','#4a80d0')"><span class="sphere-emoji">🌙</span><div class="sphere-name">Сон</div><div class="sphere-desc">Режим и качество</div></div>
-      <div class="sphere-opt" onclick="selSphere(this,'sport','⚡','Спорт','#30c090')"><span class="sphere-emoji">⚡</span><div class="sphere-name">Спорт</div><div class="sphere-desc">Движение и сила</div></div>
+      <div class="sphere-opt" onclick="selSphere(this,'sport','🏃','Спорт','#30c090')"><span class="sphere-emoji">🏃</span><div class="sphere-name">Спорт</div><div class="sphere-desc">Движение и сила</div></div>
       <div class="sphere-opt" onclick="selSphere(this,'work','🧠','Работа','#e09030')"><span class="sphere-emoji">🧠</span><div class="sphere-name">Работа</div><div class="sphere-desc">Фокус и рост</div></div>
       <div class="sphere-opt" onclick="selSphere(this,'calm','🌿','Спокойствие','#4890c0')"><span class="sphere-emoji">🌿</span><div class="sphere-name">Спокойствие</div><div class="sphere-desc">Ментальный покой</div></div>
       <div class="sphere-opt" onclick="selSphere(this,'food','🥗','Питание','#60b040')"><span class="sphere-emoji">🥗</span><div class="sphere-name">Питание</div><div class="sphere-desc">Еда и энергия</div></div>
-      <div class="sphere-opt" onclick="selSphere(this,'creative','✨','Творчество','#9060e0')"><span class="sphere-emoji">✨</span><div class="sphere-name">Творчество</div><div class="sphere-desc">Созидание</div></div>
+      <div class="sphere-opt" onclick="selSphere(this,'creative','🎨','Творчество','#9060e0')"><span class="sphere-emoji">🎨</span><div class="sphere-name">Творчество</div><div class="sphere-desc">Созидание</div></div>
     </div>
     <button class="btn btn-primary" id="ob1-next" onclick="nextOb()" style="opacity:.4;pointer-events:none;">Дальше →</button>
     <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot on"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
@@ -396,16 +425,16 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <div id="act-list-wrap" style="display:flex;flex-direction:column;gap:8px;"></div>
     <button class="btn btn-ghost" id="add-action-btn" onclick="addActionField(true)" style="margin-top:0;font-size:13px;padding:10px;">+ Добавить действие</button>
 
-    <!-- Подсказки действий для выбранной сферы (компактная горизонтальная лента) -->
-    <div id="act-suggest-wrap" style="display:none;">
-      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+    <!-- Подсказки действий для выбранной сферы — занимают свободное место -->
+    <div id="act-suggest-wrap" style="display:none;flex:1;min-height:0;flex-direction:column;">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-shrink:0;">
         <span style="color:var(--accent2);">✦</span> Идеи — нажми, чтобы добавить
       </div>
-      <div id="act-suggest-chips" style="display:flex;flex-wrap:wrap;gap:7px;max-height:96px;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
+      <div id="act-suggest-chips" style="display:flex;flex-wrap:wrap;align-content:flex-start;gap:7px;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
     </div>
 
-    <button class="btn btn-primary" onclick="nextOb()">Дальше →</button>
-    <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot on"></div><div class="ob-dot"></div></div>
+    <button class="btn btn-primary" onclick="nextOb()" style="margin-top:auto;flex-shrink:0;">Дальше →</button>
+    <div class="ob-dots" style="flex-shrink:0;"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot on"></div><div class="ob-dot"></div></div>
   </div>
 
   <!-- Шаг 3: настройки -->
@@ -450,7 +479,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
           <span style="font-size:13px;color:var(--text2);">Время:</span>
           <input type="time" id="reminder-time-input" value="21:00" onchange="onReminderTimeChange(this.value)"
-            style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;font-size:16px;color:var(--text);font-family:inherit;outline:none;color-scheme:dark;">
+            style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;font-size:16px;color:var(--text);font-family:inherit;outline:none;color-scheme:var(--cs,dark);">
         </div>
         <!-- Быстрый выбор -->
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -483,7 +512,32 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div class="sh-sub" id="main-date">Понедельник, 15 июня</div>
     </div>
     <div class="scroll">
-      <div class="master-card">
+      <!-- Пустое состояние: нет ни одного витража -->
+      <div id="main-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 30px;min-height:60vh;">
+        <div style="width:88px;height:88px;margin-bottom:20px;opacity:.85;">
+          <svg viewBox="0 0 84 110" width="88" height="88" style="display:block;">
+            <defs>
+              <linearGradient id="me1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient>
+              <linearGradient id="me2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient>
+              <linearGradient id="me3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient>
+              <linearGradient id="me4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient>
+            </defs>
+            <path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="var(--bg3)" stroke="#c8a86a" stroke-width="3" stroke-linejoin="round" opacity=".5"/>
+            <path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#me1)" opacity=".3"/>
+            <path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#me2)" opacity=".3"/>
+            <path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#me3)" opacity=".3"/>
+            <path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#me4)" opacity=".3"/>
+            <path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#me1)" opacity=".25"/>
+            <path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#me2)" opacity=".25"/>
+            <path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="2" fill="none" opacity=".4"/>
+          </svg>
+        </div>
+        <div style="font-size:19px;font-weight:600;margin-bottom:8px;">Пока нет ни одного витража</div>
+        <div style="font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:26px;max-width:280px;">Создай свой первый витраж — выбери сферу жизни и начни собирать образ из ежедневных действий</div>
+        <button class="btn btn-primary" style="max-width:280px;" onclick="startNewVitrazh()">✦ Создать витраж</button>
+      </div>
+      <!-- Обычное содержимое (когда есть активный витраж) -->
+      <div id="main-content">
         <div class="m-av">🧙</div>
         <div><div class="m-name">МАСТЕР-ВИТРАЖИСТ</div><div class="m-msg" id="master-msg">Каждый осколок открывает часть тайного образа. Что скрывается за стеклом — узнаешь сам</div></div>
       </div>
@@ -504,6 +558,10 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
           <div class="prog-lb" id="v-prog-lb">0 / 30</div>
         </div>
         <div class="hint" id="v-hint">Нажми на тёмный осколок — открой образ</div>
+        <div class="undo-bar" id="undo-bar">
+          <span>Осколок открыт</span>
+          <button onclick="undoLastShard()">Отменить</button>
+        </div>
       </div>
       <div class="actions-wrap">
         <div class="sec-label">Сегодняшние действия</div>
@@ -514,11 +572,12 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
         <div class="stat-card"><div class="sv teal" id="s-done">0</div><div class="sn">Открыто</div></div>
         <div class="stat-card"><div class="sv ac" id="s-left">30</div><div class="sn">Осталось</div></div>
       </div>
+      </div><!-- /main-content -->
     </div>
     <div class="nav">
-      <button class="ni on" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
-      <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="currentColor" opacity=".25"/><path d="M14 6.6v3"/><path d="M5 13c0-2 1.4-3.2 2.4-4M23 13c0-2-1.4-3.2-2.4-4" opacity=".0"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M5.5 14.5l2.5-1.2M22.5 14.5l-2.5-1.2"/><path d="M14 16.5c-.9 0-1.5.7-1.5 1.6V25h3v-6.9c0-.9-.6-1.6-1.5-1.6z" fill="currentColor" opacity=".25"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g></svg></span>Собор</button>
-      <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z" fill="currentColor" opacity=".22"/><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z"/><circle cx="8" cy="20" r="3.4"/><path d="M10.4 17.6l1.1-1.1"/></g></svg></span>Мастерская</button>
+      <button class="ni on" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
+      <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;overflow:visible;"><defs><linearGradient id="cg1_1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient><linearGradient id="cg2_1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient><linearGradient id="cg3_1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient><linearGradient id="cg4_1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient></defs><g class="ic-grey" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z"/><path d="M14 6.6v3"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g><g class="ic-color" stroke-linejoin="round" stroke-linecap="round"><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z" fill="url(#cg2_1)" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 25V13.5c0-1.4.9-2.3 2.5-2.8L8 25z" fill="url(#cg1_1)" stroke="currentColor" stroke-width="1.4"/><path d="M22.5 25V13.5c0-1.4-.9-2.3-2.5-2.8L20 25z" fill="url(#cg3_1)" stroke="currentColor" stroke-width="1.4"/><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="url(#cg4_1)" stroke="currentColor" stroke-width="1.2"/><path d="M14 6.6v3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3 25h22" fill="none" stroke="currentColor" stroke-width="1.6"/></g></svg></span>Собор</button>
+      <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;overflow:visible;"><defs><linearGradient id="tg2_1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient><linearGradient id="tg3_1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient></defs><g class="ic-grey" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 13.5l3.5-9.5 7.5 7.5-9.5 3.5z"/><path d="M4.5 23.5l3-1 6.5-6.5-2-2-6.5 6.5z"/><path d="M15 11.5l1.5 1.5"/></g><g class="ic-color" stroke-linejoin="round" stroke-linecap="round"><path d="M13 13.5l3.5-9.5 7.5 7.5-9.5 3.5z" fill="url(#tg3_1)" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 23.5l3-1 6.5-6.5-2-2-6.5 6.5z" fill="url(#tg2_1)" stroke="currentColor" stroke-width="1.5"/><path d="M15 11.5l1.5 1.5" fill="none" stroke="currentColor" stroke-width="1.5"/></g></svg></span>Мастерская</button>
     </div>
   </div>
 
@@ -534,9 +593,9 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div id="gallery-list"></div>
     </div>
     <div class="nav">
-      <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
-      <button class="ni on" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="currentColor" opacity=".25"/><path d="M14 6.6v3"/><path d="M5 13c0-2 1.4-3.2 2.4-4M23 13c0-2-1.4-3.2-2.4-4" opacity=".0"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M5.5 14.5l2.5-1.2M22.5 14.5l-2.5-1.2"/><path d="M14 16.5c-.9 0-1.5.7-1.5 1.6V25h3v-6.9c0-.9-.6-1.6-1.5-1.6z" fill="currentColor" opacity=".25"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g></svg></span>Собор</button>
-      <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z" fill="currentColor" opacity=".22"/><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z"/><circle cx="8" cy="20" r="3.4"/><path d="M10.4 17.6l1.1-1.1"/></g></svg></span>Мастерская</button>
+      <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
+      <button class="ni on" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;overflow:visible;"><defs><linearGradient id="cg1_2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient><linearGradient id="cg2_2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient><linearGradient id="cg3_2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient><linearGradient id="cg4_2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient></defs><g class="ic-grey" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z"/><path d="M14 6.6v3"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g><g class="ic-color" stroke-linejoin="round" stroke-linecap="round"><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z" fill="url(#cg2_2)" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 25V13.5c0-1.4.9-2.3 2.5-2.8L8 25z" fill="url(#cg1_2)" stroke="currentColor" stroke-width="1.4"/><path d="M22.5 25V13.5c0-1.4-.9-2.3-2.5-2.8L20 25z" fill="url(#cg3_2)" stroke="currentColor" stroke-width="1.4"/><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="url(#cg4_2)" stroke="currentColor" stroke-width="1.2"/><path d="M14 6.6v3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3 25h22" fill="none" stroke="currentColor" stroke-width="1.6"/></g></svg></span>Собор</button>
+      <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;overflow:visible;"><defs><linearGradient id="tg2_2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient><linearGradient id="tg3_2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient></defs><g class="ic-grey" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 13.5l3.5-9.5 7.5 7.5-9.5 3.5z"/><path d="M4.5 23.5l3-1 6.5-6.5-2-2-6.5 6.5z"/><path d="M15 11.5l1.5 1.5"/></g><g class="ic-color" stroke-linejoin="round" stroke-linecap="round"><path d="M13 13.5l3.5-9.5 7.5 7.5-9.5 3.5z" fill="url(#tg3_2)" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 23.5l3-1 6.5-6.5-2-2-6.5 6.5z" fill="url(#tg2_2)" stroke="currentColor" stroke-width="1.5"/><path d="M15 11.5l1.5 1.5" fill="none" stroke="currentColor" stroke-width="1.5"/></g></svg></span>Мастерская</button>
     </div>
   </div>
 
@@ -550,7 +609,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
         <div class="prof-light"><div style="font-size:20px;font-weight:600;color:var(--gold);" id="p-light">0</div><div style="font-size:11px;color:var(--text3);">✦ Света</div></div>
       </div>
       <div class="stats-row">
-        <div class="stat-card"><div class="sv gold" id="p-stk">0</div><div class="sn">Дней подряд</div></div>
+        <div class="stat-card"><div class="sv gold" id="p-stk">0</div><div class="sn">Дней с тобой</div></div>
         <div class="stat-card"><div class="sv teal" id="p-done">0</div><div class="sn">Осколков</div></div>
         <div class="stat-card"><div class="sv ac" id="p-sh">30</div><div class="sn">Осталось</div></div>
       </div>
@@ -566,33 +625,67 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
         <button class="btn btn-primary" style="font-size:14px;padding:13px;">399 ₽ / месяц — открыть</button>
       </div>
       <div class="sec-label" style="margin:0 18px 9px;">Настройки</div>
-      <div class="menu-item" id="menu-limit-info">✋<span id="menu-limit-text">Лимит: без ограничений</span><span class="mi-arrow">›</span></div>
-      <div class="menu-item">🔔<span id="menu-reminder-text">Напоминания от Мастера</span><span class="mi-arrow">›</span></div>
-      <div class="menu-item">🖼️<span>Загрузить своё изображение</span><span class="mi-arrow">›</span></div>
-      <div class="menu-item">📤<span>Поделиться витражом</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" onclick="openLimitSettings()">✋<span id="menu-limit-text">Лимит: без ограничений</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" onclick="openReminderSettings()">🔔<span id="menu-reminder-text">Напоминания от Мастера</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" onclick="toggleTheme()">🎨<span id="menu-theme-text">Тема: тёмная</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" onclick="shareVitrazh()">📤<span>Поделиться витражом</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="resetApp()">🔄<span>Начать заново</span><span class="mi-arrow">›</span></div>
     </div>
     <div class="nav">
-      <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
-      <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="currentColor" opacity=".25"/><path d="M14 6.6v3"/><path d="M5 13c0-2 1.4-3.2 2.4-4M23 13c0-2-1.4-3.2-2.4-4" opacity=".0"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M5.5 14.5l2.5-1.2M22.5 14.5l-2.5-1.2"/><path d="M14 16.5c-.9 0-1.5.7-1.5 1.6V25h3v-6.9c0-.9-.6-1.6-1.5-1.6z" fill="currentColor" opacity=".25"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g></svg></span>Собор</button>
-      <button class="ni on" onclick="switchTab('profile',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z" fill="currentColor" opacity=".22"/><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z"/><circle cx="8" cy="20" r="3.4"/><path d="M10.4 17.6l1.1-1.1"/></g></svg></span>Мастерская</button>
+      <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
+      <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;overflow:visible;"><defs><linearGradient id="cg1_3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient><linearGradient id="cg2_3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient><linearGradient id="cg3_3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient><linearGradient id="cg4_3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient></defs><g class="ic-grey" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z"/><path d="M14 6.6v3"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g><g class="ic-color" stroke-linejoin="round" stroke-linecap="round"><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z" fill="url(#cg2_3)" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 25V13.5c0-1.4.9-2.3 2.5-2.8L8 25z" fill="url(#cg1_3)" stroke="currentColor" stroke-width="1.4"/><path d="M22.5 25V13.5c0-1.4-.9-2.3-2.5-2.8L20 25z" fill="url(#cg3_3)" stroke="currentColor" stroke-width="1.4"/><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="url(#cg4_3)" stroke="currentColor" stroke-width="1.2"/><path d="M14 6.6v3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M3 25h22" fill="none" stroke="currentColor" stroke-width="1.6"/></g></svg></span>Собор</button>
+      <button class="ni on" onclick="switchTab('profile',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;overflow:visible;"><defs><linearGradient id="tg2_3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient><linearGradient id="tg3_3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient></defs><g class="ic-grey" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 13.5l3.5-9.5 7.5 7.5-9.5 3.5z"/><path d="M4.5 23.5l3-1 6.5-6.5-2-2-6.5 6.5z"/><path d="M15 11.5l1.5 1.5"/></g><g class="ic-color" stroke-linejoin="round" stroke-linecap="round"><path d="M13 13.5l3.5-9.5 7.5 7.5-9.5 3.5z" fill="url(#tg3_3)" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 23.5l3-1 6.5-6.5-2-2-6.5 6.5z" fill="url(#tg2_3)" stroke="currentColor" stroke-width="1.5"/><path d="M15 11.5l1.5 1.5" fill="none" stroke="currentColor" stroke-width="1.5"/></g></svg></span>Мастерская</button>
     </div>
   </div>
+
+<!-- ══ НАСТРОЙКА: ЛИМИТ ОСКОЛКОВ ══ -->
+<div id="set-limit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeLimitModal()">
+  <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;">
+    <div style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;"></div>
+    <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Лимит осколков в день</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Сколько осколков можно закрашивать за один день. Бережёт привычку от выгорания.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <div class="set-chip" data-val="1" onclick="setDailyLimit(1)"><b>1 осколок</b> — бережно, по одному действию</div>
+      <div class="set-chip" data-val="3" onclick="setDailyLimit(3)"><b>3 осколка</b> — сбалансированно</div>
+      <div class="set-chip" data-val="5" onclick="setDailyLimit(5)"><b>5 осколков</b> — активно</div>
+      <div class="set-chip" data-val="0" onclick="setDailyLimit(0)"><b>Без лимита</b> — закрашивай сколько хочешь</div>
+    </div>
+    <button class="btn btn-primary" onclick="closeLimitModal()">Готово</button>
+  </div>
+</div>
+
+<!-- ══ НАСТРОЙКА: НАПОМИНАНИЯ ══ -->
+<div id="set-reminder-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeReminderModal()">
+  <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;">
+    <div style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <div style="font-size:16px;font-weight:600;">Напоминания от Мастера</div>
+      <div class="toggle on" id="set-rem-toggle" onclick="toggleReminderSetting()"><div class="toggle-knob"></div></div>
+    </div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Мастер напомнит закрасить осколок в выбранное время.</div>
+    <div id="set-rem-time-row" style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+      <span style="font-size:14px;color:var(--text2);">Время:</span>
+      <input type="time" id="set-rem-time" value="21:00" onchange="onReminderSettingTime(this.value)"
+        style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;font-size:16px;color:var(--text);font-family:inherit;outline:none;color-scheme:var(--cs,dark);">
+    </div>
+    <button class="btn btn-primary" onclick="closeReminderModal()">Готово</button>
+  </div>
+</div>
 
 <!-- ══ ВЫБОР ИСТОЧНИКА ФОТО (камера / галерея) ══ -->
 <div id="photo-choice" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closePhotoChoice()">
   <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:16px;padding-bottom:calc(16px + var(--pad-bottom));width:100%;max-width:420px;">
     <div style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;"></div>
     <div style="font-size:15px;font-weight:600;text-align:center;margin-bottom:14px;">Добавить фото</div>
-    <!-- Label напрямую открывает нативный input — сохраняется пользовательский жест,
-         поэтому атрибут capture (камера) работает корректно -->
-    <label style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:15px;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+    <!-- Label напрямую открывает нативный input. Input скрыт ВИЗУАЛЬНО (не display:none),
+         иначе Telegram WebView на Android игнорирует атрибут capture (камеру). -->
+    <label style="position:relative;width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:15px;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;gap:12px;overflow:hidden;">
       <span style="font-size:22px;">📸</span> Сделать снимок
-      <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="onPhotoChosen(event)">
+      <input type="file" accept="image/*" capture="environment" onchange="onPhotoChosen(event)" style="position:absolute;width:1px;height:1px;opacity:0;left:0;top:0;">
     </label>
-    <label style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:15px;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+    <label style="position:relative;width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:15px;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;gap:12px;overflow:hidden;">
       <span style="font-size:22px;">🖼️</span> Выбрать из галереи
-      <input type="file" accept="image/*" style="display:none;" onchange="onPhotoChosen(event)">
+      <input type="file" accept="image/*" onchange="onPhotoChosen(event)" style="position:absolute;width:1px;height:1px;opacity:0;left:0;top:0;">
     </label>
     <button type="button" onclick="closePhotoChoice()" style="width:100%;background:none;border:none;padding:12px;font-size:14px;color:var(--text2);cursor:pointer;font-family:inherit;">Отмена</button>
   </div>
@@ -622,9 +715,6 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <button type="button" onclick="openPhotoChoice('memo')" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);font-family:inherit;">📷 Фото</button>
       <button onclick="startMemoAudio()" id="memo-audio-btn" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;">🎙 Запись</button>
     </div>
-    <!-- Скрытые поля: камера и галерея -->
-    <input type="file" id="memo-photo-camera" accept="image/*" capture="environment" style="display:none;" onchange="memoPhotoChange(event)">
-    <input type="file" id="memo-photo-gallery" accept="image/*" style="display:none;" onchange="memoPhotoChange(event)">
     <div id="memo-photo-preview" style="display:none;margin-bottom:8px;"><img id="memo-photo-img" style="width:100%;border-radius:12px;" src=""><button onclick="clearMemoPhoto()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;margin-top:4px;">✕ Удалить фото</button></div>
     <div id="memo-audio-status" style="display:none;font-size:12px;color:var(--teal);margin-bottom:8px;"></div>
     <button class="btn btn-primary" onclick="saveMemo()" style="font-size:14px;padding:13px;">Сохранить</button>
@@ -645,8 +735,6 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <button type="button" onclick="openPhotoChoice('comp')" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-size:13px;color:var(--text2);font-family:inherit;">📷 Фото</button>
       <button onclick="startCompAudio()" id="comp-audio-btn" style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;">🎙 Запись</button>
     </div>
-    <input type="file" id="comp-photo-camera" accept="image/*" capture="environment" style="display:none;" onchange="compPhotoChange(event)">
-    <input type="file" id="comp-photo-gallery" accept="image/*" style="display:none;" onchange="compPhotoChange(event)">
     <div id="comp-photo-preview" style="display:none;margin-bottom:10px;"><img id="comp-photo-img" style="width:100%;border-radius:12px;" src=""><button onclick="clearCompPhoto()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;margin-top:4px;">✕ Удалить фото</button></div>
     <div id="comp-audio-status" style="display:none;font-size:12px;color:var(--teal);margin-bottom:10px;"></div>
     <div id="comp-audio-wrap" style="display:none;margin-bottom:10px;">
@@ -715,6 +803,7 @@ const app = {
   todayDone: new Set(),
   shardsToday: 0,
   streak: 0, light: 0, totalDone: 0,
+  activeDays: [], // уникальные календарные дни активности (строки 'ГГГГ-ММ-ДД') для счётчика «дней»
   customImage: null,
   isPresetImage: false, // true когда customImage — предустановленный витраж
   completed: [], // {name, sphere, emoji, shards, shardColors, shardMemos, shardDates, insight, completedAt}
@@ -773,11 +862,19 @@ function nextObAndStart(){
 }
 
 function selSphere(el,id,emoji,name,color){
+  const prevSphere = app.sphere;
   document.querySelectorAll('.sphere-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
   app.sphere=id; app.sphereName=name; app.sphereEmoji=emoji; app.sphereColor=color;
   const btn=document.getElementById('ob1-next');
   btn.style.opacity='1'; btn.style.pointerEvents='auto';
+  // Если пользователь сменил сферу (через «Назад» → выбор другой) —
+  // очищаем ранее введённые действия, так как они относились к прошлой сфере.
+  // Если выбрана та же сфера — действия сохраняются (просто «заглянул назад»).
+  if(prevSphere && prevSphere!==id){
+    const wrap=document.getElementById('act-list-wrap');
+    if(wrap) wrap.innerHTML='';
+  }
 }
 
 function handleImageUpload(e){
@@ -1118,6 +1215,8 @@ function snapshotCurrentVitrazh(){
     streak:app.streak, light:app.light, totalDone:app.totalDone,
     shardsToday:app.shardsToday,
     todayDone:[...app.todayDone],
+    activeDays: Array.isArray(app.activeDays)?[...app.activeDays]:[],
+    shardActionIdx: Object.assign({}, app.shardActionIdx||{}),
     vTotal:app.vTotal||TOTAL,
   };
 }
@@ -1147,6 +1246,8 @@ function loadVitrazh(snap){
   app.streak=snap.streak||0; app.light=snap.light||0; app.totalDone=snap.totalDone||0;
   app.shardsToday=snap.shardsToday||0;
   app.todayDone=new Set(snap.todayDone||[]);
+  app.activeDays=Array.isArray(snap.activeDays)?[...snap.activeDays]:[];
+  app.shardActionIdx=Object.assign({}, snap.shardActionIdx||{});
   app.vTotal=snap.vTotal||TOTAL;
   // Сброс кэша полигонов под новый размер
   SHARD_CACHE={key:null,polys:null};
@@ -1198,6 +1299,7 @@ const settings = {
   dailyLimit: 0,        // 0 = без лимита, иначе число осколков в день
   reminderTime: '21:00',
   reminderOn: true,
+  theme: 'dark',        // 'dark' или 'light'
 };
 
 function applyShardCountToGrid(count){
@@ -1595,7 +1697,21 @@ function adjustColor(hex,amount){
 ══════════════════════════════════════════════ */
 let vitrazh_W=0, vitrazh_H=0;
 
+// Показывает пустое состояние на вкладке «Витраж», если нет активного витража.
+// Возвращает true, если показано пустое состояние (витража нет).
+function updateMainEmptyState(){
+  const empty = !app.sphere; // нет выбранной сферы = нет текущего витража
+  const emptyEl=document.getElementById('main-empty');
+  const contentEl=document.getElementById('main-content');
+  if(emptyEl) emptyEl.style.display = empty ? 'flex' : 'none';
+  if(contentEl) contentEl.style.display = empty ? 'none' : 'block';
+  return empty;
+}
+
 function initMainScreen(){
+  // Если нет активного витража — показываем пустое состояние с кнопкой создания
+  if(updateMainEmptyState()) return;
+  if(typeof hideUndo==='function') hideUndo();
   document.getElementById('v-name').textContent='Витраж '+app.sphereName;
 
   // Ждём два кадра чтобы браузер успел сделать layout
@@ -1614,15 +1730,7 @@ function initMainScreen(){
       buildActionsList();
       updateUI();
       updateGallery();
-
-      const limitText=document.getElementById('menu-limit-text');
-      if(limitText) limitText.textContent=settings.dailyLimit>0
-        ?`Лимит: ${settings.dailyLimit} осколков в день`
-        :'Лимит: без ограничений';
-      const remText=document.getElementById('menu-reminder-text');
-      if(remText) remText.textContent=settings.reminderOn
-        ?`Напоминание в ${settings.reminderTime}`
-        :'Напоминания выключены';
+      refreshSettingsLabels();
     });
   });
 }
@@ -1666,6 +1774,59 @@ function addMemoIndicators(svg){
   });
 }
 
+// Ключ сегодняшнего дня в формате ГГГГ-ММ-ДД (локальное время)
+function todayKey(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+// Отмечает сегодняшний день как активный (для счётчика «дней с активностью»)
+function registerActiveDay(){
+  if(!Array.isArray(app.activeDays)) app.activeDays=[];
+  const k=todayKey();
+  if(!app.activeDays.includes(k)) app.activeDays.push(k);
+}
+
+// ── ОТМЕНА ПОСЛЕДНЕГО ОТКРЫТОГО ОСКОЛКА ──
+let _lastShardIdx = -1;
+let _undoTimer = null;
+function showUndo(idx){
+  _lastShardIdx = idx;
+  const bar=document.getElementById('undo-bar');
+  if(!bar) return;
+  bar.classList.add('show');
+}
+function hideUndo(){
+  const bar=document.getElementById('undo-bar');
+  if(bar) bar.classList.remove('show');
+  _lastShardIdx=-1;
+}
+function undoLastShard(){
+  const idx=_lastShardIdx;
+  if(idx<0 || !app.shards[idx]){ hideUndo(); return; }
+  // Снимаем отметку с осколка
+  app.shards[idx]=false;
+  app.shardColors[idx]=null;
+  app.shardDates[idx]=null;
+  app.shardMemos[idx]=null;
+  app.light=Math.max(0, app.light-10);
+  app.totalDone=Math.max(0, app.totalDone-1);
+  app.shardsToday=Math.max(0, app.shardsToday-1);
+  // Снимаем отметку «выполнено» с действия, которое этот осколок отметил
+  if(app.shardActionIdx && app.shardActionIdx[idx]!==undefined){
+    const actIdx=app.shardActionIdx[idx];
+    app.todayDone.delete(actIdx);
+    delete app.shardActionIdx[idx];
+  }
+  // Убираем свечение/баннер завершения, если были
+  document.getElementById('main-vcard').classList.remove('glow');
+  document.getElementById('main-done-banner').classList.remove('show');
+  hideUndo();
+  rebuildVitrazh();
+  buildActionsList();
+  updateUI();
+  saveProgress();
+}
+
 function tapShard(idx, e, actionIdx){
   if(app.shards[idx]){
     // Осколок уже открыт. Если к нему есть заметка (текст/фото/аудио) —
@@ -1700,12 +1861,18 @@ function tapShard(idx, e, actionIdx){
   app.light+=10;
   app.totalDone++;
   app.shardsToday++;
+  // Запоминаем, какое действие отметил этот осколок — чтобы можно было отменить
+  app.shardActionIdx = app.shardActionIdx || {};
+  if(actToMark!==-1 && actToMark!==undefined) app.shardActionIdx[idx]=actToMark;
 
   // Записываем дату открытия осколка
   if(!app.shardDates[idx]){
     const now=new Date();
     app.shardDates[idx]=now.toLocaleDateString('ru')+' '+now.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
   }
+
+  // Учитываем сегодняшний день в счётчике «дней с активностью»
+  registerActiveDay();
 
   // Перестраиваем витраж целиком
   rebuildVitrazh();
@@ -1715,11 +1882,13 @@ function tapShard(idx, e, actionIdx){
   spawnParticles(e.clientX, e.clientY);
   showToast('main-toast');
 
+  // Кнопка отмены последнего действия
+  showUndo(idx);
+
   // Все действия дня?
   const allDone=app.actions.every((_,i)=>app.todayDone.has(i));
   if(allDone){
-    app.streak++;
-    document.getElementById('v-stk').textContent=app.streak;
+    document.getElementById('v-stk').textContent=app.activeDays.length;
     const masterMsgs=[
       'День закрыт. Витраж светится твоим усилием',
       'Все осколки дня вложены. Продолжай — образ проясняется',
@@ -1786,19 +1955,59 @@ function buildActionsList(){
     const done=app.todayDone.has(i);
     const d=document.createElement('div');
     d.className='act-card'+(done?' done':'');
-    d.innerHTML=`<div class="act-dot">${done?'✓':''}</div><div style="flex:1"><div class="act-name" style="${done?'text-decoration:line-through;opacity:.4;':''}">${a}</div><div class="act-meta">Открывает осколок витража</div></div><div class="act-light">+10 ✦</div>`;
-    if(!done) d.onclick=()=>{
-      const n=app.shards.findIndex(s=>!s);
-      if(n!==-1){
-        const el=document.getElementById(`main-sf${n}`);
-        const wrap=document.getElementById('vg-wrap');
-        const rect=el ? el.getBoundingClientRect() : wrap.getBoundingClientRect();
-        // Передаём индекс выбранного действия (i), чтобы отметить именно его
-        tapShard(n,{clientX:rect.left+rect.width/2,clientY:rect.top+rect.height/2}, i);
-      }
-    };
+    const hint = done ? 'Нажми, чтобы отменить' : 'Открывает осколок витража';
+    d.innerHTML=`<div class="act-dot">${done?'✓':''}</div><div style="flex:1"><div class="act-name" style="${done?'text-decoration:line-through;opacity:.4;':''}">${a}</div><div class="act-meta">${hint}</div></div><div class="act-light">+10 ✦</div>`;
+    if(!done){
+      d.onclick=()=>{
+        const n=app.shards.findIndex(s=>!s);
+        if(n!==-1){
+          const el=document.getElementById(`main-sf${n}`);
+          const wrap=document.getElementById('vg-wrap');
+          const rect=el ? el.getBoundingClientRect() : wrap.getBoundingClientRect();
+          // Передаём индекс выбранного действия (i), чтобы отметить именно его
+          tapShard(n,{clientX:rect.left+rect.width/2,clientY:rect.top+rect.height/2}, i);
+        }
+      };
+    } else {
+      // Повторный тап по выполненному действию снимает отметку и закрывает его осколок
+      d.onclick=()=>unmarkAction(i);
+    }
     c.appendChild(d);
   });
+}
+
+// Снимает отметку «выполнено» с действия и закрывает связанный с ним осколок
+function unmarkAction(actIdx){
+  if(!app.todayDone.has(actIdx)) return;
+  // Находим осколок, который был открыт этим действием
+  let shardIdx=-1;
+  if(app.shardActionIdx){
+    for(const k in app.shardActionIdx){
+      if(app.shardActionIdx[k]===actIdx){ shardIdx=parseInt(k,10); break; }
+    }
+  }
+  // Если связь не сохранилась — закрываем последний открытый осколок
+  if(shardIdx<0){
+    for(let i=app.shards.length-1;i>=0;i--){ if(app.shards[i]){ shardIdx=i; break; } }
+  }
+  app.todayDone.delete(actIdx);
+  if(shardIdx>=0 && app.shards[shardIdx]){
+    app.shards[shardIdx]=false;
+    app.shardColors[shardIdx]=null;
+    app.shardDates[shardIdx]=null;
+    app.shardMemos[shardIdx]=null;
+    app.light=Math.max(0, app.light-10);
+    app.totalDone=Math.max(0, app.totalDone-1);
+    app.shardsToday=Math.max(0, app.shardsToday-1);
+    if(app.shardActionIdx) delete app.shardActionIdx[shardIdx];
+  }
+  document.getElementById('main-vcard').classList.remove('glow');
+  document.getElementById('main-done-banner').classList.remove('show');
+  hideUndo();
+  rebuildVitrazh();
+  buildActionsList();
+  updateUI();
+  saveProgress();
 }
 
 function updateUI(){
@@ -1815,8 +2024,11 @@ function updateUI(){
   document.getElementById('v-sub').textContent=`Открыто ${done} из ${TOTAL}`;
   document.getElementById('v-prog').style.width=pct+'%';
   document.getElementById('v-prog-lb').textContent=done+' / '+TOTAL;
+  // Счётчик «дней с активностью» (мягкий, не обнуляется за пропуски)
+  const daysCount = Array.isArray(app.activeDays) ? app.activeDays.length : 0;
+  const vstk=document.getElementById('v-stk'); if(vstk) vstk.textContent=daysCount;
   document.getElementById('p-light').textContent=app.light;
-  document.getElementById('p-stk').textContent=app.streak;
+  document.getElementById('p-stk').textContent=daysCount;
   document.getElementById('p-done').textContent=app.totalDone;
   document.getElementById('p-sh').textContent=left;
   document.getElementById('g-pct').textContent=pct+'%';
@@ -1856,6 +2068,7 @@ function switchTab(tab, btn){
     if(btns[navIdx]) btns[navIdx].classList.add('on');
   }
   if(tab==='gallery') updateGallery();
+  if(tab==='main') updateMainEmptyState();
 }
 
 /* ══ ЭФФЕКТЫ ══ */
@@ -1890,6 +2103,110 @@ function spawnParticles(x,y){
       +`background:${cols[Math.floor(Math.random()*cols.length)]};`
       +`--tx:${(Math.cos(a)*d).toFixed(1)}px;--ty:${(Math.sin(a)*d).toFixed(1)}px;--d:${dur}s;`;
     document.body.appendChild(p); setTimeout(()=>p.remove(),800);
+  }
+}
+
+/* ══ ТЕМА (тёмная / светлая) ══ */
+function applyTheme(theme){
+  const isLight = theme==='light';
+  document.documentElement.classList.toggle('light-theme', isLight);
+  settings.theme = isLight ? 'light' : 'dark';
+  const t=document.getElementById('menu-theme-text');
+  if(t) t.textContent = isLight ? 'Тема: светлая' : 'Тема: тёмная';
+  // Telegram header/background под тему
+  try{
+    const tg=window.Telegram&&window.Telegram.WebApp;
+    if(tg){
+      const bg=isLight?'#e9e7f3':'#03040a';
+      if(tg.setBackgroundColor) tg.setBackgroundColor(bg);
+      if(tg.setHeaderColor) tg.setHeaderColor(bg);
+    }
+  }catch(e){}
+}
+function toggleTheme(){
+  applyTheme(settings.theme==='light' ? 'dark' : 'light');
+  if(typeof saveProgress==='function') saveProgress();
+}
+
+/* ══ ОБНОВЛЕНИЕ ПОДПИСЕЙ В НАСТРОЙКАХ ══ */
+function refreshSettingsLabels(){
+  const limitText=document.getElementById('menu-limit-text');
+  if(limitText) limitText.textContent=settings.dailyLimit>0
+    ?`Лимит: ${settings.dailyLimit} осколков в день`
+    :'Лимит: без ограничений';
+  const remText=document.getElementById('menu-reminder-text');
+  if(remText) remText.textContent=settings.reminderOn
+    ?`Напоминание в ${settings.reminderTime}`
+    :'Напоминания выключены';
+  const themeText=document.getElementById('menu-theme-text');
+  if(themeText) themeText.textContent = settings.theme==='light' ? 'Тема: светлая' : 'Тема: тёмная';
+}
+
+/* ══ НАСТРОЙКА ЛИМИТА ОСКОЛКОВ В ДЕНЬ ══ */
+function openLimitSettings(){
+  document.getElementById('set-limit-modal').style.display='flex';
+  syncLimitChips();
+}
+function syncLimitChips(){
+  document.querySelectorAll('#set-limit-modal .set-chip').forEach(c=>{
+    c.classList.toggle('sel', parseInt(c.dataset.val,10)===settings.dailyLimit);
+  });
+}
+function setDailyLimit(val){
+  settings.dailyLimit=val;
+  syncLimitChips();
+  refreshSettingsLabels();
+  saveProgress();
+}
+function closeLimitModal(){ document.getElementById('set-limit-modal').style.display='none'; }
+
+/* ══ НАСТРОЙКА НАПОМИНАНИЙ ══ */
+function openReminderSettings(){
+  document.getElementById('set-reminder-modal').style.display='flex';
+  const tog=document.getElementById('set-rem-toggle');
+  if(tog) tog.classList.toggle('on', settings.reminderOn);
+  const inp=document.getElementById('set-rem-time');
+  if(inp) inp.value=settings.reminderTime||'21:00';
+  const row=document.getElementById('set-rem-time-row');
+  if(row){ row.style.opacity=settings.reminderOn?'1':'.4'; row.style.pointerEvents=settings.reminderOn?'auto':'none'; }
+}
+function toggleReminderSetting(){
+  settings.reminderOn=!settings.reminderOn;
+  const tog=document.getElementById('set-rem-toggle');
+  if(tog) tog.classList.toggle('on', settings.reminderOn);
+  const row=document.getElementById('set-rem-time-row');
+  if(row){ row.style.opacity=settings.reminderOn?'1':'.4'; row.style.pointerEvents=settings.reminderOn?'auto':'none'; }
+  refreshSettingsLabels();
+  saveProgress();
+}
+function onReminderSettingTime(val){
+  if(!val) return;
+  settings.reminderTime=val;
+  refreshSettingsLabels();
+  saveProgress();
+}
+function closeReminderModal(){ document.getElementById('set-reminder-modal').style.display='none'; }
+
+/* ══ ПОДЕЛИТЬСЯ ВИТРАЖОМ ══ */
+function shareVitrazh(){
+  const done=app.shards.filter(Boolean).length;
+  const total=TOTAL;
+  const sphereName=app.sphereName||'свою цель';
+  const text=`Я собираю витраж «${sphereName}» в приложении Витраж — уже ${done} из ${total} осколков! Каждое выполненное действие открывает кусочек тайного образа. ✦`;
+  const tg=window.Telegram&&window.Telegram.WebApp;
+  // В Telegram — нативное окно «Поделиться»
+  if(tg && tg.openTelegramLink){
+    const url='https://t.me/share/url?url='+encodeURIComponent('https://t.me/')+'&text='+encodeURIComponent(text);
+    tg.openTelegramLink(url);
+    return;
+  }
+  // Веб — Web Share API, иначе копируем в буфер
+  if(navigator.share){
+    navigator.share({text}).catch(()=>{});
+  } else if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>alert('Текст скопирован — можно вставить и поделиться!')).catch(()=>alert(text));
+  } else {
+    alert(text);
   }
 }
 
@@ -2008,7 +2325,7 @@ function renderSuggestChips(){
   if(!wrap || !cont) return;
   const sugg = suggestionList();
   if(!sugg.length){ wrap.style.display='none'; return; }
-  wrap.style.display='block';
+  wrap.style.display='flex';
   cont.innerHTML='';
   const used = currentActionValues();
   sugg.forEach(text=>{
@@ -2528,6 +2845,7 @@ function deleteVitrazh(v){
   }
 
   updateGallery();
+  updateMainEmptyState();
   saveProgress();
 }
 
@@ -2540,6 +2858,7 @@ function resetCurrentVitrazhState(){
   app.shardMemos=new Array(TOTAL).fill(null);
   app.shardDates=new Array(TOTAL).fill(null);
   app.todayDone=new Set(); app.shardsToday=0;
+  app.activeDays=[]; app.shardActionIdx={};
   app.customImage=null; app.isPresetImage=false;
   app.activeId=null;
   __imgReady=false; __imgCanvas=null; __imgCtx=null;
@@ -3059,13 +3378,15 @@ function serializeProgress(){
     shardMemos:lightMemos(app.shardMemos), shardDates:app.shardDates,
     todayDone:[...app.todayDone], shardsToday:app.shardsToday,
     streak:app.streak, light:app.light, totalDone:app.totalDone,
+    activeDays: Array.isArray(app.activeDays)?app.activeDays:[],
+    shardActionIdx: app.shardActionIdx||{},
     customImage: app.isPresetImage? app.customImage : (app.customImage?'__MEDIA__':null),
     isPresetImage:app.isPresetImage,
     activeId:app.activeId, vTotal:app.vTotal||TOTAL,
     TOTAL:TOTAL,
     completed:(app.completed||[]).map(lightVitrazh),
     activeVitrazhi:(app.activeVitrazhi||[]).map(lightVitrazh),
-    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn},
+    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme},
     started: !document.getElementById('app-screen').classList.contains('hidden')
   };
 }
@@ -3233,6 +3554,8 @@ function applyProgress(data){
   app.shardMemos=data.shardMemos||[]; app.shardDates=data.shardDates||[];
   app.todayDone=new Set(data.todayDone||[]); app.shardsToday=data.shardsToday||0;
   app.streak=data.streak||0; app.light=data.light||0; app.totalDone=data.totalDone||0;
+  app.activeDays=Array.isArray(data.activeDays)?data.activeDays:[];
+  app.shardActionIdx=data.shardActionIdx||{};
   app.customImage=data.customImage||null; app.isPresetImage=data.isPresetImage||false;
   app.activeId=data.activeId||null;
   app.vTotal=data.vTotal||30;
@@ -3243,6 +3566,8 @@ function applyProgress(data){
     settings.dailyLimit=data.settings.dailyLimit||0;
     settings.reminderTime=data.settings.reminderTime||'21:00';
     settings.reminderOn=data.settings.reminderOn!==false;
+    settings.theme=data.settings.theme||'dark';
+    applyTheme(settings.theme);
   }
   TOTAL = data.TOTAL || data.vTotal || 30;
 
