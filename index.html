@@ -62,8 +62,11 @@ html,body{height:100%;background:#03040a;font-family:'Onest',-apple-system,sans-
 .scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
 .scroll::-webkit-scrollbar{display:none;}
 .nav{height:64px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;background:rgba(8,9,16,.97);backdrop-filter:blur(20px);flex-shrink:0;padding-bottom:calc(var(--pad-bottom) + 6px);box-sizing:content-box;}
-.ni{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 16px;border-radius:14px;border:none;background:none;color:var(--text3);font-family:inherit;font-size:10px;font-weight:500;letter-spacing:.04em;transition:all .22s ease;}
+.ni{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 16px;border-radius:14px;border:none;background:none;color:var(--text3);font-family:inherit;font-size:10px;font-weight:500;letter-spacing:.04em;transition:all .22s ease;-webkit-tap-highlight-color:transparent;outline:none;}
 .ni:hover{background:rgba(255,255,255,.04);}
+.ni:focus,.ni:focus-visible,.ni:active{outline:none;}
+/* Не подсвечиваем неактивные кнопки при касании/фокусе — только класс .on задаёт выделение */
+.ni:not(.on):focus,.ni:not(.on):active{background:none;color:var(--text3);}
 .ni.on{color:var(--accent2);font-weight:600;background:rgba(124,111,255,.12);}
 .ni.on .ni-ic{transform:translateY(-1px) scale(1.08);filter:drop-shadow(0 2px 8px rgba(124,111,255,.5));}
 .ni-ic{font-size:22px;line-height:1;transition:transform .22s ease,filter .22s ease;}
@@ -102,11 +105,14 @@ body.tg-mode #ob-screen{padding:0;}
 /* ══ ONBOARDING ══ */
 #ob-screen{background:radial-gradient(ellipse at 50% 30%, #1a1040 0%, #050310 60%);}
 .ob-wrap{width:390px;max-height:844px;background:var(--bg);border-radius:48px;border:1.5px solid rgba(255,255,255,0.11);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 120px rgba(0,0,0,0.85);position:relative;}
-.ob-step{display:none;flex:1;flex-direction:column;padding:24px 28px 28px;justify-content:center;gap:18px;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;}
+.ob-step{display:none;flex:1;flex-direction:column;padding:48px 28px 28px;justify-content:center;gap:18px;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;position:relative;}
 .ob-step.on{display:flex;}
 body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 .ob-icon{font-size:64px;text-align:center;filter:drop-shadow(0 0 20px rgba(124,111,255,0.5));}
 .ob-eyebrow{font-size:11px;font-weight:600;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;text-align:center;}
+.ob-back{position:absolute;top:calc(14px + var(--pad-top));left:18px;background:none;border:none;color:var(--text2);font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;padding:6px 4px;z-index:5;transition:color .2s;-webkit-tap-highlight-color:transparent;}
+.ob-back:hover{color:var(--text);}
+.ob-back:active{color:var(--accent2);}
 .ob-title{font-size:28px;font-weight:700;letter-spacing:-.8px;line-height:1.18;text-align:center;font-family:'Onest',sans-serif;}
 .ob-sub{font-size:14px;color:var(--text2);line-height:1.7;text-align:center;}
 .ob-dots{display:flex;gap:6px;justify-content:center;}
@@ -382,19 +388,20 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
   </div>
 
   <!-- Шаг 2: действия -->
-  <div class="ob-step" id="ob2">
+  <div class="ob-step" id="ob2" style="justify-content:flex-start;gap:13px;">
+    <button class="ob-back" onclick="obBack(1)">← Назад</button>
     <div class="ob-eyebrow">Шаг 2 из 3</div>
     <div class="ob-title" style="font-size:22px;">Добавь 1-7 действий</div>
-    <div class="ob-sub" style="font-size:15px;line-height:1.65;max-width:300px;margin:0 auto;text-wrap:balance;">Что ты будешь делать каждый день? Каждое выполненное действие открывает осколок витража</div>
-    <div id="act-list-wrap" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;"></div>
-    <button class="btn btn-ghost" id="add-action-btn" onclick="addActionField()" style="margin-top:0;font-size:13px;padding:10px;">+ Добавить действие</button>
+    <div class="ob-sub" style="font-size:14px;line-height:1.55;max-width:300px;margin:0 auto;text-wrap:balance;">Что ты будешь делать каждый день? Каждое выполненное действие открывает осколок витража</div>
+    <div id="act-list-wrap" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <button class="btn btn-ghost" id="add-action-btn" onclick="addActionField(true)" style="margin-top:0;font-size:13px;padding:10px;">+ Добавить действие</button>
 
-    <!-- Подсказки действий для выбранной сферы -->
+    <!-- Подсказки действий для выбранной сферы (компактная горизонтальная лента) -->
     <div id="act-suggest-wrap" style="display:none;">
-      <div style="font-size:12px;color:var(--text3);margin-bottom:9px;display:flex;align-items:center;gap:6px;">
-        <span style="color:var(--accent2);">✦</span> Идеи для твоей сферы — нажми, чтобы добавить
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        <span style="color:var(--accent2);">✦</span> Идеи — нажми, чтобы добавить
       </div>
-      <div id="act-suggest-chips" style="display:flex;flex-wrap:wrap;gap:7px;"></div>
+      <div id="act-suggest-chips" style="display:flex;flex-wrap:wrap;gap:7px;max-height:96px;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
     </div>
 
     <button class="btn btn-primary" onclick="nextOb()">Дальше →</button>
@@ -403,6 +410,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 
   <!-- Шаг 3: настройки -->
   <div class="ob-step" id="ob3" style="justify-content:flex-start;">
+    <button class="ob-back" onclick="obBack(2)">← Назад</button>
     <div class="ob-icon">⚙️</div>
     <div class="ob-eyebrow">Твой витраж почти готов</div>
     <div class="ob-title" style="font-size:21px;">Настрой свой ритуал</div>
@@ -510,7 +518,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <div class="nav">
       <button class="ni on" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
       <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="currentColor" opacity=".25"/><path d="M14 6.6v3"/><path d="M5 13c0-2 1.4-3.2 2.4-4M23 13c0-2-1.4-3.2-2.4-4" opacity=".0"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M5.5 14.5l2.5-1.2M22.5 14.5l-2.5-1.2"/><path d="M14 16.5c-.9 0-1.5.7-1.5 1.6V25h3v-6.9c0-.9-.6-1.6-1.5-1.6z" fill="currentColor" opacity=".25"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g></svg></span>Собор</button>
-      <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
+      <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z" fill="currentColor" opacity=".22"/><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z"/><circle cx="8" cy="20" r="3.4"/><path d="M10.4 17.6l1.1-1.1"/></g></svg></span>Мастерская</button>
     </div>
   </div>
 
@@ -528,7 +536,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <div class="nav">
       <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
       <button class="ni on" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="currentColor" opacity=".25"/><path d="M14 6.6v3"/><path d="M5 13c0-2 1.4-3.2 2.4-4M23 13c0-2-1.4-3.2-2.4-4" opacity=".0"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M5.5 14.5l2.5-1.2M22.5 14.5l-2.5-1.2"/><path d="M14 16.5c-.9 0-1.5.7-1.5 1.6V25h3v-6.9c0-.9-.6-1.6-1.5-1.6z" fill="currentColor" opacity=".25"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g></svg></span>Собор</button>
-      <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
+      <button class="ni" onclick="switchTab('profile',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z" fill="currentColor" opacity=".22"/><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z"/><circle cx="8" cy="20" r="3.4"/><path d="M10.4 17.6l1.1-1.1"/></g></svg></span>Мастерская</button>
     </div>
   </div>
 
@@ -542,7 +550,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
         <div class="prof-light"><div style="font-size:20px;font-weight:600;color:var(--gold);" id="p-light">0</div><div style="font-size:11px;color:var(--text3);">✦ Света</div></div>
       </div>
       <div class="stats-row">
-        <div class="stat-card"><div class="sv gold" id="p-stk">0</div><div class="sn">Стрик</div></div>
+        <div class="stat-card"><div class="sv gold" id="p-stk">0</div><div class="sn">Дней подряд</div></div>
         <div class="stat-card"><div class="sv teal" id="p-done">0</div><div class="sn">Осколков</div></div>
         <div class="stat-card"><div class="sv ac" id="p-sh">30</div><div class="sn">Осталось</div></div>
       </div>
@@ -567,7 +575,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <div class="nav">
       <button class="ni" onclick="switchTab('main',this)"><span class="ni-ic"><svg viewBox="0 0 84 110" width="22" height="22" style="display:block;"><defs><linearGradient id="nv1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5bd0"/><stop offset="1" stop-color="#1a2870"/></linearGradient><linearGradient id="nv2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a6cf0"/><stop offset="1" stop-color="#6a3fc0"/></linearGradient><linearGradient id="nv3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dd9c0"/><stop offset="1" stop-color="#1f9a8a"/></linearGradient><linearGradient id="nv4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e87aa0"/><stop offset="1" stop-color="#c04870"/></linearGradient></defs><path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="#0a0c18" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1)"/><path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2)"/><path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3)"/><path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4)"/><path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1)" opacity=".85"/><path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2)" opacity=".88"/><path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="3" fill="none"/></svg></span>Витраж</button>
       <button class="ni" onclick="switchTab('gallery',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="currentColor" opacity=".25"/><path d="M14 6.6v3"/><path d="M5 13c0-2 1.4-3.2 2.4-4M23 13c0-2-1.4-3.2-2.4-4" opacity=".0"/><path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/><path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/><path d="M5.5 14.5l2.5-1.2M22.5 14.5l-2.5-1.2"/><path d="M14 16.5c-.9 0-1.5.7-1.5 1.6V25h3v-6.9c0-.9-.6-1.6-1.5-1.6z" fill="currentColor" opacity=".25"/><path d="M3 25h22"/><path d="M8 25V18M20 25V18"/></g></svg></span>Собор</button>
-      <button class="ni on" onclick="switchTab('profile',this)"><span class="ni-ic">✦</span>Мастерская</button>
+      <button class="ni on" onclick="switchTab('profile',this)"><span class="ni-ic"><svg viewBox="0 0 28 28" width="22" height="22" style="display:block;"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z" fill="currentColor" opacity=".22"/><path d="M20.5 4l3.5 3.5-9.5 9.5-3.5-3.5z"/><circle cx="8" cy="20" r="3.4"/><path d="M10.4 17.6l1.1-1.1"/></g></svg></span>Мастерская</button>
     </div>
   </div>
 
@@ -576,12 +584,16 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
   <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:16px;padding-bottom:calc(16px + var(--pad-bottom));width:100%;max-width:420px;">
     <div style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;"></div>
     <div style="font-size:15px;font-weight:600;text-align:center;margin-bottom:14px;">Добавить фото</div>
-    <button type="button" onclick="choosePhotoSource('camera')" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:15px;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+    <!-- Label напрямую открывает нативный input — сохраняется пользовательский жест,
+         поэтому атрибут capture (камера) работает корректно -->
+    <label style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:15px;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
       <span style="font-size:22px;">📸</span> Сделать снимок
-    </button>
-    <button type="button" onclick="choosePhotoSource('gallery')" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:15px;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
+      <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="onPhotoChosen(event)">
+    </label>
+    <label style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:15px;font-size:15px;color:var(--text);cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;gap:12px;">
       <span style="font-size:22px;">🖼️</span> Выбрать из галереи
-    </button>
+      <input type="file" accept="image/*" style="display:none;" onchange="onPhotoChosen(event)">
+    </label>
     <button type="button" onclick="closePhotoChoice()" style="width:100%;background:none;border:none;padding:12px;font-size:14px;color:var(--text2);cursor:pointer;font-family:inherit;">Отмена</button>
   </div>
 </div>
@@ -744,6 +756,14 @@ function nextOb(){
   document.getElementById('ob'+obStep).classList.remove('on');
   obStep++;
   document.getElementById('ob'+obStep).classList.add('on');
+  if(obStep===2) initActFields();
+}
+// Возврат на предыдущий шаг онбординга (данные сохраняются)
+function obBack(toStep){
+  document.getElementById('ob'+obStep).classList.remove('on');
+  obStep=toStep;
+  document.getElementById('ob'+obStep).classList.add('on');
+  // Если вернулись на шаг действий — обновляем подсказки под выбранную сферу
   if(obStep===2) initActFields();
 }
 function nextObAndStart(){
@@ -1157,10 +1177,10 @@ function startNewVitrazh(){
   // Очищаем поля действий
   const wrap=document.getElementById('act-list-wrap');
   if(wrap) wrap.innerHTML='';
-  // Сбрасываем upload-зону
-  const uzi=document.getElementById('uz-icon'); if(uzi) uzi.textContent='🖼️';
-  const uzt=document.getElementById('uz-title'); if(uzt) uzt.textContent='Загрузить своё изображение';
-  const uzs=document.getElementById('uz-sub'); if(uzs) uzs.textContent='Оно превратится в витраж-пазл';
+  // ВАЖНО: снимаем анти-флэш классы, иначе #ob-screen остаётся скрытым
+  // (has-saved-progress прячет его через display:none, ob-ready нужен для opacity)
+  document.documentElement.classList.remove('has-saved-progress');
+  document.documentElement.classList.add('ob-ready');
   // Показываем экран онбординга
   document.getElementById('app-screen').classList.add('hidden');
   document.getElementById('ob-screen').classList.remove('hidden');
@@ -1646,7 +1666,7 @@ function addMemoIndicators(svg){
   });
 }
 
-function tapShard(idx, e){
+function tapShard(idx, e, actionIdx){
   if(app.shards[idx]){
     // Осколок уже открыт. Если к нему есть заметка (текст/фото/аудио) —
     // открываем её для просмотра по тапу на сам осколок (а не только по точке).
@@ -1665,9 +1685,16 @@ function tapShard(idx, e){
     return;
   }
 
-  // Отмечаем действие
-  const nextAct=app.actions.findIndex((_,i)=>!app.todayDone.has(i));
-  if(nextAct!==-1) app.todayDone.add(nextAct);
+  // Отмечаем действие.
+  // Если передан конкретный индекс действия (клик по карточке действия) — отмечаем именно его.
+  // Иначе (клик прямо по осколку) — берём первое невыполненное.
+  let actToMark;
+  if(typeof actionIdx==='number' && actionIdx>=0 && !app.todayDone.has(actionIdx)){
+    actToMark=actionIdx;
+  } else {
+    actToMark=app.actions.findIndex((_,i)=>!app.todayDone.has(i));
+  }
+  if(actToMark!==-1 && actToMark!==undefined) app.todayDone.add(actToMark);
 
   app.shards[idx]=true;
   app.light+=10;
@@ -1696,7 +1723,7 @@ function tapShard(idx, e){
     const masterMsgs=[
       'День закрыт. Витраж светится твоим усилием',
       'Все осколки дня вложены. Продолжай — образ проясняется',
-      'Стрик идёт! Каждый день ты ближе к полному витражу',
+      'Так держать! Каждый день ты ближе к полному витражу',
     ];
     document.getElementById('master-msg').textContent=masterMsgs[Math.floor(Math.random()*masterMsgs.length)];
   }
@@ -1766,7 +1793,8 @@ function buildActionsList(){
         const el=document.getElementById(`main-sf${n}`);
         const wrap=document.getElementById('vg-wrap');
         const rect=el ? el.getBoundingClientRect() : wrap.getBoundingClientRect();
-        tapShard(n,{clientX:rect.left+rect.width/2,clientY:rect.top+rect.height/2});
+        // Передаём индекс выбранного действия (i), чтобы отметить именно его
+        tapShard(n,{clientX:rect.left+rect.width/2,clientY:rect.top+rect.height/2}, i);
       }
     };
     c.appendChild(d);
@@ -1814,9 +1842,19 @@ function switchTab(tab, btn){
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display='none';
   });
-  document.getElementById('tab-'+tab).style.display='flex';
+  const targetTab=document.getElementById('tab-'+tab);
+  targetTab.style.display='flex';
+  // Снимаем выделение со всех кнопок во всех навигациях
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
-  if(btn) btn.classList.add('on');
+  // Подсвечиваем нужную кнопку именно в навигации ЦЕЛЕВОЙ вкладки
+  // (у каждой вкладки своя нижняя навигация), по индексу раздела
+  const order=['main','gallery','profile'];
+  const navIdx=order.indexOf(tab);
+  const targetNav=targetTab.querySelector('.nav');
+  if(targetNav){
+    const btns=targetNav.querySelectorAll('.ni');
+    if(btns[navIdx]) btns[navIdx].classList.add('on');
+  }
   if(tab==='gallery') updateGallery();
 }
 
@@ -1906,9 +1944,15 @@ function addActionField(focusNew){
     <input class="action-inp dyn-act-input" placeholder="${actionPlaceholder(idx)}" style="flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;">
     ${delBtn}`;
   wrap.appendChild(row);
+  const inp=row.querySelector('input');
+  // Когда поле получает фокус (открывается клавиатура) — подкручиваем его в зону видимости,
+  // чтобы пользователь видел, что печатает (иначе клавиатура перекрывает поле).
+  inp.addEventListener('focus', ()=>{
+    setTimeout(()=>{ try{ inp.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){ try{inp.scrollIntoView();}catch(e2){} } }, 300);
+  });
   // Фокус (и клавиатуру) ставим ТОЛЬКО когда пользователь сам нажал «+ Добавить»,
   // а не при авто-создании первого поля — чтобы клавиатура не выскакивала сразу.
-  if(focusNew){ row.querySelector('input').focus(); }
+  if(focusNew){ inp.focus(); }
   updateAddBtn();
 }
 function renumberActions(){
@@ -2002,6 +2046,11 @@ function addSuggestedAction(text){
 
 /* ══ MEMO MODAL ══ */
 function openMemoModal(idx){
+  // Подстраховка: если осталась активная запись от прошлой заметки — глушим её
+  if(_memoRecording && app.memoRecorder && app.memoRecorder.state!=='inactive'){
+    try{ app.memoRecorder.onstop=null; app.memoRecorder.stop(); }catch(e){}
+  }
+  _memoRecording=false; _memoStopResolve=null; app.memoRecorder=null;
   app.currentMemoIdx=idx;
   app.memoPhotoData=null; app.memoAudioUrl=null;
   const m=app.shardMemos[idx]||{};
@@ -2041,6 +2090,15 @@ function closeMemo(){
   // Если только что закрыли заметку финального осколка — теперь показываем инсайт
   if(_pendingCompletion){
     _pendingCompletion = false;
+    // Сброс состояния записи инсайта (чтобы не утекло аудио прошлой заметки)
+    if(_compRecording && app.compRecorder && app.compRecorder.state!=='inactive'){
+      try{ app.compRecorder.onstop=null; app.compRecorder.stop(); }catch(e){}
+    }
+    _compRecording=false; _compStopResolve=null; app.compRecorder=null;
+    app.compAudioUrl=null; app.compPhotoData=null;
+    const cins=document.getElementById('comp-insight'); if(cins) cins.value='';
+    const caw=document.getElementById('comp-audio-wrap'); if(caw) caw.style.display='none';
+    const cpp=document.getElementById('comp-photo-preview'); if(cpp) cpp.style.display='none';
     setTimeout(()=>{
       document.getElementById('comp-title').textContent='Витраж «'+app.sphereName+'» завершён!';
       document.getElementById('completion-modal').style.display='flex';
@@ -2065,20 +2123,18 @@ function deleteMemoAudio(){  const idx=app.currentMemoIdx;
 let _photoTarget = null; // 'memo' | 'comp'
 function openPhotoChoice(target){
   _photoTarget = target;
+  // Сброс значений инпутов, чтобы повторный выбор того же файла сработал
+  document.querySelectorAll('#photo-choice input[type=file]').forEach(i=>i.value='');
   document.getElementById('photo-choice').style.display='flex';
 }
 function closePhotoChoice(){
   document.getElementById('photo-choice').style.display='none';
 }
-function choosePhotoSource(source){
+// Файл выбран (с камеры или из галереи) — направляем в нужную форму
+function onPhotoChosen(e){
   closePhotoChoice();
-  // Выбираем нужный скрытый input: камера (capture) или галерея
-  const id = _photoTarget + '-photo-' + source; // напр. memo-photo-camera
-  const input = document.getElementById(id);
-  if(input){
-    input.value=''; // сброс, чтобы повторный выбор того же файла сработал
-    input.click();
-  }
+  if(_photoTarget==='comp') compPhotoChange(e);
+  else memoPhotoChange(e);
 }
 
 function memoPhotoChange(e){
@@ -2116,6 +2172,7 @@ function getMicStream(){
 // Эта функция-заглушка оставлена для совместимости вызовов.
 function releaseMicStream(stream){ /* намеренно не глушим — держим разрешение */ }
 
+let _memoStopResolve=null; // резолвится когда onstop собрал blob
 function startMemoAudio(){
   if(_memoRecording){ stopMemoAudio(); return; }
   getMicStream().then(stream=>{
@@ -2126,7 +2183,7 @@ function startMemoAudio(){
     const chunks=[];
     const rec=new MediaRecorder(stream);
     app.memoRecorder=rec;
-    rec.ondataavailable=e=>chunks.push(e.data);
+    rec.ondataavailable=e=>{ if(e.data && e.data.size>0) chunks.push(e.data); };
     rec.onstop=()=>{
       const blob=new Blob(chunks,{type:'audio/webm'});
       app.memoAudioUrl=URL.createObjectURL(blob);
@@ -2134,11 +2191,13 @@ function startMemoAudio(){
       const cv=document.getElementById('memo-content-view');
       const av=document.getElementById('memo-audio-view');
       const adel=document.getElementById('memo-audio-del');
-      cv.style.display='block';
-      av.style.display='block'; av.src=app.memoAudioUrl;
-      adel.style.display='block';
-      document.getElementById('memo-audio-status').style.display='none';
+      if(cv) cv.style.display='block';
+      if(av){ av.style.display='block'; av.src=app.memoAudioUrl; }
+      if(adel) adel.style.display='block';
+      const st=document.getElementById('memo-audio-status'); if(st) st.style.display='none';
+      const btn=document.getElementById('memo-audio-btn'); if(btn) btn.textContent='🎙 Запись';
       _memoRecording=false;
+      if(_memoStopResolve){ _memoStopResolve(); _memoStopResolve=null; }
     };
     rec.start();
   }).catch(()=>{ alert('Нет доступа к микрофону'); _memoRecording=false; });
@@ -2147,21 +2206,37 @@ function stopMemoAudio(){
   if(app.memoRecorder&&app.memoRecorder.state!=='inactive') app.memoRecorder.stop();
   document.getElementById('memo-audio-btn').textContent='🎙 Запись';
 }
+// Завершает запись (если идёт) и ждёт, пока blob будет готов
+function finalizeMemoAudio(){
+  return new Promise(resolve=>{
+    if(_memoRecording && app.memoRecorder && app.memoRecorder.state!=='inactive'){
+      _memoStopResolve=resolve;
+      try{ app.memoRecorder.stop(); }catch(e){ resolve(); }
+      // подстраховка по таймауту
+      setTimeout(()=>{ if(_memoStopResolve){ _memoStopResolve=null; resolve(); } }, 800);
+    } else {
+      resolve();
+    }
+  });
+}
 function saveMemo(){
   const idx=app.currentMemoIdx;
   if(idx<0)return;
-  const text=document.getElementById('memo-text').value.trim();
-  const existing=app.shardMemos[idx]||{};
-  app.shardMemos[idx]={
-    text: text||existing.text||'',
-    photo: app.memoPhotoData||existing.photo||null,
-    audioUrl: app.memoAudioUrl||existing.audioUrl||null,
-    date: app.shardDates[idx]||new Date().toLocaleString('ru')
-  };
-  closeMemo();
-  // Перерисовываем витраж сразу — чтобы жёлтая точка-индикатор появилась немедленно
-  if(typeof rebuildVitrazh==='function') rebuildVitrazh();
-  saveProgress();
+  // Сначала завершаем запись (если пользователь нажал «Сохранить» во время записи)
+  finalizeMemoAudio().then(()=>{
+    const text=document.getElementById('memo-text').value.trim();
+    const existing=app.shardMemos[idx]||{};
+    app.shardMemos[idx]={
+      text: text||existing.text||'',
+      photo: app.memoPhotoData||existing.photo||null,
+      audioUrl: app.memoAudioUrl||existing.audioUrl||null,
+      date: app.shardDates[idx]||new Date().toLocaleString('ru')
+    };
+    closeMemo();
+    // Перерисовываем витраж сразу — чтобы жёлтая точка-индикатор появилась немедленно
+    if(typeof rebuildVitrazh==='function') rebuildVitrazh();
+    saveProgress();
+  });
 }
 
 /* ══ COMPLETION ══ */
@@ -2179,6 +2254,7 @@ function compPhotoChange(e){
 }
 function clearCompPhoto(){ app.compPhotoData=null; document.getElementById('comp-photo-preview').style.display='none'; }
 let _compRecording=false;
+let _compStopResolve=null;
 function startCompAudio(){
   if(_compRecording){ stopCompAudio(); return; }
   getMicStream().then(stream=>{
@@ -2189,16 +2265,18 @@ function startCompAudio(){
     const chunks=[];
     const rec=new MediaRecorder(stream);
     app.compRecorder=rec;
-    rec.ondataavailable=e=>chunks.push(e.data);
+    rec.ondataavailable=e=>{ if(e.data && e.data.size>0) chunks.push(e.data); };
     rec.onstop=()=>{
       const blob=new Blob(chunks,{type:'audio/webm'});
       app.compAudioUrl=URL.createObjectURL(blob);
-      document.getElementById('comp-audio-status').style.display='none';
+      const st=document.getElementById('comp-audio-status'); if(st) st.style.display='none';
       const aw=document.getElementById('comp-audio-wrap');
-      aw.style.display='block';
-      document.getElementById('comp-audio-play').src=app.compAudioUrl;
+      if(aw) aw.style.display='block';
+      const pl=document.getElementById('comp-audio-play'); if(pl) pl.src=app.compAudioUrl;
+      const btn=document.getElementById('comp-audio-btn'); if(btn) btn.textContent='🎙 Запись';
       releaseMicStream(stream);
       _compRecording=false;
+      if(_compStopResolve){ _compStopResolve(); _compStopResolve=null; }
     };
     rec.start();
   }).catch(()=>{ alert('Нет доступа к микрофону'); _compRecording=false; });
@@ -2206,6 +2284,17 @@ function startCompAudio(){
 function stopCompAudio(){
   if(app.compRecorder&&app.compRecorder.state!=='inactive') app.compRecorder.stop();
   document.getElementById('comp-audio-btn').textContent='🎙 Запись';
+}
+function finalizeCompAudio(){
+  return new Promise(resolve=>{
+    if(_compRecording && app.compRecorder && app.compRecorder.state!=='inactive'){
+      _compStopResolve=resolve;
+      try{ app.compRecorder.stop(); }catch(e){ resolve(); }
+      setTimeout(()=>{ if(_compStopResolve){ _compStopResolve=null; resolve(); } }, 800);
+    } else {
+      resolve();
+    }
+  });
 }
 
 function closeCompletion(){
@@ -2267,39 +2356,42 @@ function deleteCompAudio(){
 }
 
 function saveCompletion(){
-  const insight=document.getElementById('comp-insight').value.trim();
-  const photo=app.compPhotoData||null;
-  const audio=app.compAudioUrl||null;
+  // Сначала завершаем запись (если пользователь нажал «Сохранить» во время записи)
+  finalizeCompAudio().then(()=>{
+    const insight=document.getElementById('comp-insight').value.trim();
+    const photo=app.compPhotoData||null;
+    const audio=app.compAudioUrl||null;
 
-  if(_compEditId!==null){
-    // Редактируем существующий завершённый витраж (через «изменить» позже)
-    const v=app.completed.find(c=>c.completedAt===_compEditId);
-    if(v){ v.insight=insight; v.insightPhoto=photo; v.insightAudio=audio; }
-    _compEditId=null;
-  } else if(_justCompletedId!==null){
-    // Только что завершённый витраж уже в списке — просто добавляем инсайт
-    const v=app.completed.find(c=>c.completedAt===_justCompletedId);
-    if(v){ v.insight=insight; v.insightPhoto=photo; v.insightAudio=audio; }
-    finishCurrentAfterCompletion();
-  }
+    if(_compEditId!==null){
+      // Редактируем существующий завершённый витраж (через «изменить» позже)
+      const v=app.completed.find(c=>c.completedAt===_compEditId);
+      if(v){ v.insight=insight; v.insightPhoto=photo; v.insightAudio=audio; }
+      _compEditId=null;
+    } else if(_justCompletedId!==null){
+      // Только что завершённый витраж уже в списке — просто добавляем инсайт
+      const v=app.completed.find(c=>c.completedAt===_justCompletedId);
+      if(v){ v.insight=insight; v.insightPhoto=photo; v.insightAudio=audio; }
+      finishCurrentAfterCompletion();
+    }
 
-  // Сброс полей модалки
-  app.compPhotoData=null; app.compAudioUrl=null;
-  document.getElementById('comp-photo-preview').style.display='none';
-  document.getElementById('comp-audio-status').style.display='none';
-  document.getElementById('comp-audio-wrap').style.display='none';
+    // Сброс полей модалки
+    app.compPhotoData=null; app.compAudioUrl=null;
+    document.getElementById('comp-photo-preview').style.display='none';
+    document.getElementById('comp-audio-status').style.display='none';
+    document.getElementById('comp-audio-wrap').style.display='none';
 
-  document.getElementById('g-comp').textContent=app.completed.length;
-  document.getElementById('completion-modal').style.display='none';
-  updateGallery();
-  saveProgress();
+    document.getElementById('g-comp').textContent=app.completed.length;
+    document.getElementById('completion-modal').style.display='none';
+    updateGallery();
+    saveProgress();
 
-  // Если открыт полноэкранный просмотр этого витража — обновляем его
-  const overlay=document.getElementById('vitrazh-overlay');
-  if(overlay && overlay.style.display!=='none' && _editedVitrazh){
-    showFullscreenVitrazh(_editedVitrazh);
-  }
-  _editedVitrazh=null;
+    // Если открыт полноэкранный просмотр этого витража — обновляем его
+    const overlay=document.getElementById('vitrazh-overlay');
+    if(overlay && overlay.style.display!=='none' && _editedVitrazh){
+      showFullscreenVitrazh(_editedVitrazh);
+    }
+    _editedVitrazh=null;
+  });
 }
 
 // После завершения текущего витража — переключаемся на следующий незавершённый
@@ -2802,6 +2894,60 @@ function showArchivedMemo(v, idx){
 }
 
 
+/* ══ СВАЙП ВЛЕВО/ВПРАВО ДЛЯ ПЕРЕКЛЮЧЕНИЯ РАЗДЕЛОВ ══ */
+const TAB_ORDER = ['main','gallery','profile'];
+function currentTabName(){
+  for(const t of TAB_ORDER){
+    const el=document.getElementById('tab-'+t);
+    if(el && el.style.display!=='none') return t;
+  }
+  return 'main';
+}
+function switchTabByName(name){
+  // Находим соответствующую кнопку навигации в активной (видимой) навигации
+  let targetBtn=null;
+  document.querySelectorAll('.nav').forEach(nav=>{
+    if(nav.offsetParent!==null){ // видимая навигация текущей вкладки
+      const btns=nav.querySelectorAll('.ni');
+      const idx=TAB_ORDER.indexOf(name);
+      if(btns[idx]) targetBtn=btns[idx];
+    }
+  });
+  switchTab(name, targetBtn);
+}
+(function initTabSwipe(){
+  function attach(){
+    const appScreen=document.getElementById('app-screen');
+    if(!appScreen) return;
+    let startX=0, startY=0, tracking=false;
+    appScreen.addEventListener('touchstart', e=>{
+      if(e.touches.length!==1) return;
+      // Не перехватываем свайп, если открыта модалка
+      const memoOpen=document.getElementById('memo-modal').style.display==='flex';
+      const compOpen=document.getElementById('completion-modal').style.display==='flex';
+      const photoOpen=document.getElementById('photo-choice').style.display==='flex';
+      const overlay=document.getElementById('vitrazh-overlay');
+      const fsOpen=overlay && overlay.style.display!=='none';
+      if(memoOpen||compOpen||photoOpen||fsOpen){ tracking=false; return; }
+      startX=e.touches[0].clientX; startY=e.touches[0].clientY; tracking=true;
+    }, {passive:true});
+    appScreen.addEventListener('touchend', e=>{
+      if(!tracking) return;
+      tracking=false;
+      const t=e.changedTouches[0];
+      const dx=t.clientX-startX, dy=t.clientY-startY;
+      // Горизонтальный свайп: достаточно длинный и явно горизонтальный
+      if(Math.abs(dx)<60 || Math.abs(dx)<Math.abs(dy)*1.6) return;
+      const cur=currentTabName();
+      let i=TAB_ORDER.indexOf(cur);
+      if(dx<0 && i<TAB_ORDER.length-1) switchTabByName(TAB_ORDER[i+1]); // свайп влево → следующий
+      else if(dx>0 && i>0) switchTabByName(TAB_ORDER[i-1]); // свайп вправо → предыдущий
+    }, {passive:true});
+  }
+  if(document.readyState!=='loading') attach();
+  else document.addEventListener('DOMContentLoaded', attach);
+})();
+
 /* ══ СВАЙП ВНИЗ ДЛЯ ЗАКРЫТИЯ МОДАЛКИ ЗАМЕТКИ ══ */
 (function initSwipeToClose(){
   function attach(){
@@ -2952,8 +3098,21 @@ function serializeMedia(){
 }
 
 // ── СОХРАНЕНИЕ ──
+let _bootComplete = false; // становится true после завершения восстановления
+function hasAnythingToSave(){
+  // Есть ли вообще что сохранять (чтобы не затирать облако пустым состоянием)
+  const curHasShards = app.shards && app.shards.some(Boolean);
+  const started = !document.getElementById('app-screen').classList.contains('hidden');
+  return !!(app.sphere || (app.completed&&app.completed.length) ||
+            (app.activeVitrazhi&&app.activeVitrazhi.length) || curHasShards || started);
+}
 function saveProgress(){
   if(typeof _resetting!=='undefined' && _resetting) return; // идёт сброс — не сохраняем
+  // Пока восстановление не завершено — не сохраняем (иначе пустое состояние
+  // затрёт хороший прогресс в облаке при перезагрузке Telegram).
+  if(!_bootComplete) return;
+  // Нечего сохранять — не затираем существующие данные пустышкой
+  if(!hasAnythingToSave()) return;
   let json;
   try{ json = JSON.stringify(serializeProgress()); }
   catch(e){ console.warn('serialize failed', e); return; }
@@ -2974,6 +3133,7 @@ function saveProgress(){
 // Дебаунс — не сохраняем чаще раза в ~1.5 сек
 function scheduleSave(){
   if(typeof _resetting!=='undefined' && _resetting) return;
+  if(!_bootComplete) return;
   if(_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(saveProgress, 1200);
 }
@@ -3111,6 +3271,10 @@ function clearAllProgress(){
 // Загружаем прогресс и решаем какой экран показать
 function dismissSplash(){
   document.documentElement.classList.add('boot-done');
+  // Снимаем класс анти-флэша: дальше онбординг управляется обычным способом
+  // (иначе #ob-screen остаётся с display:none и «Добавить витраж» даёт чёрный экран)
+  document.documentElement.classList.remove('has-saved-progress');
+  document.documentElement.classList.add('ob-ready');
   // Удаляем заставку из DOM после анимации
   setTimeout(()=>{ const s=document.getElementById('boot-splash'); if(s) s.remove(); }, 350);
 }
@@ -3119,6 +3283,7 @@ function revealOnboarding(){
   document.documentElement.classList.remove('has-saved-progress');
   document.documentElement.classList.add('ob-ready');
   dismissSplash();
+  _bootComplete = true; // новый пользователь — сохранение можно включить
 }
 function bootWithProgress(){
   // ── БЫСТРЫЙ ПУТЬ: мгновенно восстанавливаем из localStorage (без ожидания облака) ──
@@ -3152,16 +3317,18 @@ function bootWithProgress(){
         }catch(e){ console.warn('cloud restore failed', e); }
       }
       dismissSplash();
+      _bootComplete = true;
     } else if(!localHasProgress){
       // Нигде нет прогресса — показываем онбординг
       revealOnboarding();
     } else {
       // localStorage уже показал витраж — заставку уже убрали
       dismissSplash();
+      _bootComplete = true;
     }
   }).catch(()=>{
     if(!localHasProgress) revealOnboarding();
-    else dismissSplash();
+    else { dismissSplash(); _bootComplete = true; }
   });
 
   // Подстраховка: если облако зависло дольше 1.8с и локального прогресса нет —
@@ -3169,8 +3336,9 @@ function bootWithProgress(){
   setTimeout(()=>{
     if(!document.documentElement.classList.contains('boot-done')){
       if(!localHasProgress) revealOnboarding();
-      else dismissSplash();
+      else { dismissSplash(); _bootComplete = true; }
     }
+    if(!_bootComplete) _bootComplete = true;
   }, 1800);
 }
 
