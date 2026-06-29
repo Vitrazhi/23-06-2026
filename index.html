@@ -77,6 +77,8 @@ html,body{height:100%;background:var(--app-bg);font-family:'Onest',-apple-system
 .scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
 .scroll::-webkit-scrollbar{display:none;}
 .nav{height:64px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;background:var(--nav-bg,rgba(8,9,16,.97));backdrop-filter:blur(20px);flex-shrink:0;padding-bottom:calc(var(--pad-bottom) + 6px);box-sizing:content-box;}
+/* Равная ширина кнопок: средняя всегда ровно по центру экрана */
+.nav .ni{flex:1 1 0;min-width:0;}
 .ni{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;padding:8px 16px;border-radius:14px;border:none;background:none;color:var(--text3);font-family:inherit;font-size:10px;font-weight:500;letter-spacing:.04em;transition:all .22s ease;-webkit-tap-highlight-color:transparent;outline:none;}
 .ni:hover{background:rgba(255,255,255,.04);}
 .ni:focus,.ni:focus-visible,.ni:active{outline:none;}
@@ -369,10 +371,10 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
   <div class="status-bar"><span class="sb-time" id="ob-clk">9:41</span><span class="sb-ic">●●● WiFi ■■■</span></div>
 
   <!-- Шаг 0: приветствие -->
-  <div class="ob-step on" id="ob0" style="justify-content:flex-start;gap:22px;">
+  <div class="ob-step on" id="ob0" style="justify-content:flex-start;gap:18px;">
     <div style="text-align:center;">
-      <div style="margin:0 auto 16px;width:84px;height:84px;filter:drop-shadow(0 0 22px rgba(124,111,255,.55));">
-        <svg viewBox="0 0 84 110" width="84" height="84" style="display:block;margin:0 auto;overflow:visible;">
+      <div style="margin:0 auto 12px;width:78px;height:78px;filter:drop-shadow(0 0 22px rgba(124,111,255,.55));">
+        <svg viewBox="0 0 84 110" width="78" height="78" style="display:block;margin:0 auto;overflow:visible;">
           <defs>
             <linearGradient id="vg-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient>
             <linearGradient id="vg-vio" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient>
@@ -394,24 +396,24 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
           <path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="2.4" fill="none" stroke-linecap="round"/>
         </svg>
       </div>
-      <div class="ob-eyebrow" style="margin-bottom:16px;">Добро пожаловать</div>
-      <div class="ob-title" style="font-size:26px;margin-bottom:18px;">Собери свою лучшую жизнь по кусочкам</div>
-      <div class="ob-sub" style="font-size:15px;line-height:1.65;max-width:300px;margin:0 auto;text-wrap:balance;">Каждое выполненное действие — осколок витража. Открывай кусочки один за другим. Собери все — и увидишь тайный образ</div>
+      <div class="ob-eyebrow" style="margin-bottom:12px;">Добро пожаловать</div>
+      <div class="ob-title" style="font-size:25px;margin-bottom:14px;">Собери свою лучшую жизнь по кусочкам</div>
+      <div class="ob-sub" style="font-size:14px;line-height:1.6;max-width:300px;margin:0 auto;text-wrap:balance;">Каждое выполненное действие — осколок витража. Открывай кусочки один за другим. Собери все — и увидишь тайный образ</div>
     </div>
-    <div style="background:linear-gradient(135deg,rgba(124,111,255,.12),rgba(45,212,191,.08));border:1px solid rgba(124,111,255,.25);border-radius:20px;padding:22px 20px;display:flex;flex-direction:column;gap:18px;">
+    <div style="background:linear-gradient(135deg,rgba(124,111,255,.12),rgba(45,212,191,.08));border:1px solid rgba(124,111,255,.25);border-radius:20px;padding:18px 20px;display:flex;flex-direction:column;gap:15px;">
       <div style="display:flex;align-items:center;gap:14px;"><div style="font-size:26px;width:30px;text-align:center;flex-shrink:0;">✦</div><div><div style="font-size:14px;font-weight:600;">Открывай осколки</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Каждое выполненное действие — один осколок</div></div></div>
       <div style="display:flex;align-items:center;gap:14px;"><div style="font-size:26px;width:30px;text-align:center;flex-shrink:0;">🎨</div><div><div style="font-size:14px;font-weight:600;">Собирай образ</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Витраж складывается из твоих усилий</div></div></div>
       <div style="display:flex;align-items:center;gap:14px;"><div style="font-size:26px;width:30px;text-align:center;flex-shrink:0;">📖</div><div><div style="font-size:14px;font-weight:600;">Добавляй заметки</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Фото, текст и аудио — хронология твоей трансформации</div></div></div>
     </div>
-    <button class="btn btn-primary" onclick="nextOb()" style="margin-top:6px;">Начать ритуал →</button>
-    <div class="ob-dots" style="margin-top:4px;"><div class="ob-dot on"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
+    <button class="btn btn-primary" onclick="nextOb()" style="margin-top:4px;">Начать ритуал →</button>
+    <div class="ob-dots" style="margin-top:2px;"><div class="ob-dot on"></div><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot"></div></div>
   </div>
 
   <!-- Шаг 1: выбор сферы -->
   <div class="ob-step" id="ob1">
     <div class="ob-eyebrow">Шаг 1 из 3</div>
     <div class="ob-title" style="font-size:22px;">Выбери сферу жизни</div>
-    <div class="ob-sub" style="font-size:13px;">Первый витраж посвящён одной цели. За ней скрыт тайный образ</div>
+    <div class="ob-sub" style="font-size:13px;">Первый витраж посвящён одной цели<br>За ней скрыт тайный образ</div>
     <div class="sphere-grid" id="sphere-grid">
       <div class="sphere-opt" onclick="selSphere(this,'sleep','🌙','Сон','#4a80d0')"><span class="sphere-emoji">🌙</span><div class="sphere-name">Сон</div><div class="sphere-desc">Режим и качество</div></div>
       <div class="sphere-opt" onclick="selSphere(this,'sport','🏃','Спорт','#30c090')"><span class="sphere-emoji">🏃</span><div class="sphere-name">Спорт</div><div class="sphere-desc">Движение и сила</div></div>
@@ -2812,6 +2814,7 @@ function closePhotoChoice(){
 // показываем видеопоток на весь экран и снимаем кадр по кнопке. Это надёжно работает.
 let _camStream = null;
 let _camFacing = 'environment'; // задняя камера по умолчанию
+let _camPermGranted = false;    // разрешение уже выдано в этой сессии — не спрашиваем снова
 
 function triggerCamera(){
   closePhotoChoice();
@@ -2837,11 +2840,20 @@ async function startCameraStream(){
     errBox.style.display='flex';
     return;
   }
+  // Если разрешение уже проверено через Permissions API как выданное — помечаем,
+  // чтобы не считать повторный вызов «первым запросом».
+  try{
+    if(navigator.permissions && navigator.permissions.query){
+      const st=await navigator.permissions.query({name:'camera'});
+      if(st.state==='granted') _camPermGranted=true;
+    }
+  }catch(e){ /* Permissions API для камеры есть не везде — не критично */ }
   try{
     _camStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: _camFacing } },
       audio: false
     });
+    _camPermGranted=true; // успех → разрешение выдано, дальше не спрашиваем
     video.srcObject=_camStream;
     errBox.style.display='none';
     // На некоторых устройствах play() нужно вызвать вручную
