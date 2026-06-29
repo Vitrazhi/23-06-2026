@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#07080f">
 <title>Витраж — Собери свою новую жизнь</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&display=swap">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 /* Убираем синий прямоугольник подсветки касания и случайное выделение
    текста при быстрых тапах (мобильные браузеры / Telegram WebView). */
@@ -626,6 +628,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div class="sec-label" style="margin:0 18px 9px;">Настройки</div>
       <div class="menu-item" onclick="openLimitSettings()">✋<span id="menu-limit-text">Лимит: без ограничений</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="openReminderSettings()">🔔<span id="menu-reminder-text">Напоминания от Мастера</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" onclick="openMemoPromptSettings()">✍️<span id="menu-memoprompt-text">Впечатления: после каждого</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleTheme()">🎨<span id="menu-theme-text">Тема: тёмная</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="shareVitrazh()">📤<span>Поделиться витражом</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="resetApp()">🔄<span>Начать заново</span><span class="mi-arrow">›</span></div>
@@ -671,6 +674,21 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
   </div>
 </div>
 
+<!-- ══ НАСТРОЙКА: ФОРМА ВПЕЧАТЛЕНИЯ ══ -->
+<div id="set-memoprompt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeMemoPromptModal()">
+  <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;">
+    <div style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;"></div>
+    <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Форма впечатления</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Когда предлагать оставить впечатление к закрашенному осколку. Впечатление всегда можно добавить позже — просто нажми на открытый осколок.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <div class="set-chip" data-val="each" onclick="setMemoPrompt('each')"><b>После каждого осколка</b> — предлагать всегда</div>
+      <div class="set-chip" data-val="first" onclick="setMemoPrompt('first')"><b>Только для первого за день</b> — не отвлекать дальше</div>
+      <div class="set-chip" data-val="never" onclick="setMemoPrompt('never')"><b>Никогда</b> — осколки открываются без формы</div>
+    </div>
+    <button class="btn btn-primary" onclick="closeMemoPromptModal()">Готово</button>
+  </div>
+</div>
+
 <!-- ══ ВЫБОР ИСТОЧНИКА ФОТО (камера / галерея) ══ -->
 <!-- ══ РЕДАКТИРОВАНИЕ ТЕКСТА ДЕЙСТВИЯ ══ -->
 <div id="edit-act-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeEditAction()">
@@ -701,6 +719,26 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <input type="file" accept="image/*" onchange="onPhotoChosen(event)" style="position:absolute;width:1px;height:1px;opacity:0;left:0;top:0;">
     </label>
     <button type="button" onclick="closePhotoChoice()" style="width:100%;background:none;border:none;padding:12px;font-size:14px;color:var(--text2);cursor:pointer;font-family:inherit;">Отмена</button>
+  </div>
+</div>
+
+<!-- ══ ВСТРОЕННАЯ КАМЕРА (getUserMedia) — надёжно работает там, где input capture игнорируется ══ -->
+<div id="camera-view" style="display:none;position:fixed;inset:0;background:#000;z-index:1200;flex-direction:column;">
+  <video id="camera-stream" autoplay playsinline muted style="flex:1;width:100%;object-fit:cover;background:#000;"></video>
+  <canvas id="camera-canvas" style="display:none;"></canvas>
+  <div style="position:absolute;top:0;left:0;right:0;padding:calc(14px + var(--pad-top)) 18px 14px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(rgba(0,0,0,.5),transparent);">
+    <button type="button" onclick="closeCamera()" style="background:rgba(0,0,0,.4);border:none;color:#fff;font-size:22px;width:40px;height:40px;border-radius:50%;cursor:pointer;">✕</button>
+    <button type="button" id="cam-flip-btn" onclick="flipCamera()" style="background:rgba(0,0,0,.4);border:none;color:#fff;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer;">🔄</button>
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;padding:24px 0 calc(36px + var(--pad-bottom));display:flex;justify-content:center;align-items:center;background:linear-gradient(transparent,rgba(0,0,0,.55));">
+    <button type="button" id="cam-shoot-btn" onclick="captureCameraPhoto()" aria-label="Снять"
+      style="width:74px;height:74px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,.45);cursor:pointer;box-shadow:0 0 0 2px #000 inset;"></button>
+  </div>
+  <div id="camera-error" style="display:none;position:absolute;inset:0;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;color:#fff;gap:14px;">
+    <div style="font-size:40px;">📷</div>
+    <div id="camera-error-text" style="font-size:15px;line-height:1.5;max-width:280px;opacity:.85;">Не удалось открыть камеру</div>
+    <button type="button" onclick="cameraFallbackToFile()" style="background:var(--accent);border:none;color:#fff;border-radius:12px;padding:13px 22px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;">Выбрать фото из галереи</button>
+    <button type="button" onclick="closeCamera()" style="background:none;border:none;color:#fff;opacity:.6;font-size:14px;cursor:pointer;font-family:inherit;padding:8px;">Отмена</button>
   </div>
 </div>
 
@@ -1317,6 +1355,7 @@ const settings = {
   reminderTime: '21:00',
   reminderOn: true,
   theme: 'dark',        // 'dark' или 'light'
+  memoPrompt: 'each',   // 'each' = после каждого осколка, 'first' = только первый за день, 'never' = никогда
 };
 
 function applyShardCountToGrid(count){
@@ -1803,19 +1842,22 @@ function buildVitrazhMaskCanvas(revealed, W, H, preset, forPreview){
   const idmap=_maskAssets.idData, mw=_maskAssets.w, mh=_maskAssets.h;
   const out=ctx.getImageData(0,0,cw,ch);
   const od=out.data, idd=idmap.data;
+  // Предрассчитываем соответствие столбцов canvas → столбцам карты (одно деление на столбец,
+  // а не на каждый пиксель). Результат идентичный, но заметно быстрее.
+  const colMap=new Int32Array(cw);
+  for(let x=0;x<cw;x++){ let mx=(x*mw/cw)|0; if(mx>=mw)mx=mw-1; colMap[x]=mx; }
   for(let y=0;y<ch;y++){
-    const my=Math.min(mh-1, (y*mh/ch)|0);
+    let my=(y*mh/ch)|0; if(my>=mh)my=mh-1;
+    const idRow=my*mw;
+    const outRow=y*cw;
     for(let x=0;x<cw;x++){
-      const mx=Math.min(mw-1, (x*mw/cw)|0);
-      const sid=idd[(my*mw+mx)*4]; // shard id in red channel (1..15)
-      const oi=(y*cw+x)*4;
-      const isOpen = sid>=1 && revealed[sid-1];
-      if(!isOpen){
-        // Закрытый осколок — тёмное «непрозрачное» стекло
-        od[oi]   = (od[oi]  *0.10 + 12);
-        od[oi+1] = (od[oi+1]*0.10 + 14);
-        od[oi+2] = (od[oi+2]*0.10 + 24);
-      }
+      const sid=idd[(idRow+colMap[x])*4]; // shard id in red channel (1..15)
+      if(sid>=1 && revealed[sid-1]) continue; // открытый осколок — оставляем как есть
+      const oi=(outRow+x)*4;
+      // Закрытый осколок — тёмное «непрозрачное» стекло
+      od[oi]   = (od[oi]  *0.10 + 12);
+      od[oi+1] = (od[oi+1]*0.10 + 14);
+      od[oi+2] = (od[oi+2]*0.10 + 24);
     }
   }
   ctx.putImageData(out,0,0);
@@ -2077,10 +2119,27 @@ function tapShard(idx, e, actionIdx){
   updateUI();
   updateGallery();
 
-  // Сначала — модалка заметки к осколку.
-  // Если это финальный осколок, окно инсайта откроем ПОСЛЕ закрытия заметки.
+  // Решаем, открывать ли форму впечатления автоматически.
+  // Финальный осколок (витраж завершён) — всегда (это особый момент завершения).
+  // Иначе следуем настройке settings.memoPrompt:
+  //   'each'  — после каждого осколка
+  //   'first' — только для первого осколка за день
+  //   'never' — не открывать автоматически (можно добавить позже тапом по осколку)
   _pendingCompletion = isFinalShard;
-  setTimeout(()=>{ if(app.shards[idx]) openMemoModal(idx); }, 650);
+  let autoOpen = isFinalShard;
+  if(!isFinalShard){
+    const mode = settings.memoPrompt || 'each';
+    if(mode==='each') autoOpen = true;
+    else if(mode==='first') autoOpen = (app.shardsToday===1); // первый осколок за сегодня
+    else autoOpen = false; // 'never'
+  }
+  if(autoOpen){
+    setTimeout(()=>{ if(app.shards[idx]) openMemoModal(idx); }, 650);
+  } else {
+    // Не открываем форму — показываем мягкую ненавязчивую подсказку,
+    // что впечатление можно добавить позже, нажав на осколок.
+    showMemoHint();
+  }
   scheduleSave();
 }
 
@@ -2288,6 +2347,24 @@ function showToast(id){
   setTimeout(()=>t.classList.remove('show'),1500);
 }
 
+// Мягкая ненавязчивая подсказка: показываем её редко (раз за сессию),
+// чтобы не надоедать. Кратко меняем текст подсказки под витражом и возвращаем обратно.
+let _memoHintShown=false;
+function showMemoHint(){
+  if(_memoHintShown) return; // только один раз за сессию — не назойливо
+  _memoHintShown=true;
+  const hint=document.getElementById('v-hint');
+  if(!hint) return;
+  const prev=hint.textContent;
+  hint.textContent='✦ Хочешь — нажми на открытый осколок и оставь впечатление';
+  hint.style.transition='opacity .4s';
+  hint.style.opacity='1';
+  setTimeout(()=>{
+    // Возвращаем прежний текст (updateUI всё равно перезапишет его при необходимости)
+    if(hint.textContent.startsWith('✦ Хочешь')) hint.textContent=prev;
+  }, 4200);
+}
+
 function spawnFlash(x,y){
   const f=document.createElement('div');
   f.className='flash-el';
@@ -2349,6 +2426,13 @@ function refreshSettingsLabels(){
     :'Напоминания выключены';
   const themeText=document.getElementById('menu-theme-text');
   if(themeText) themeText.textContent = settings.theme==='light' ? 'Тема: светлая' : 'Тема: тёмная';
+  const mpText=document.getElementById('menu-memoprompt-text');
+  if(mpText){
+    const mp=settings.memoPrompt||'each';
+    mpText.textContent = mp==='each' ? 'Впечатления: после каждого'
+      : mp==='first' ? 'Впечатления: только первый'
+      : 'Впечатления: не предлагать';
+  }
 }
 
 /* ══ НАСТРОЙКА ЛИМИТА ОСКОЛКОВ В ДЕНЬ ══ */
@@ -2395,6 +2479,25 @@ function onReminderSettingTime(val){
   saveProgress();
 }
 function closeReminderModal(){ document.getElementById('set-reminder-modal').style.display='none'; }
+
+/* ══ НАСТРОЙКА ФОРМЫ ВПЕЧАТЛЕНИЯ ══ */
+function openMemoPromptSettings(){
+  document.getElementById('set-memoprompt-modal').style.display='flex';
+  syncMemoPromptChips();
+}
+function syncMemoPromptChips(){
+  const cur=settings.memoPrompt||'each';
+  document.querySelectorAll('#set-memoprompt-modal .set-chip').forEach(c=>{
+    c.classList.toggle('sel', c.dataset.val===cur);
+  });
+}
+function setMemoPrompt(val){
+  settings.memoPrompt=val;
+  syncMemoPromptChips();
+  refreshSettingsLabels();
+  saveProgress();
+}
+function closeMemoPromptModal(){ document.getElementById('set-memoprompt-modal').style.display='none'; }
 
 /* ══ ПОДЕЛИТЬСЯ ВИТРАЖОМ ══ */
 function shareVitrazh(){
@@ -2657,23 +2760,122 @@ function openPhotoChoice(target){
 function closePhotoChoice(){
   document.getElementById('photo-choice').style.display='none';
 }
-// Открыть КАМЕРУ: создаём свежий input с capture и кликаем его сразу в рамках
-// пользовательского жеста. Это самый надёжный способ заставить Telegram/Android
-// открыть именно камеру, а не галерею.
+// ══ ВСТРОЕННАЯ КАМЕРА ══
+// На Android в Telegram стандартный <input capture> игнорируется и открывает галерею
+// (известный баг клиента Telegram). Поэтому открываем камеру сами через getUserMedia:
+// показываем видеопоток на весь экран и снимаем кадр по кнопке. Это надёжно работает.
+let _camStream = null;
+let _camFacing = 'environment'; // задняя камера по умолчанию
+
 function triggerCamera(){
+  closePhotoChoice();
+  openCamera();
+}
+
+function openCamera(){
+  const view=document.getElementById('camera-view');
+  const errBox=document.getElementById('camera-error');
+  view.style.display='flex';
+  errBox.style.display='none';
+  startCameraStream();
+}
+
+async function startCameraStream(){
+  const video=document.getElementById('camera-stream');
+  const errBox=document.getElementById('camera-error');
+  const errText=document.getElementById('camera-error-text');
+  // Останавливаем прежний поток, если был
+  stopCameraStream();
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    errText.textContent='Камера недоступна в этом приложении. Можно выбрать фото из галереи.';
+    errBox.style.display='flex';
+    return;
+  }
+  try{
+    _camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: _camFacing } },
+      audio: false
+    });
+    video.srcObject=_camStream;
+    errBox.style.display='none';
+    // На некоторых устройствах play() нужно вызвать вручную
+    try{ await video.play(); }catch(e){}
+  }catch(err){
+    // Камера не дала доступ (нет разрешения / баг Telegram Android / нет камеры)
+    errText.textContent='Не удалось открыть камеру. Проверь разрешение на камеру для Telegram или выбери фото из галереи.';
+    errBox.style.display='flex';
+  }
+}
+
+function stopCameraStream(){
+  if(_camStream){
+    try{ _camStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+    _camStream=null;
+  }
+}
+
+function flipCamera(){
+  _camFacing = (_camFacing==='environment') ? 'user' : 'environment';
+  startCameraStream();
+}
+
+function captureCameraPhoto(){
+  const video=document.getElementById('camera-stream');
+  if(!video.videoWidth){ return; } // поток ещё не готов
+  const canvas=document.getElementById('camera-canvas');
+  // Ограничиваем размер, чтобы фото не было слишком тяжёлым
+  const maxW=1280;
+  let w=video.videoWidth, h=video.videoHeight;
+  if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+  canvas.width=w; canvas.height=h;
+  const ctx=canvas.getContext('2d');
+  // Если фронтальная камера — отзеркаливаем, чтобы фото было как в видоискателе
+  if(_camFacing==='user'){
+    ctx.translate(w,0); ctx.scale(-1,1);
+  }
+  ctx.drawImage(video,0,0,w,h);
+  const dataUrl=canvas.toDataURL('image/jpeg', 0.85);
+  // Передаём как обычное фото в нужную форму (заметка / завершение)
+  applyCapturedPhoto(dataUrl);
+  closeCamera();
+}
+
+// Применяет снятое фото так же, как выбранное из файла
+function applyCapturedPhoto(dataUrl){
+  if(_photoTarget==='comp'){
+    app.compPhotoData=dataUrl;
+    const pv=document.getElementById('comp-photo-preview');
+    const im=document.getElementById('comp-photo-img');
+    if(im) im.src=dataUrl;
+    if(pv) pv.style.display='block';
+  } else {
+    app.memoPhotoData=dataUrl;
+    const pv=document.getElementById('memo-photo-preview');
+    const im=document.getElementById('memo-photo-img');
+    if(im) im.src=dataUrl;
+    if(pv) pv.style.display='block';
+  }
+}
+
+function closeCamera(){
+  stopCameraStream();
+  document.getElementById('camera-view').style.display='none';
+}
+
+// Откат: если камера недоступна — открыть выбор файла из галереи
+function cameraFallbackToFile(){
+  closeCamera();
   const input=document.createElement('input');
-  input.type='file';
-  input.accept='image/*';
-  input.setAttribute('capture','environment'); // задняя камера
-  input.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;';
+  input.type='file'; input.accept='image/*';
+  input.style.cssText='position:fixed;left:-9999px;';
   input.addEventListener('change', e=>{
     onPhotoChosen(e);
-    setTimeout(()=>{ try{ document.body.removeChild(input); }catch(_){} }, 500);
+    setTimeout(()=>{ try{ document.body.removeChild(input); }catch(_){} },500);
   });
   document.body.appendChild(input);
   input.click();
 }
-// Файл выбран (с камеры или из галереи) — направляем в нужную форму
+// Файл выбран (из галереи) — направляем в нужную форму
 function onPhotoChosen(e){
   closePhotoChoice();
   if(_photoTarget==='comp') compPhotoChange(e);
@@ -3595,9 +3797,10 @@ function switchTabByName(name){
       const memoOpen=document.getElementById('memo-modal').style.display==='flex';
       const compOpen=document.getElementById('completion-modal').style.display==='flex';
       const photoOpen=document.getElementById('photo-choice').style.display==='flex';
+      const camOpen=document.getElementById('camera-view').style.display==='flex';
       const overlay=document.getElementById('vitrazh-overlay');
       const fsOpen=overlay && overlay.style.display!=='none';
-      if(memoOpen||compOpen||photoOpen||fsOpen){ tracking=false; return; }
+      if(memoOpen||compOpen||photoOpen||camOpen||fsOpen){ tracking=false; return; }
       startX=e.touches[0].clientX; startY=e.touches[0].clientY; tracking=true;
     }, {passive:true});
     appScreen.addEventListener('touchend', e=>{
@@ -3736,7 +3939,7 @@ function serializeProgress(){
     TOTAL:TOTAL,
     completed:(app.completed||[]).map(lightVitrazh),
     activeVitrazhi:(app.activeVitrazhi||[]).map(lightVitrazh),
-    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme},
+    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt},
     started: !document.getElementById('app-screen').classList.contains('hidden')
   };
 }
@@ -3917,6 +4120,7 @@ function applyProgress(data){
     settings.reminderTime=data.settings.reminderTime||'21:00';
     settings.reminderOn=data.settings.reminderOn!==false;
     settings.theme=data.settings.theme||'dark';
+    settings.memoPrompt=data.settings.memoPrompt||'each';
     applyTheme(settings.theme);
   }
   TOTAL = data.TOTAL || data.vTotal || 30;
