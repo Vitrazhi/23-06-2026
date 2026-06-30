@@ -1822,31 +1822,48 @@ function initMainScreen(){
    (id-map): каждый пиксель принадлежит осколку 1..15. Закрытые осколки затемнены,
    открытые показывают настоящее изображение. Это убирает зазоры, рваные формы и
    искажения рисунка — осколки идут строго по родным свинцовым линиям. */
+
+// Встроенные карты осколков (base64) — чтобы превью в «Соборе» никогда не падало
+// из-за сетевых/кэш-проблем с PNG-картой. Картинка-основа грузится по сети,
+// а карта осколков всегда доступна локально.
+const _EMBEDDED_IDMAPS = {
+  "presets/moon2-15-map.png": "data:image/png;base64,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"
+};
+
 let _maskAssets = { key:null, base:null, idData:null, w:0, h:0 };
 function loadMaskAssets(preset, cb){
   const key = preset.img+'|'+preset.map;
   if(_maskAssets.key===key && _maskAssets.base && _maskAssets.idData){ cb(); return; }
-  // Картинка и карта лежат на том же домене (GitHub Pages), что и приложение —
-  // crossOrigin НЕ нужен и даже вреден: из-за рассинхронизации кэша он мог приводить
-  // к чёрному превью в «Соборе». Поэтому грузим как обычные same-origin картинки.
   const base=new Image();
   const idmap=new Image();
-  let loaded=0;
+  let loaded=0, failed=false;
   const done=()=>{
+    if(failed) return;
     loaded++;
     if(loaded<2) return;
     // Считываем id-map в пиксельный массив (через offscreen canvas)
-    const oc=document.createElement('canvas');
-    oc.width=idmap.naturalWidth; oc.height=idmap.naturalHeight;
-    const octx=oc.getContext('2d',{willReadFrequently:true});
-    octx.drawImage(idmap,0,0);
-    const id=octx.getImageData(0,0,oc.width,oc.height);
-    _maskAssets={ key, base, idData:id, w:oc.width, h:oc.height };
-    cb();
+    try{
+      const oc=document.createElement('canvas');
+      oc.width=idmap.naturalWidth; oc.height=idmap.naturalHeight;
+      const octx=oc.getContext('2d',{willReadFrequently:true});
+      octx.drawImage(idmap,0,0);
+      const id=octx.getImageData(0,0,oc.width,oc.height);
+      _maskAssets={ key, base, idData:id, w:oc.width, h:oc.height };
+      cb();
+    }catch(e){
+      // Не удалось прочитать карту — сообщаем об ошибке (сработает запасной вариант)
+      failed=true; cb(true);
+    }
   };
-  base.onload=done; idmap.onload=done;
-  base.onerror=()=>cb(true); idmap.onerror=()=>cb(true);
-  base.src=preset.img; idmap.src=preset.map;
+  base.onload=done;
+  idmap.onload=done;
+  base.onerror=()=>{ if(!failed){ failed=true; cb(true); } };
+  idmap.onerror=()=>{ if(!failed){ failed=true; cb(true); } };
+  // Карту осколков берём из встроенной base64-копии, если она есть —
+  // это исключает сетевые/кэш-сбои PNG-карты (главная причина «иконки месяца»).
+  const embedded = _EMBEDDED_IDMAPS[preset.map];
+  idmap.src = embedded || preset.map;
+  base.src = preset.img;
 }
 
 function buildVitrazhMaskCanvas(revealed, W, H, preset, forPreview){
