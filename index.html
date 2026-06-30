@@ -963,9 +963,8 @@ function loadCustomImagePixels(dataUrl){
   __imgReady=false;
   __imgCanvas=null; __imgCtx=null;
   const img=new Image();
-  // Для файлов с того же домена (пресеты на GitHub Pages) CORS не мешает,
-  // но указываем anonymous на случай внешних источников.
-  try{ img.crossOrigin='anonymous'; }catch(e){}
+  // Пресеты лежат на том же домене (GitHub Pages) — crossOrigin не нужен.
+  // Раньше он мог вызывать рассинхронизацию кэша и пустую (чёрную) картинку.
 
   function setUZ(icon,title,sub){
     const i=document.getElementById('uz-icon'); if(i) i.textContent=icon;
@@ -1827,8 +1826,11 @@ let _maskAssets = { key:null, base:null, idData:null, w:0, h:0 };
 function loadMaskAssets(preset, cb){
   const key = preset.img+'|'+preset.map;
   if(_maskAssets.key===key && _maskAssets.base && _maskAssets.idData){ cb(); return; }
-  const base=new Image(); base.crossOrigin='anonymous';
-  const idmap=new Image(); idmap.crossOrigin='anonymous';
+  // Картинка и карта лежат на том же домене (GitHub Pages), что и приложение —
+  // crossOrigin НЕ нужен и даже вреден: из-за рассинхронизации кэша он мог приводить
+  // к чёрному превью в «Соборе». Поэтому грузим как обычные same-origin картинки.
+  const base=new Image();
+  const idmap=new Image();
   let loaded=0;
   const done=()=>{
     loaded++;
@@ -3499,16 +3501,26 @@ function createGalleryCard(v){
   // Если это маск-пресет (картинка-витраж) — рисуем мини-превью через canvas с реальным изображением
   const vPreset = (typeof getPreset==='function') ? getPreset(v.sphere, v.total) : null;
   if(vPreset && vPreset.mask && vPreset.map){
-    const mw2=312, mh2=Math.round(312*(vPreset.ratio||1.41));
+    const mw2=312, mh2=Math.round(312*(vPreset.ratio||1.25));
     const ph=document.createElement('div');
-    ph.style.cssText=`width:100%;height:${mh2}px;background:#04060f;`;
+    ph.style.cssText=`width:100%;height:${mh2}px;background:#04060f;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;`;
+    ph.textContent='Загрузка…';
     miniWrap.appendChild(ph);
-    loadMaskAssets(vPreset, (err)=>{
-      if(err) return;
-      const cv=buildVitrazhMaskCanvas(v.shards, mw2, mh2, vPreset, true);
-      cv.style.cssText='width:100%;display:block;';
-      miniWrap.innerHTML=''; miniWrap.appendChild(cv);
-    });
+    const tryRender=(attempt)=>{
+      loadMaskAssets(vPreset, (err)=>{
+        if(err){
+          if(attempt<2){ setTimeout(()=>tryRender(attempt+1), 400); return; }
+          // После повторных попыток не вышло — показываем эмодзи сферы вместо чёрного поля
+          ph.textContent=v.emoji||'🌙';
+          ph.style.fontSize='40px';
+          return;
+        }
+        const cv=buildVitrazhMaskCanvas(v.shards, mw2, mh2, vPreset, true);
+        cv.style.cssText='width:100%;display:block;';
+        miniWrap.innerHTML=''; miniWrap.appendChild(cv);
+      });
+    };
+    tryRender(0);
     miniWrap.onclick=()=>openVitrazh(v);
     card.appendChild(miniWrap);
   } else {
@@ -3748,8 +3760,9 @@ function showFullscreenVitrazh(v){
     ph.style.cssText=`width:100%;aspect-ratio:${1/fsRatio};background:#04060f;border-radius:12px;`;
     svgWrap.appendChild(ph);
     overlay.appendChild(svgWrap);
+    const renderFs=(attempt)=>{
     loadMaskAssets(preset, (err)=>{
-      if(err) return;
+      if(err){ if(attempt<2){ setTimeout(()=>renderFs(attempt+1),400); } return; }
       const cv=buildVitrazhMaskCanvas(v.shards, W, H, preset, false);
       cv.style.cssText='width:100%;display:block;border-radius:12px;cursor:pointer;';
       svgWrap.innerHTML=''; svgWrap.appendChild(cv);
@@ -3772,6 +3785,8 @@ function showFullscreenVitrazh(v){
         svgWrap.appendChild(dot);
       });
     });
+    };
+    renderFs(0);
     // Инсайт + история для маск-пресета
     appendFullscreenExtras(v, overlay);
     overlay.style.display = 'flex';
