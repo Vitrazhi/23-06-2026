@@ -218,6 +218,16 @@ html.light-theme .m-msg{color:#46415e;}
 .vg-wrap{border-radius:12px;overflow:hidden;background:#04050e;position:relative;margin-bottom:12px;}
 html.light-theme .vg-wrap{background:#dcdae8;}
 .memo-dot{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px var(--gold);}
+
+/* ── Инкрустация драгоценным камнем (отметка заметки на осколке) ── */
+.gem-inlay{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;width:22px;height:22px;z-index:3;
+  animation:gemAppear .45s cubic-bezier(.2,.9,.3,1.4);}
+.gem-inlay svg{display:block;width:100%;height:100%;overflow:visible;}
+.gem-inlay:hover{filter:brightness(1.12);}
+@keyframes gemAppear{0%{opacity:0;transform:translate(-50%,-50%) scale(.2);}60%{transform:translate(-50%,-50%) scale(1.15);}100%{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+@keyframes gemTwinkle{0%,100%{opacity:.55;}50%{opacity:1;}}
+.gem-sparkle{animation:gemTwinkle 2.4s ease-in-out infinite;}
+
 #memo-modal,#completion-modal{animation:fadeIn .2s ease;}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 #memo-modal textarea,#completion-modal textarea{background:var(--bg3);border:1px solid var(--border);color:var(--text);transition:border-color .2s;}
@@ -1181,28 +1191,98 @@ function syncReminderChips(value){
   });
 }
 
+// Определяет тип вложения в осколке
+function memoGemType(m){
+  if(!m) return null;
+  const has={text:!!m.text, photo:!!m.photo, audio:!!m.audioUrl};
+  const count=(has.text?1:0)+(has.photo?1:0)+(has.audio?1:0);
+  if(count===0) return null;
+  if(count>1) return {kind:'multi', ...has};
+  if(has.text) return {kind:'text', ...has};
+  if(has.photo) return {kind:'photo', ...has};
+  return {kind:'audio', ...has};
+}
+const GEM_PALETTE = {
+  text:  {name:'сапфир',  c1:'#6db4ff', c2:'#2563d8', c3:'#0e2a6b', spark:'#cfe6ff'},
+  photo: {name:'изумруд', c1:'#5fe6b0', c2:'#1fae7a', c3:'#0c5a42', spark:'#d6fff0'},
+  audio: {name:'аметист', c1:'#c79bff', c2:'#8a52e0', c3:'#4a2585', spark:'#efe0ff'},
+  multi: {name:'опал',    c1:'#ffd86b', c2:'#ff9a5c', c3:'#b9457a', spark:'#fff3d6'}
+};
+// Строит SVG-разметку камня (без обёртки) с уникальными id градиентов
+function gemSVGMarkup(kind){
+  const pal = GEM_PALETTE[kind] || GEM_PALETTE.text;
+  const uid='g'+Math.random().toString(36).slice(2,7);
+  const glyph = kind==='multi'
+      ? '<text x="12" y="15.4" text-anchor="middle" font-size="8" fill="#fff" opacity=".95" style="font-weight:700">✦</text>'
+      : kind==='photo'
+        ? '<g opacity=".95" fill="none" stroke="#fff" stroke-width="1.1"><rect x="8.5" y="9.5" width="7" height="5.2" rx="1"/><circle cx="12" cy="12.1" r="1.3"/></g>'
+        : kind==='audio'
+          ? '<g opacity=".95"><rect x="10.7" y="8.2" width="2.6" height="5" rx="1.3" fill="#fff"/><path d="M9 12a3 3 0 0 0 6 0" fill="none" stroke="#fff" stroke-width="1"/><rect x="11.6" y="14.8" width="0.8" height="1.6" fill="#fff"/></g>'
+          : '<g opacity=".95" stroke="#fff" stroke-width="1.1" stroke-linecap="round"><line x1="9" y1="10.4" x2="15" y2="10.4"/><line x1="9" y1="12.2" x2="15" y2="12.2"/><line x1="9" y1="14" x2="13" y2="14"/></g>';
+  return `<svg viewBox="0 0 24 24">
+    <defs>
+      <radialGradient id="${uid}f" cx="38%" cy="32%" r="75%">
+        <stop offset="0%" stop-color="${pal.c1}"/><stop offset="55%" stop-color="${pal.c2}"/><stop offset="100%" stop-color="${pal.c3}"/>
+      </radialGradient>
+      <radialGradient id="${uid}s" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="rgba(0,0,0,.55)"/><stop offset="70%" stop-color="rgba(0,0,0,.25)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+      </radialGradient>
+      <linearGradient id="${uid}r" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="rgba(0,0,0,.6)"/><stop offset="45%" stop-color="rgba(255,255,255,.18)"/><stop offset="100%" stop-color="rgba(0,0,0,.5)"/>
+      </linearGradient>
+    </defs>
+    <ellipse cx="12" cy="13.2" rx="11" ry="11" fill="url(#${uid}s)"/>
+    <circle cx="12" cy="12" r="9.6" fill="none" stroke="url(#${uid}r)" stroke-width="2.4"/>
+    <circle cx="12" cy="12" r="9.6" fill="none" stroke="rgba(0,0,0,.55)" stroke-width=".6"/>
+    <polygon points="12,3.2 17.8,6.2 20.8,12 17.8,17.8 12,20.8 6.2,17.8 3.2,12 6.2,6.2" fill="url(#${uid}f)" stroke="rgba(255,255,255,.35)" stroke-width=".5"/>
+    <g stroke="rgba(255,255,255,.28)" stroke-width=".5" fill="none">
+      <polygon points="12,6.4 15.6,8.4 17,12 15.6,15.6 12,17 8.4,15.6 7,12 8.4,8.4"/>
+      <line x1="12" y1="3.2" x2="12" y2="6.4"/><line x1="17.8" y1="6.2" x2="15.6" y2="8.4"/>
+      <line x1="20.8" y1="12" x2="17" y2="12"/><line x1="17.8" y1="17.8" x2="15.6" y2="15.6"/>
+      <line x1="12" y1="20.8" x2="12" y2="17"/><line x1="6.2" y1="17.8" x2="8.4" y2="15.6"/>
+      <line x1="3.2" y1="12" x2="7" y2="12"/><line x1="6.2" y1="6.2" x2="8.4" y2="8.4"/>
+    </g>
+    <ellipse class="gem-sparkle" cx="9.2" cy="8.8" rx="2.4" ry="1.5" fill="${pal.spark}" opacity=".85" transform="rotate(-35 9.2 8.8)"/>
+    <circle class="gem-sparkle" cx="14.4" cy="14.6" r=".9" fill="#fff" opacity=".7"/>
+    ${glyph}
+  </svg>`;
+}
+// HTML-элемент камня (для canvas-маски, позиционируется в %)
+function buildGemInlay(type, leftPct, topPct, onClickIdx){
+  const pal=GEM_PALETTE[type.kind]||GEM_PALETTE.text;
+  const el=document.createElement('div');
+  el.className='gem-inlay';
+  el.style.left=leftPct+'%'; el.style.top=topPct+'%';
+  el.title='Заметка ('+(type.kind==='multi'?'текст/фото/аудио':pal.name)+')';
+  el.innerHTML=gemSVGMarkup(type.kind);
+  if(onClickIdx!=null) el.addEventListener('click', e=>{ e.stopPropagation(); openMemoModal(onClickIdx); });
+  return el;
+}
+
 function addMemoIndicators(svg){
   if(!svg||!app.shardMemos) return;
   const polys=getShardPolygons(vitrazh_W,vitrazh_H);
   polys.forEach((pts,i)=>{
     if(!app.shards[i]||!app.shardMemos[i]) return;
     const m=app.shardMemos[i];
-    if(!m||(!m.text&&!m.photo&&!m.audioUrl)) return;
+    const type=memoGemType(m);
+    if(!type) return;
     const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length;
     const cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
     const NS='http://www.w3.org/2000/svg';
-    const dot=document.createElementNS(NS,'circle');
-    dot.setAttribute('cx',(cx+8).toFixed(1));
-    dot.setAttribute('cy',(cy-8).toFixed(1));
-    dot.setAttribute('r','5');
-    dot.setAttribute('fill','#f0c060');
-    dot.setAttribute('stroke','#0a0a14');
-    dot.setAttribute('stroke-width','1');
-    dot.style.pointerEvents='auto';
-    dot.style.cursor='pointer';
-    dot.addEventListener('click', e => { e.stopPropagation(); openMemoModal(i); });
-    dot.style.filter='drop-shadow(0 0 4px #f0c060)';
-    svg.appendChild(dot);
+    // Встраиваем камень как foreignObject поверх осколка
+    const fo=document.createElementNS(NS,'foreignObject');
+    const sz=24;
+    fo.setAttribute('x',(cx-sz/2).toFixed(1));
+    fo.setAttribute('y',(cy-sz/2).toFixed(1));
+    fo.setAttribute('width',sz); fo.setAttribute('height',sz);
+    fo.style.overflow='visible'; fo.style.cursor='pointer';
+    const div=document.createElement('div');
+    div.style.cssText='width:'+sz+'px;height:'+sz+'px;';
+    div.innerHTML=gemSVGMarkup(type.kind);
+    div.addEventListener('click', e=>{ e.stopPropagation(); openMemoModal(i); });
+    fo.appendChild(div);
+    svg.appendChild(fo);
   });
 }
 
@@ -2005,17 +2085,14 @@ function attachMaskHitZones(wrap, preset){
       tapShard(idx, {clientX:e.clientX, clientY:e.clientY});
     }
   };
-  // Золотые точки-индикаторы для осколков с заметками
+  // Камни-инкрустации для осколков с заметками
   Object.keys(cents).forEach(k=>{
     const i=parseInt(k,10)-1;
     if(!app.shards[i]) return;
-    const m=app.shardMemos[i];
-    if(!m||(!m.text&&!m.photo&&!m.audioUrl)) return;
-    const dot=document.createElement('div');
-    dot.className='mask-memo-dot';
+    const type=memoGemType(app.shardMemos[i]);
+    if(!type) return;
     const c=cents[k];
-    dot.style.cssText=`position:absolute;left:${c[0]*100}%;top:${c[1]*100}%;width:9px;height:9px;border-radius:50%;background:#f0c060;border:1.5px solid #0a0a14;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 6px rgba(240,192,96,.6);`;
-    wrap.appendChild(dot);
+    wrap.appendChild(buildGemInlay(type, c[0]*100, c[1]*100, i));
   });
 }
 
@@ -2028,21 +2105,17 @@ function maskShardAt(nx,ny){
   return idd[(y*mw+x)*4];
 }
 
-// Обновляет только золотые точки-индикаторы заметок (без перерисовки canvas → без мерцания)
+// Обновляет камни-инкрустации заметок (без перерисовки canvas → без мерцания)
 function refreshMaskDots(wrap, preset){
-  // Удаляем прежние точки
-  wrap.querySelectorAll('.mask-memo-dot').forEach(d=>d.remove());
+  wrap.querySelectorAll('.gem-inlay, .mask-memo-dot').forEach(d=>d.remove());
   const cents=preset.centroids||{};
   Object.keys(cents).forEach(k=>{
     const i=parseInt(k,10)-1;
     if(!app.shards[i]) return;
-    const m=app.shardMemos[i];
-    if(!m||(!m.text&&!m.photo&&!m.audioUrl)) return;
+    const type=memoGemType(app.shardMemos[i]);
+    if(!type) return;
     const c=cents[k];
-    const dot=document.createElement('div');
-    dot.className='mask-memo-dot';
-    dot.style.cssText=`position:absolute;left:${c[0]*100}%;top:${c[1]*100}%;width:9px;height:9px;border-radius:50%;background:#f0c060;border:1.5px solid #0a0a14;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 6px rgba(240,192,96,.6);`;
-    wrap.appendChild(dot);
+    wrap.appendChild(buildGemInlay(type, c[0]*100, c[1]*100, i));
   });
 }
 function addMemoIndicators(svg){
@@ -2051,22 +2124,23 @@ function addMemoIndicators(svg){
   polys.forEach((pts,i)=>{
     if(!app.shards[i]||!app.shardMemos[i]) return;
     const m=app.shardMemos[i];
-    if(!m||(!m.text&&!m.photo&&!m.audioUrl)) return;
+    const type=memoGemType(m);
+    if(!type) return;
     const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length;
     const cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
     const NS='http://www.w3.org/2000/svg';
-    const dot=document.createElementNS(NS,'circle');
-    dot.setAttribute('cx',(cx+8).toFixed(1));
-    dot.setAttribute('cy',(cy-8).toFixed(1));
-    dot.setAttribute('r','5');
-    dot.setAttribute('fill','#f0c060');
-    dot.setAttribute('stroke','#0a0a14');
-    dot.setAttribute('stroke-width','1');
-    dot.style.pointerEvents='auto';
-    dot.style.cursor='pointer';
-    dot.addEventListener('click', e => { e.stopPropagation(); openMemoModal(i); });
-    dot.style.filter='drop-shadow(0 0 4px #f0c060)';
-    svg.appendChild(dot);
+    const fo=document.createElementNS(NS,'foreignObject');
+    const sz=24;
+    fo.setAttribute('x',(cx-sz/2).toFixed(1));
+    fo.setAttribute('y',(cy-sz/2).toFixed(1));
+    fo.setAttribute('width',sz); fo.setAttribute('height',sz);
+    fo.style.overflow='visible'; fo.style.cursor='pointer';
+    const div=document.createElement('div');
+    div.style.cssText='width:'+sz+'px;height:'+sz+'px;';
+    div.innerHTML=gemSVGMarkup(type.kind);
+    div.addEventListener('click', e=>{ e.stopPropagation(); openMemoModal(i); });
+    fo.appendChild(div);
+    svg.appendChild(fo);
   });
 }
 
