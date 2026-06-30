@@ -216,6 +216,7 @@ html.light-theme .m-msg{color:#46415e;}
 
 /* SVG витраж */
 .vg-wrap{border-radius:12px;overflow:hidden;background:#04050e;position:relative;margin-bottom:12px;}
+html.light-theme .vg-wrap{background:#dcdae8;}
 .memo-dot{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px var(--gold);}
 #memo-modal,#completion-modal{animation:fadeIn .2s ease;}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -453,7 +454,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <div class="ob-icon">⚙️</div>
     <div class="ob-eyebrow">Твой витраж почти готов</div>
     <div class="ob-title" style="font-size:21px;">Настрой свой ритуал</div>
-    <div class="ob-sub" style="font-size:13px;">Эти параметры можно изменить позже в Мастерской. Сейчас выбери то, что подходит именно тебе.</div>
+    <div class="ob-sub" style="font-size:13px;">Эти параметры можно изменить позже в Мастерской. Сейчас выбери то, что подходит именно тебе</div>
 
     <!-- Размер витража -->
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
@@ -517,14 +518,14 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 
   <!-- TAB: MAIN -->
   <div style="display:flex;flex-direction:column;flex:1;overflow:hidden;" id="tab-main">
-    <div class="screen-header">
-      <div class="sh-title" id="main-greeting">Добрый день ✦</div>
-      <div class="sh-sub" id="main-date">Понедельник, 15 июня</div>
-    </div>
     <div class="scroll">
+      <div class="screen-header" id="main-header">
+        <div class="sh-title" id="main-greeting">Добрый день ✦</div>
+        <div class="sh-sub" id="main-date">Понедельник, 15 июня</div>
+      </div>
       <!-- Пустое состояние: нет ни одного витража -->
-      <div id="main-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 30px;min-height:60vh;">
-        <div style="width:88px;height:88px;margin-bottom:20px;opacity:.85;">
+      <div id="main-empty" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 30px;min-height:70vh;">
+        <div onclick="startNewVitrazh()" style="width:88px;height:88px;margin-bottom:20px;cursor:pointer;filter:drop-shadow(0 4px 18px rgba(124,111,255,.35));transition:transform .15s;" onpointerdown="this.style.transform='scale(.94)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
           <svg viewBox="0 0 84 110" width="88" height="88" style="display:block;">
             <defs>
               <linearGradient id="me1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient>
@@ -532,14 +533,14 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
               <linearGradient id="me3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient>
               <linearGradient id="me4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient>
             </defs>
-            <path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="var(--bg3)" stroke="#c8a86a" stroke-width="3" stroke-linejoin="round" opacity=".5"/>
-            <path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#me1)" opacity=".3"/>
-            <path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#me2)" opacity=".3"/>
-            <path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#me3)" opacity=".3"/>
-            <path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#me4)" opacity=".3"/>
-            <path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#me1)" opacity=".25"/>
-            <path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#me2)" opacity=".25"/>
-            <path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="#0a0c18" stroke-width="2" fill="none" opacity=".4"/>
+            <path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="var(--bg3)" stroke="#c8a86a" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#me1)"/>
+            <path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#me2)"/>
+            <path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#me3)"/>
+            <path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#me4)"/>
+            <path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#me1)"/>
+            <path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#me2)"/>
+            <path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="var(--vmark,#0a0c18)" stroke-width="2" fill="none" opacity=".55"/>
           </svg>
         </div>
         <div style="font-size:19px;font-weight:600;margin-bottom:8px;">Пока нет ни одного витража</div>
@@ -698,8 +699,8 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 <!-- ══ ВЫБОР ИСТОЧНИКА ФОТО (камера / галерея) ══ -->
 <!-- ══ РЕДАКТИРОВАНИЕ ТЕКСТА ДЕЙСТВИЯ ══ -->
 <div id="edit-act-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeEditAction()">
-  <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;">
-    <div style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;"></div>
+  <div id="edit-act-sheet" style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;transition:transform .05s;">
+    <div id="edit-act-grabber" style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;cursor:grab;touch-action:none;"></div>
     <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Изменить действие</div>
     <div style="font-size:13px;color:var(--text2);margin-bottom:14px;">Перепиши текст так, как тебе удобнее. Выполненные сегодня действия менять нельзя — только завтра.</div>
     <input id="edit-act-input" type="text" maxlength="60" placeholder="Например: зарядка 10 минут"
@@ -1312,8 +1313,15 @@ function loadVitrazh(snap){
   app.vTotal=snap.vTotal||TOTAL;
   // Сброс кэша полигонов под новый размер
   SHARD_CACHE={key:null,polys:null};
-  // Если было фото — переинициализируем пиксели
-  if(app.customImage){ loadCustomImagePixels(app.customImage); }
+  // Для маск-пресетов (картинка-витраж) старая загрузка пикселей НЕ нужна —
+  // их рисует canvas-рендерер. Вызов loadCustomImagePixels тут ломал отрисовку.
+  const _preset = (typeof getPreset==='function') ? getPreset(app.sphere, TOTAL) : null;
+  if(_preset && _preset.mask){
+    app.isPresetImage=true;
+    app.customImage=_preset.img;
+  } else if(app.customImage){
+    loadCustomImagePixels(app.customImage);
+  }
   // Убираем из списка активных (он снова станет текущим)
   app.activeVitrazhi=app.activeVitrazhi.filter(v=>v.id!==snap.id);
   document.getElementById('main-vcard').classList.remove('glow');
@@ -1580,6 +1588,13 @@ function shardColor(cx,cy,W,H,sphere,seedIdx){
 }
 
 /* ══ СТРОИМ VITRAZH SVG ══ */
+// Цвет «непроявленного» (закрытого) осколка — зависит от темы.
+// Тёмная тема: почти чёрное стекло. Светлая: мягкий светло-серый (видно, что это область для открытия).
+function _isLightTheme(){ return document.documentElement.classList.contains('light-theme'); }
+function closedShardColor(){ return _isLightTheme() ? '#c8c6d6' : '#10131f'; }
+function closedShardStroke(){ return _isLightTheme() ? '#b3b0c4' : '#1c2030'; }
+function closedShardHover(){ return _isLightTheme() ? '#d2d0de' : '#1c2236'; }
+
 function buildVitrazhSVG(revealed, W, H, preview=false, idPrefix=''){
   const NS='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(NS,'svg');
@@ -1642,8 +1657,9 @@ function buildVitrazhSVG(revealed, W, H, preview=false, idPrefix=''){
       }
       color=app.shardColors[i];
     } else {
-      // Закрытый осколок — показываем тёмный, цвет не фиксируем
-      color='#10131f';
+      // Закрытый осколок — показываем нейтральный «непроявленный» цвет
+      // (тёмный в тёмной теме, светло-серый в светлой)
+      color=closedShardColor();
     }
 
     const g=document.createElementNS(NS,'g');
@@ -1653,8 +1669,8 @@ function buildVitrazhSVG(revealed, W, H, preview=false, idPrefix=''){
     const fill=document.createElementNS(NS,'path');
     fill.id=`${idPrefix}sf${i}`;
     fill.setAttribute('d',ptsD(pts));
-    fill.setAttribute('fill', isRevealed ? color : '#10131f');
-    fill.setAttribute('stroke', isRevealed ? '#0a0a14' : '#1c2030');
+    fill.setAttribute('fill', isRevealed ? color : closedShardColor());
+    fill.setAttribute('stroke', isRevealed ? '#0a0a14' : closedShardStroke());
     fill.setAttribute('stroke-width', isRevealed?'2.6':'1.6');
     fill.setAttribute('stroke-linejoin','round');
     fill.style.transition='fill .4s ease,stroke .4s ease';
@@ -1711,11 +1727,11 @@ function buildVitrazhSVG(revealed, W, H, preview=false, idPrefix=''){
       if(!isRevealed){
         hit.addEventListener('mouseenter',()=>{
           const f=document.getElementById(`${idPrefix}sf${i}`);
-          if(f&&!app.shards[i]) f.setAttribute('fill','#1c2236');
+          if(f&&!app.shards[i]) f.setAttribute('fill', closedShardHover());
         });
         hit.addEventListener('mouseleave',()=>{
           const f=document.getElementById(`${idPrefix}sf${i}`);
-          if(f&&!app.shards[i]) f.setAttribute('fill','#10131f');
+          if(f&&!app.shards[i]) f.setAttribute('fill', closedShardColor());
         });
       }
       hit.dataset.shardIdx=i;
@@ -1767,8 +1783,11 @@ function updateMainEmptyState(){
   const empty = !app.sphere; // нет выбранной сферы = нет текущего витража
   const emptyEl=document.getElementById('main-empty');
   const contentEl=document.getElementById('main-content');
+  const headerEl=document.getElementById('main-header');
   if(emptyEl) emptyEl.style.display = empty ? 'flex' : 'none';
   if(contentEl) contentEl.style.display = empty ? 'none' : 'block';
+  // В пустом состоянии приветствие/дата не нужны — скрываем шапку
+  if(headerEl) headerEl.style.display = empty ? 'none' : '';
   return empty;
 }
 
@@ -2289,8 +2308,47 @@ function saveEditAction(){
 }
 function closeEditAction(){
   document.getElementById('edit-act-modal').style.display='none';
+  const sheet=document.getElementById('edit-act-sheet');
+  if(sheet) sheet.style.transform='';
   _editActionIdx=-1;
 }
+
+// Смахивание вниз закрывает форму редактирования действия (тянем за «грабер»)
+(function initEditActSwipe(){
+  function attach(){
+    const sheet=document.getElementById('edit-act-sheet');
+    const grabber=document.getElementById('edit-act-grabber');
+    if(!sheet || !grabber) return;
+    let startY=0, curY=0, dragging=false;
+    grabber.addEventListener('touchstart', e=>{
+      if(e.touches[0]){ startY=curY=e.touches[0].clientY; dragging=true; sheet.style.transition='none'; }
+    }, {passive:true});
+    grabber.addEventListener('touchmove', e=>{
+      if(!dragging || !e.touches[0]) return;
+      curY=e.touches[0].clientY;
+      const dy=Math.max(0, curY-startY);
+      sheet.style.transform='translateY('+dy+'px)';
+    }, {passive:true});
+    grabber.addEventListener('touchend', ()=>{
+      if(!dragging) return;
+      dragging=false;
+      sheet.style.transition='transform .2s ease';
+      const dy=Math.max(0, curY-startY);
+      if(dy>80){ closeEditAction(); }
+      else { sheet.style.transform='translateY(0)'; }
+    });
+    // На десктопе — мышью тоже можно потянуть грабер
+    grabber.addEventListener('mousedown', e=>{ startY=curY=e.clientY; dragging=true; sheet.style.transition='none';
+      const mm=ev=>{ if(!dragging)return; curY=ev.clientY; sheet.style.transform='translateY('+Math.max(0,curY-startY)+'px)'; };
+      const mu=()=>{ dragging=false; sheet.style.transition='transform .2s ease';
+        if(Math.max(0,curY-startY)>80) closeEditAction(); else sheet.style.transform='translateY(0)';
+        document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
+      document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu);
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', attach);
+  else attach();
+})();
 
 // Снимает отметку «выполнено» с действия и закрывает связанный с ним осколок
 function unmarkAction(actIdx){
@@ -2459,6 +2517,9 @@ function applyTheme(theme){
 }
 function toggleTheme(){
   applyTheme(settings.theme==='light' ? 'dark' : 'light');
+  // Перерисовываем витраж, чтобы закрытые осколки взяли цвет новой темы
+  if(typeof rebuildVitrazh==='function' && app.sphere){ try{ rebuildVitrazh(); }catch(e){} }
+  if(typeof updateGallery==='function'){ try{ updateGallery(); }catch(e){} }
   if(typeof saveProgress==='function') saveProgress();
 }
 
@@ -2613,9 +2674,12 @@ function addActionField(focusNew){
   const row=document.createElement('div');
   row.className='action-inp-row';
   row.style.cssText='display:flex;align-items:center;gap:10px;';
-  // У первого действия НЕ показываем крестик удаления (его можно оставить пустым,
-  // но нельзя удалить — это обязательное основное действие).
-  const delBtn = isFirst ? '' :
+  // У первого действия крестик ОЧИЩАЕТ поле (его нельзя удалить — это основное действие,
+  // но можно быстро стереть, если пользователь передумал по поводу выбранной подсказки).
+  // У остальных действий крестик удаляет строку целиком.
+  const delBtn = isFirst ?
+    `<button onclick="clearFirstAction(this)" title="Очистить" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;">✕</button>`
+    :
     `<button onclick="this.parentElement.remove();renumberActions();updateAddBtn();" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;">✕</button>`;
   row.innerHTML=`<span class="action-num" style="min-width:22px;color:var(--text3);font-size:14px;">${num}</span>
     <input class="action-inp dyn-act-input" placeholder="${actionPlaceholder(idx)}" style="flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;">
@@ -2631,6 +2695,17 @@ function addActionField(focusNew){
   // а не при авто-создании первого поля — чтобы клавиатура не выскакивала сразу.
   if(focusNew){ inp.focus(); }
   updateAddBtn();
+}
+// Очищает поле первого действия (не удаляет строку), обновляет подсказки-чипы
+function clearFirstAction(btn){
+  const row=btn.parentElement;
+  const inp=row.querySelector('.dyn-act-input');
+  if(inp){
+    inp.value='';
+    inp.placeholder=actionPlaceholder(0);
+    inp.focus();
+  }
+  if(typeof renderSuggestChips==='function') renderSuggestChips();
 }
 function renumberActions(){
   const rows=document.querySelectorAll('#act-list-wrap .action-inp-row');
@@ -2697,8 +2772,16 @@ function renderSuggestChips(){
     cont.appendChild(chip);
   });
 }
+// Делает первую букву заглавной (для названий из подсказок)
+function capitalizeFirst(s){
+  s=(s||'').trim();
+  if(!s) return s;
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+
 // Добавляет действие из подсказки: в первое пустое поле или новое
 function addSuggestedAction(text){
+  text=capitalizeFirst(text); // названия из подсказок — с заглавной буквы
   const inputs = Array.from(document.querySelectorAll('.dyn-act-input'));
   // Уже добавлено? — выходим
   if(inputs.some(i=>i.value.trim().toLowerCase()===text.toLowerCase())) return;
@@ -3402,6 +3485,13 @@ function createGalleryCard(v){
     delBtn.onmouseleave=()=>delBtn.style.color='var(--text3)';
     delBtn.onclick=(e)=>{ e.stopPropagation(); deleteVitrazh(v); };
   }
+  // Нажатие на шапку карточки (название, статус) — тоже открывает витраж,
+  // не только нажатие на саму картинку. Кнопку удаления при этом не задеваем.
+  const hdr=card.querySelector('.gal-card-hdr');
+  if(hdr){
+    hdr.style.cursor='pointer';
+    hdr.onclick=(e)=>{ if(e.target.closest('.gal-del-btn')) return; openVitrazh(v); };
+  }
 
   // Mini vitrazh preview
   const miniWrap=document.createElement('div');
@@ -3732,7 +3822,98 @@ function showFullscreenVitrazh(v){
 }
 
 // Добавляет блок инсайта и историю осколков в полноэкранный просмотр
+// Рендерит завершённый витраж в картинку (canvas) и возвращает её как Promise<canvas>
+function renderVitrazhToCanvas(v){
+  return new Promise((resolve)=>{
+    const preset = (v.sphere && v.total) ? getPreset(v.sphere, v.total) : null;
+    const W=720, ratio = preset && preset.ratio ? preset.ratio : 1.4;
+    const H=Math.round(W*ratio);
+    if(preset && preset.mask && preset.map){
+      loadMaskAssets(preset, (err)=>{
+        if(err){ resolve(null); return; }
+        const cv=buildVitrazhMaskCanvas(v.shards, W, H, preset, false);
+        resolve(cv);
+      });
+    } else {
+      // SVG-витраж → рисуем во временный canvas через сериализацию
+      const _sc=app.shardColors, _sp=app.sphere, _t=TOTAL, _cache={key:SHARD_CACHE.key,polys:SHARD_CACHE.polys};
+      if(v.shardColors) app.shardColors=v.shardColors;
+      if(v.sphere) app.sphere=v.sphere;
+      TOTAL=v.total; SHARD_CACHE={key:null,polys:null};
+      const svg=buildVitrazhSVG(v.shards, W, H, true, 'sh'+Date.now()%9999+'_');
+      app.shardColors=_sc; app.sphere=_sp; TOTAL=_t; SHARD_CACHE=_cache;
+      const xml=new XMLSerializer().serializeToString(svg);
+      const img=new Image();
+      const svg64='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(xml)));
+      img.onload=()=>{
+        const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+        const ctx=cv.getContext('2d');
+        ctx.fillStyle='#04060f'; ctx.fillRect(0,0,W,H);
+        ctx.drawImage(img,0,0,W,H);
+        resolve(cv);
+      };
+      img.onerror=()=>resolve(null);
+      img.src=svg64;
+    }
+  });
+}
+
+// Поделиться картинкой завершённого витража
+function shareCompletedVitrazh(v){
+  renderVitrazhToCanvas(v).then(cv=>{
+    const sphereName=v.name||'витраж';
+    const text=`Мой витраж «${sphereName}» собран целиком! ✦ Каждый осколок — выполненное действие. Собери свой в приложении Витраж`;
+    if(!cv){ // не удалось отрисовать — делимся текстом
+      _shareText(text); return;
+    }
+    cv.toBlob((blob)=>{
+      if(blob && navigator.canShare && navigator.canShare({files:[new File([blob],'vitrazh.png',{type:'image/png'})]})){
+        const file=new File([blob],'vitrazh.png',{type:'image/png'});
+        navigator.share({files:[file], text}).catch(()=>_shareText(text));
+      } else {
+        _shareText(text);
+      }
+    }, 'image/png');
+  });
+}
+function _shareText(text){
+  const tg=window.Telegram&&window.Telegram.WebApp;
+  if(tg && tg.openTelegramLink){
+    tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent('https://t.me/')+'&text='+encodeURIComponent(text));
+  } else if(navigator.share){ navigator.share({text}).catch(()=>{}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(text).then(()=>alert('Текст скопирован!')).catch(()=>alert(text)); }
+  else alert(text);
+}
+
+// Сохранить картинку витража в галерею (скачать файл)
+function saveVitrazhImage(v){
+  renderVitrazhToCanvas(v).then(cv=>{
+    if(!cv){ alert('Не удалось подготовить изображение'); return; }
+    cv.toBlob((blob)=>{
+      if(!blob){ alert('Не удалось сохранить'); return; }
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download='vitrazh-'+(v.name||'образ').replace(/\s+/g,'_')+'.png';
+      document.body.appendChild(a); a.click();
+      setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+    }, 'image/png');
+  });
+}
+
 function appendFullscreenExtras(v, overlay){
+  // Кнопки: поделиться и сохранить в галерею телефона (картинку витража)
+  const actions = document.createElement('div');
+  actions.style.cssText = 'display:flex;gap:10px;margin:0 18px 18px;';
+  actions.innerHTML = `
+    <button class="btn btn-ghost" id="fs-share-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;">✦ Поделиться</button>
+    <button class="btn btn-ghost" id="fs-save-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;">⬇ В галерею</button>`;
+  overlay.appendChild(actions);
+  const shareBtn=actions.querySelector('#fs-share-btn');
+  const saveBtn=actions.querySelector('#fs-save-btn');
+  if(shareBtn) shareBtn.onclick=()=>shareCompletedVitrazh(v);
+  if(saveBtn) saveBtn.onclick=()=>saveVitrazhImage(v);
+
   // Insight — сворачиваемый блок с фото/аудио и кнопкой редактирования
   const insBlock = buildInsightBlock(v, {compact:false, showEdit:true});
   overlay.appendChild(insBlock);
@@ -3762,8 +3943,7 @@ function appendFullscreenExtras(v, overlay){
 }
 
 // Открывает заметку осколка ЗАВЕРШЁННОГО витража в режиме редактирования
-// (можно добавить впечатление спустя время; сам факт открытия осколка не меняется)
-let _archiveTarget = null; // {v, idx} когда редактируем заметку завершённого витража
+// (можно добавить впечатление спустя время; сам факт открытия осколка не меняется)let _archiveTarget = null; // {v, idx} когда редактируем заметку завершённого витража
 function openArchivedMemoEditor(v, idx){
   _archiveTarget = { v, idx };
   // Глушим возможную активную запись
