@@ -2016,23 +2016,37 @@ function paintMaskCanvas(cv, revealed){
   }
   ctx.putImageData(out,0,0);
 
-  // 4) Свинцовые линии между осколками (тёмные границы по карте)
-  drawLeadLines(ctx, cw, ch, idmap, mw, mh);
+  // 4) Свинцовые линии рисуем ТОЛЬКО между закрытыми осколками (или на границе
+  //    закрытого с открытым). Между двумя открытыми осколками линию НЕ рисуем —
+  //    там уже есть родная золотистая линия художника, и она красивее.
+  drawLeadLines(ctx, cw, ch, idmap, mw, mh, revealed);
 }
 
-// Рисует тёмные «свинцовые» линии там, где встречаются разные осколки
-function drawLeadLines(ctx, cw, ch, idmap, mw, mh){
+// Рисует тёмные «свинцовые» линии на границах осколков.
+// Если переданы revealed — линия рисуется только там, где хотя бы один
+// из соседних осколков ещё закрыт (чтобы не перекрывать родную золотистую линию).
+function drawLeadLines(ctx, cw, ch, idmap, mw, mh, revealed){
   const idd=idmap.data;
   ctx.save();
   ctx.fillStyle='rgba(6,7,14,0.92)';
   const sx=cw/mw, sy=ch/mh;
+  const isClosed=(sid)=>{
+    if(!revealed) return true;          // если статус не передан — рисуем всё (как раньше)
+    if(sid<1) return true;
+    return !revealed[sid-1];            // закрыт, если осколок ещё не открыт
+  };
   for(let y=1;y<mh;y++){
     for(let x=1;x<mw;x++){
       const c=idd[(y*mw+x)*4];
       const l=idd[(y*mw+x-1)*4];
       const u=idd[((y-1)*mw+x)*4];
       if(c!==l || c!==u){
-        ctx.fillRect(Math.floor(x*sx)-1, Math.floor(y*sy)-1, Math.ceil(sx)+2, Math.ceil(sy)+2);
+        // Граница между разными осколками. Рисуем линию только если хотя бы один
+        // из участников границы закрыт. Между двумя открытыми — пропускаем.
+        const anyClosed = isClosed(c) || (c!==l && isClosed(l)) || (c!==u && isClosed(u));
+        if(anyClosed){
+          ctx.fillRect(Math.floor(x*sx)-1, Math.floor(y*sy)-1, Math.ceil(sx)+2, Math.ceil(sy)+2);
+        }
       }
     }
   }
