@@ -7,8 +7,10 @@
 <title>Витраж — Собери свою новую жизнь</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@300;400;500;600;700;800&display=swap">
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- Веса шрифта — только используемые (400/500/600/700), 300 и 800 убраны.
+     display=swap: текст показывается системным шрифтом сразу, затем заменяется на Onest. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap">
+<script src="https://telegram.org/js/telegram-web-app.js" defer></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 /* Убираем синий прямоугольник подсветки касания и случайное выделение
@@ -227,13 +229,14 @@ html.light-theme .vg-wrap{background:#dcdae8;}
 .memo-dot{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px var(--gold);}
 
 /* ── Инкрустация драгоценным камнем (отметка заметки на осколке) ── */
-.gem-inlay{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;width:22px;height:22px;z-index:3;
-  animation:gemAppear .45s cubic-bezier(.2,.9,.3,1.4);}
+.gem-inlay{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;width:17px;height:17px;z-index:3;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.45));
+  animation:gemAppear .5s cubic-bezier(.2,.9,.3,1.4);}
 .gem-inlay svg{display:block;width:100%;height:100%;overflow:visible;}
-.gem-inlay:hover{filter:brightness(1.12);}
-@keyframes gemAppear{0%{opacity:0;transform:translate(-50%,-50%) scale(.2);}60%{transform:translate(-50%,-50%) scale(1.15);}100%{opacity:1;transform:translate(-50%,-50%) scale(1);}}
-@keyframes gemTwinkle{0%,100%{opacity:.55;}50%{opacity:1;}}
-.gem-sparkle{animation:gemTwinkle 2.4s ease-in-out infinite;}
+.gem-inlay:hover{transform:translate(-50%,-50%) scale(1.15);}
+@keyframes gemAppear{0%{opacity:0;transform:translate(-50%,-50%) scale(.2);}60%{transform:translate(-50%,-50%) scale(1.12);}100%{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+@keyframes gemTwinkle{0%,100%{opacity:.4;}50%{opacity:1;}}
+.gem-sparkle{animation:gemTwinkle 2.8s ease-in-out infinite;}
 
 #memo-modal,#completion-modal{animation:fadeIn .2s ease;}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -250,6 +253,7 @@ html.light-theme .vg-wrap{background:#dcdae8;}
 /* Progress */
 .prog-row{display:flex;align-items:center;gap:9px;}
 .prog-bar{flex:1;height:4px;background:#1a1d2e;border-radius:2px;overflow:hidden;}
+html.light-theme .prog-bar{background:#d8d5e8;}
 .prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .7s cubic-bezier(.22,1,.36,1);}
 .prog-lb{font-size:11px;color:var(--text2);white-space:nowrap;}
 .hint{font-size:11px;color:var(--text3);text-align:center;margin-top:7px;transition:opacity .5s;}
@@ -455,10 +459,10 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 
     <!-- Подсказки действий для выбранной сферы -->
     <div id="act-suggest-wrap" style="display:none;flex:1 1 auto;min-height:0;flex-direction:column;">
-      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <div id="act-suggest-label" style="font-size:12px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-shrink:0;">
         <span style="color:var(--accent2);">✦</span> Идеи — нажми, чтобы добавить · листай вбок ↔
       </div>
-      <div style="position:relative;flex:1 1 auto;min-height:0;">
+      <div style="position:relative;flex:1 1 auto;min-height:52px;">
         <div id="act-suggest-chips" class="sugg-carousel"></div>
         <div class="sugg-fade" aria-hidden="true"></div>
       </div>
@@ -475,6 +479,13 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <div class="ob-eyebrow">Твой витраж почти готов</div>
     <div class="ob-title" style="font-size:21px;">Настрой свой ритуал</div>
     <div class="ob-sub" style="font-size:13px;">Эти параметры можно изменить позже в Мастерской. Сейчас выбери то, что подходит именно тебе</div>
+
+    <!-- Название витража -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:3px;">✦ Название витража</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Дай своему витражу имя — или оставь как есть</div>
+      <input id="ob-vitrazh-name" type="text" maxlength="40" placeholder="Витраж Сна" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-size:14px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box;">
+    </div>
 
     <!-- Размер витража -->
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
@@ -770,7 +781,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 </div>
 
 <!-- ══ SHARD MEMO MODAL ══ -->
-<div id="memo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:flex-end;justify-content:center;">
+<div id="memo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2200;align-items:flex-end;justify-content:center;">
   <div id="memo-sheet" style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;max-height:85vh;overflow-y:auto;transition:transform .25s ease;">
     <div id="memo-grabber" style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:-6px auto 12px;cursor:grab;"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
@@ -781,8 +792,10 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <div style="font-size:13px;color:var(--text2);margin-bottom:14px;" id="memo-date">—</div>
     <!-- Existing memo content -->
     <div id="memo-content-view" style="display:none;margin-bottom:14px;">
-      <div id="memo-text-view" style="background:var(--bg3);border-radius:12px;padding:12px;font-size:14px;line-height:1.6;margin-bottom:8px;display:none;"></div>
-      <img id="memo-photo-view" style="width:100%;border-radius:12px;margin-bottom:8px;display:none;" src="">
+      <div id="memo-text-view" style="background:var(--bg3);border-radius:12px;padding:12px;font-size:14px;line-height:1.6;margin-bottom:4px;display:none;"></div>
+      <button id="memo-text-del" onclick="deleteMemoText()" style="display:none;background:none;border:none;color:var(--rose);cursor:pointer;font-size:12px;margin:0 0 8px;font-family:inherit;">✕ Удалить комментарий</button>
+      <img id="memo-photo-view" style="width:100%;border-radius:12px;margin-bottom:4px;display:none;" src="">
+      <button id="memo-photo-del" onclick="deleteMemoPhotoSaved()" style="display:none;background:none;border:none;color:var(--rose);cursor:pointer;font-size:12px;margin:0 0 8px;font-family:inherit;">✕ Удалить фото</button>
       <audio id="memo-audio-view" controls style="width:100%;display:none;"></audio>
       <button id="memo-audio-del" onclick="deleteMemoAudio()" style="display:none;background:none;border:none;color:var(--rose);cursor:pointer;font-size:12px;margin-top:4px;font-family:inherit;">✕ Удалить голосовое</button>
     </div>
@@ -872,7 +885,7 @@ const PRESET_GEOMETRY={"sleep":{"15":{"ratio": 1.25, "img": "presets/moon3-15.jp
 ══════════════════════════════════════════════ */
 const app = {
   ob: 0,
-  sphere: null, sphereName:'', sphereEmoji:'🌙', sphereColor:'#4a80d0',
+  sphere: null, sphereName:'', sphereEmoji:'🌙', sphereColor:'#4a80d0', vitrazhName:'',
   actions: [],
   shards: new Array(30).fill(false),
   shardColors: new Array(30).fill(null),
@@ -880,6 +893,8 @@ const app = {
   shardDates: new Array(30).fill(null), // дата открытия каждого осколка
   todayDone: new Set(),
   shardsToday: 0,
+  dayClosed: false,   // все действия за сегодня выполнены → осколок дня открыт, новых сегодня нет
+  dayDate: null,      // календарный день (ГГГГ-ММ-ДД), к которому относится todayDone
   streak: 0, light: 0, totalDone: 0,
   activeDays: [], // уникальные календарные дни активности (строки 'ГГГГ-ММ-ДД') для счётчика «дней»
   customImage: null,
@@ -924,6 +939,11 @@ function nextOb(){
   obStep++;
   document.getElementById('ob'+obStep).classList.add('on');
   if(obStep===2) initActFields();
+  if(obStep===3){
+    // Подставляем название по умолчанию как placeholder (можно переопределить)
+    const nameInp=document.getElementById('ob-vitrazh-name');
+    if(nameInp) nameInp.placeholder='Витраж '+(app.sphereName||'Сна');
+  }
 }
 // Возврат на предыдущий шаг онбординга (данные сохраняются)
 function obBack(toStep){
@@ -934,6 +954,10 @@ function obBack(toStep){
   if(obStep===2) initActFields();
 }
 function nextObAndStart(){
+  // Забираем название витража (если пользователь ввёл своё)
+  const nameInp=document.getElementById('ob-vitrazh-name');
+  const custom=nameInp ? nameInp.value.trim() : '';
+  app.vitrazhName = custom || ('Витраж '+app.sphereName);
   // Screen 3 (settings) → directly launch app
   applyShardCountToGrid(settings.shardCount);
   startApp();
@@ -1218,43 +1242,50 @@ const GEM_PALETTE = {
   audio: {name:'аметист', c1:'#c79bff', c2:'#8a52e0', c3:'#4a2585', spark:'#efe0ff'},
   multi: {name:'опал',    c1:'#ffd86b', c2:'#ff9a5c', c3:'#b9457a', spark:'#fff3d6'}
 };
-// Строит SVG-разметку камня (без обёртки) с уникальными id градиентов
+// Строит SVG-разметку камня (без обёртки) с уникальными id градиентов.
+// Красивый огранённый камень: без иконок и без круглой окантовки.
+// Тип заметки различается только цветом камня.
 function gemSVGMarkup(kind){
   const pal = GEM_PALETTE[kind] || GEM_PALETTE.text;
   const uid='g'+Math.random().toString(36).slice(2,7);
-  const glyph = kind==='multi'
-      ? '<text x="12" y="15.4" text-anchor="middle" font-size="8" fill="#fff" opacity=".95" style="font-weight:700">✦</text>'
-      : kind==='photo'
-        ? '<g opacity=".95" fill="none" stroke="#fff" stroke-width="1.1"><rect x="8.5" y="9.5" width="7" height="5.2" rx="1"/><circle cx="12" cy="12.1" r="1.3"/></g>'
-        : kind==='audio'
-          ? '<g opacity=".95"><rect x="10.7" y="8.2" width="2.6" height="5" rx="1.3" fill="#fff"/><path d="M9 12a3 3 0 0 0 6 0" fill="none" stroke="#fff" stroke-width="1"/><rect x="11.6" y="14.8" width="0.8" height="1.6" fill="#fff"/></g>'
-          : '<g opacity=".95" stroke="#fff" stroke-width="1.1" stroke-linecap="round"><line x1="9" y1="10.4" x2="15" y2="10.4"/><line x1="9" y1="12.2" x2="15" y2="12.2"/><line x1="9" y1="14" x2="13" y2="14"/></g>';
   return `<svg viewBox="0 0 24 24">
     <defs>
-      <radialGradient id="${uid}f" cx="38%" cy="32%" r="75%">
-        <stop offset="0%" stop-color="${pal.c1}"/><stop offset="55%" stop-color="${pal.c2}"/><stop offset="100%" stop-color="${pal.c3}"/>
+      <radialGradient id="${uid}f" cx="40%" cy="30%" r="80%">
+        <stop offset="0%" stop-color="${pal.c1}"/>
+        <stop offset="48%" stop-color="${pal.c2}"/>
+        <stop offset="100%" stop-color="${pal.c3}"/>
       </radialGradient>
-      <radialGradient id="${uid}s" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="rgba(0,0,0,.55)"/><stop offset="70%" stop-color="rgba(0,0,0,.25)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+      <radialGradient id="${uid}glow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="${pal.c1}" stop-opacity=".55"/>
+        <stop offset="60%" stop-color="${pal.c2}" stop-opacity=".18"/>
+        <stop offset="100%" stop-color="${pal.c2}" stop-opacity="0"/>
       </radialGradient>
-      <linearGradient id="${uid}r" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="rgba(0,0,0,.6)"/><stop offset="45%" stop-color="rgba(255,255,255,.18)"/><stop offset="100%" stop-color="rgba(0,0,0,.5)"/>
+      <linearGradient id="${uid}top" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fff" stop-opacity=".9"/>
+        <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
       </linearGradient>
     </defs>
-    <ellipse cx="12" cy="13.2" rx="11" ry="11" fill="url(#${uid}s)"/>
-    <circle cx="12" cy="12" r="9.6" fill="none" stroke="url(#${uid}r)" stroke-width="2.4"/>
-    <circle cx="12" cy="12" r="9.6" fill="none" stroke="rgba(0,0,0,.55)" stroke-width=".6"/>
-    <polygon points="12,3.2 17.8,6.2 20.8,12 17.8,17.8 12,20.8 6.2,17.8 3.2,12 6.2,6.2" fill="url(#${uid}f)" stroke="rgba(255,255,255,.35)" stroke-width=".5"/>
-    <g stroke="rgba(255,255,255,.28)" stroke-width=".5" fill="none">
-      <polygon points="12,6.4 15.6,8.4 17,12 15.6,15.6 12,17 8.4,15.6 7,12 8.4,8.4"/>
-      <line x1="12" y1="3.2" x2="12" y2="6.4"/><line x1="17.8" y1="6.2" x2="15.6" y2="8.4"/>
-      <line x1="20.8" y1="12" x2="17" y2="12"/><line x1="17.8" y1="17.8" x2="15.6" y2="15.6"/>
-      <line x1="12" y1="20.8" x2="12" y2="17"/><line x1="6.2" y1="17.8" x2="8.4" y2="15.6"/>
-      <line x1="3.2" y1="12" x2="7" y2="12"/><line x1="6.2" y1="6.2" x2="8.4" y2="8.4"/>
+    <!-- мягкое свечение по цвету камня -->
+    <circle cx="12" cy="12.4" r="11" fill="url(#${uid}glow)"/>
+    <!-- тело камня: огранка «бриллиант», слегка вытянутый шестигранник -->
+    <polygon points="12,3.4 18.6,8 16.4,17.4 12,20.6 7.6,17.4 5.4,8"
+      fill="url(#${uid}f)" stroke="rgba(255,255,255,.5)" stroke-width=".5"/>
+    <!-- грани (фасеты) -->
+    <g stroke="rgba(255,255,255,.32)" stroke-width=".45" fill="none" stroke-linejoin="round">
+      <polygon points="12,3.4 15.4,8.4 12,10.6 8.6,8.4"/>
+      <line x1="5.4" y1="8" x2="8.6" y2="8.4"/>
+      <line x1="18.6" y1="8" x2="15.4" y2="8.4"/>
+      <line x1="8.6" y1="8.4" x2="7.6" y2="17.4"/>
+      <line x1="15.4" y1="8.4" x2="16.4" y2="17.4"/>
+      <line x1="12" y1="10.6" x2="12" y2="20.6"/>
+      <line x1="8.6" y1="8.4" x2="12" y2="20.6"/>
+      <line x1="15.4" y1="8.4" x2="12" y2="20.6"/>
     </g>
-    <ellipse class="gem-sparkle" cx="9.2" cy="8.8" rx="2.4" ry="1.5" fill="${pal.spark}" opacity=".85" transform="rotate(-35 9.2 8.8)"/>
-    <circle class="gem-sparkle" cx="14.4" cy="14.6" r=".9" fill="#fff" opacity=".7"/>
-    ${glyph}
+    <!-- верхний блик -->
+    <polygon points="12,3.9 14.9,8.2 12,10.1 9.1,8.2" fill="url(#${uid}top)" opacity=".5"/>
+    <!-- искорки -->
+    <circle class="gem-sparkle" cx="9.6" cy="7.3" r="1" fill="#fff" opacity=".9"/>
+    <circle class="gem-sparkle" cx="14" cy="13.6" r=".7" fill="${pal.spark}" opacity=".8"/>
   </svg>`;
 }
 // HTML-элемент камня (для canvas-маски, позиционируется в %)
@@ -1282,7 +1313,7 @@ function addMemoIndicators(svg){
     const NS='http://www.w3.org/2000/svg';
     // Встраиваем камень как foreignObject поверх осколка
     const fo=document.createElementNS(NS,'foreignObject');
-    const sz=24;
+    const sz=18;
     fo.setAttribute('x',(cx-sz/2).toFixed(1));
     fo.setAttribute('y',(cy-sz/2).toFixed(1));
     fo.setAttribute('width',sz); fo.setAttribute('height',sz);
@@ -1354,7 +1385,7 @@ function snapshotCurrentVitrazh(){
   if(!app.sphere) return null;
   return {
     id: app.activeId||('v'+Date.now()),
-    name:'Витраж '+app.sphereName,
+    name:app.vitrazhName||('Витраж '+app.sphereName),
     sphere:app.sphere, sphereName:app.sphereName, sphereEmoji:app.sphereEmoji, sphereColor:app.sphereColor,
     actions:[...app.actions],
     shards:[...app.shards],
@@ -1388,6 +1419,7 @@ function loadVitrazh(snap){
   app.activeId=snap.id;
   app.sphere=snap.sphere; app.sphereName=snap.sphereName;
   app.sphereEmoji=snap.sphereEmoji; app.sphereColor=snap.sphereColor;
+  app.vitrazhName=snap.name||('Витраж '+snap.sphereName);
   app.actions=[...snap.actions];
   app.shards=[...snap.shards];
   app.shardColors=[...snap.shardColors];
@@ -1424,7 +1456,7 @@ function loadVitrazh(snap){
 function startNewVitrazh(){
   saveCurrentToActive();
   // Сбрасываем onboarding-состояние сферы и действий
-  app.sphere=null; app.sphereName=''; app.sphereEmoji='🌙'; app.sphereColor='#4a80d0';
+  app.sphere=null; app.sphereName=''; app.vitrazhName=''; app.sphereEmoji='🌙'; app.sphereColor='#4a80d0';
   app.customImage=null; __imgReady=false; __imgCanvas=null; __imgCtx=null;
   // Возвращаемся на онбординг (шаг выбора сферы)
   obStep=1;
@@ -1436,6 +1468,9 @@ function startNewVitrazh(){
   // Очищаем поля действий
   const wrap=document.getElementById('act-list-wrap');
   if(wrap) wrap.innerHTML='';
+  // Очищаем поле названия витража
+  const nameInp=document.getElementById('ob-vitrazh-name');
+  if(nameInp){ nameInp.value=''; nameInp.placeholder='Витраж Сна'; }
   // ВАЖНО: снимаем анти-флэш классы, иначе #ob-screen остаётся скрытым
   // (has-saved-progress прячет его через display:none, ob-ready нужен для opacity)
   document.documentElement.classList.remove('has-saved-progress');
@@ -1884,7 +1919,7 @@ function initMainScreen(){
   // Если нет активного витража — показываем пустое состояние с кнопкой создания
   if(updateMainEmptyState()) return;
   if(typeof hideUndo==='function') hideUndo();
-  document.getElementById('v-name').textContent='Витраж '+app.sphereName;
+  document.getElementById('v-name').textContent=app.vitrazhName||('Витраж '+app.sphereName);
 
   // Ждём два кадра чтобы браузер успел сделать layout
   requestAnimationFrame(()=>{
@@ -1956,27 +1991,27 @@ function loadMaskAssets(preset, cb){
   base.src = preset.img;
 }
 
-function buildVitrazhMaskCanvas(revealed, W, H, preset, forPreview){
+function buildVitrazhMaskCanvas(revealed, W, H, preset, forPreview, partial){
   const cv=document.createElement('canvas');
   // Рендерим в высоком разрешении для чёткости
   const dpr=Math.min(window.devicePixelRatio||1, 2.5);
   cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
   cv.style.width='100%'; cv.style.display='block'; cv.style.borderRadius=forPreview?'8px':'12px';
-  paintMaskCanvas(cv, revealed);
+  paintMaskCanvas(cv, revealed, partial);
   return cv;
 }
 
 // Перерисовка существующего canvas НА МЕСТЕ (без пересоздания DOM) — убирает мерцание
-function redrawMaskCanvas(cv, revealed, W, H, preset){
+function redrawMaskCanvas(cv, revealed, W, H, preset, partial){
   // Размер не меняем, если он уже корректный (ширина по DPR)
   const dpr=Math.min(window.devicePixelRatio||1, 2.5);
   const wantW=Math.round(W*dpr), wantH=Math.round(H*dpr);
   if(cv.width!==wantW || cv.height!==wantH){ cv.width=wantW; cv.height=wantH; }
-  paintMaskCanvas(cv, revealed);
+  paintMaskCanvas(cv, revealed, partial);
 }
 
 // Собственно отрисовка содержимого canvas-витража (одна функция для создания и перерисовки)
-function paintMaskCanvas(cv, revealed){
+function paintMaskCanvas(cv, revealed, partial){
   const ctx=cv.getContext('2d');
   ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
   const cw=cv.width, ch=cv.height;
@@ -1989,14 +2024,17 @@ function paintMaskCanvas(cv, revealed){
   // 2) Рисуем полное изображение
   ctx.drawImage(_maskAssets.base, 0,0, cw,ch);
 
+  // Осколок дня, который проявляется частично: id (1..15) и уровень 0..1
+  const partIdRaw = (partial && partial.idx>=0) ? (partial.idx+1) : -1;
+  const partLevel = partial ? Math.max(0, Math.min(1, partial.level||0)) : 0;
+
   // 3) Затемняем закрытые осколки по карте id-map
   const idmap=_maskAssets.idData, mw=_maskAssets.w, mh=_maskAssets.h;
   const out=ctx.getImageData(0,0,cw,ch);
   const od=out.data, idd=idmap.data;
-  // Предрассчитываем соответствие столбцов canvas → столбцам карты (одно деление на столбец,
-  // а не на каждый пиксель). Результат идентичный, но заметно быстрее.
   const colMap=new Int32Array(cw);
   for(let x=0;x<cw;x++){ let mx=(x*mw/cw)|0; if(mx>=mw)mx=mw-1; colMap[x]=mx; }
+  const DR=30, DG=33, DB=48; // цвет тёмного «непроявленного» стекла
   for(let y=0;y<ch;y++){
     let my=(y*mh/ch)|0; if(my>=mh)my=mh-1;
     const idRow=my*mw;
@@ -2005,20 +2043,24 @@ function paintMaskCanvas(cv, revealed){
       const sid=idd[(idRow+colMap[x])*4]; // shard id in red channel (1..15)
       if(sid>=1 && revealed[sid-1]) continue; // открытый осколок — оставляем как есть
       const oi=(outRow+x)*4;
-      // Закрытый осколок — ПОЛНОСТЬЮ непрозрачное тёмное стекло.
-      // Не пропускаем исходное изображение вообще (0%), чтобы рисунок не просвечивал
-      // и интрига полностью сохранялась. Цвет — глубокий сине-серый «непроявленного»
-      // стекла (не чёрный), чтобы осколки читались как витраж, а не как дыры.
-      od[oi]   = 30;
-      od[oi+1] = 33;
-      od[oi+2] = 48;
+      if(sid===partIdRaw && partLevel>0){
+        // Осколок дня: смешиваем исходное изображение с тёмным стеклом по уровню.
+        // level 0 → полностью тёмный (интрига), level 1 → полное изображение.
+        const t=partLevel;
+        od[oi]   = od[oi]  *t + DR*(1-t);
+        od[oi+1] = od[oi+1]*t + DG*(1-t);
+        od[oi+2] = od[oi+2]*t + DB*(1-t);
+      } else {
+        // Закрытый осколок — полностью непрозрачное тёмное стекло
+        od[oi]   = DR;
+        od[oi+1] = DG;
+        od[oi+2] = DB;
+      }
     }
   }
   ctx.putImageData(out,0,0);
 
-  // 4) Свинцовые линии рисуем ТОЛЬКО между закрытыми осколками (или на границе
-  //    закрытого с открытым). Между двумя открытыми осколками линию НЕ рисуем —
-  //    там уже есть родная золотистая линия художника, и она красивее.
+  // 4) Свинцовые линии между закрытыми осколками
   drawLeadLines(ctx, cw, ch, idmap, mw, mh, revealed);
 }
 
@@ -2154,7 +2196,7 @@ function addMemoIndicators(svg){
     const cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
     const NS='http://www.w3.org/2000/svg';
     const fo=document.createElementNS(NS,'foreignObject');
-    const sz=24;
+    const sz=18;
     fo.setAttribute('x',(cx-sz/2).toFixed(1));
     fo.setAttribute('y',(cy-sz/2).toFixed(1));
     fo.setAttribute('width',sz); fo.setAttribute('height',sz);
@@ -2221,85 +2263,106 @@ function undoLastShard(){
   saveProgress();
 }
 
+// ── МЕХАНИКА «1 ДЕНЬ = 1 ОСКОЛОК» ──
+// Осколок дня проявляется постепенно: чем больше действий выполнено, тем ярче.
+// Все действия выполнены → осколок открыт и светится, день закрыт (новых сегодня нет).
+
+function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+
+// Сбрасывает дневной прогресс, если наступил новый календарный день
+function ensureDayFresh(){
+  const k=todayKey();
+  if(app.dayDate!==k){
+    app.dayDate=k;
+    app.todayDone=new Set();
+    app.dayClosed=false;
+    app.shardsToday=0;
+  }
+}
+
+// Индекс сегодняшнего (проявляемого) осколка — первый закрытый. -1 если витраж собран.
+function todayShardIndex(){
+  return app.shards.findIndex(s=>!s);
+}
+
+// Прогресс дня 0..1 = выполнено действий / всего действий
+function dayProgress(){
+  const n=app.actions.length;
+  if(n<=0) return 0;
+  let done=0;
+  for(let i=0;i<n;i++) if(app.todayDone.has(i)) done++;
+  return Math.min(1, done/n);
+}
+
 function tapShard(idx, e, actionIdx){
   if(app.shards[idx]){
-    // Осколок уже открыт — по тапу открываем заметку (для просмотра ИЛИ чтобы
-    // добавить впечатление позже, даже если раньше заметку не оставляли).
+    // Осколок уже открыт — по тапу открываем заметку (просмотр или добавить впечатление)
     openMemoModal(idx);
     return;
   }
+  // Закрытый/проявляемый осколок тапом НЕ открывается — он проявляется
+  // по мере выполнения действий (механика «1 день = 1 осколок»).
+}
 
-  // Дневной лимит осколков
-  if(settings.dailyLimit>0 && app.shardsToday>=settings.dailyLimit){
-    const msgs=[
-      `На сегодня лимит закрашенных осколков (${settings.dailyLimit}) достигнут. Возвращайся завтра — терпение тоже часть мастерства`,
-      `Мастер советует беречь силы: сегодня уже закрашено ${settings.dailyLimit} из ${settings.dailyLimit}. До встречи завтра`,
-    ];
-    document.getElementById('master-msg').textContent=msgs[Math.floor(Math.random()*msgs.length)];
+// Отмечает действие i как выполненное сегодня. Осколок дня проявляется ярче;
+// когда выполнены ВСЕ действия — осколок дня открывается и день закрывается.
+function markActionDone(i, e){
+  ensureDayFresh();
+  if(app.dayClosed){
+    document.getElementById('master-msg').textContent='Сегодняшний осколок уже проявлен полностью. Возвращайся завтра — путь строится по дню за раз';
     return;
   }
+  if(app.todayDone.has(i)) return; // уже отмечено
+  if(i<0 || i>=app.actions.length) return;
 
-  // Отмечаем действие.
-  // Если передан конкретный индекс действия (клик по карточке действия) — отмечаем именно его.
-  // Иначе (клик прямо по осколку) — берём первое невыполненное.
-  let actToMark;
-  if(typeof actionIdx==='number' && actionIdx>=0 && !app.todayDone.has(actionIdx)){
-    actToMark=actionIdx;
-  } else {
-    actToMark=app.actions.findIndex((_,i)=>!app.todayDone.has(i));
-  }
-  if(actToMark!==-1 && actToMark!==undefined) app.todayDone.add(actToMark);
-
-  app.shards[idx]=true;
+  app.todayDone.add(i);
   app.light+=10;
   app.totalDone++;
-  app.shardsToday++;
-  // Запоминаем, какое действие отметил этот осколок — чтобы можно было отменить
-  app.shardActionIdx = app.shardActionIdx || {};
-  if(actToMark!==-1 && actToMark!==undefined) app.shardActionIdx[idx]=actToMark;
 
-  // Записываем дату открытия осколка
-  if(!app.shardDates[idx]){
+  const idx=todayShardIndex();            // сегодняшний осколок
+  const prog=dayProgress();
+  const allDone = app.actions.every((_,k)=>app.todayDone.has(k));
+
+  // Записываем дату «начала проявления» осколка при первом действии дня
+  if(idx>=0 && !app.shardDates[idx]){
     const now=new Date();
     app.shardDates[idx]=now.toLocaleDateString('ru')+' '+now.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
   }
-
-  // Учитываем сегодняшний день в счётчике «дней с активностью»
   registerActiveDay();
 
-  // Перестраиваем витраж целиком
+  let isFinalShard=false;
+  if(allDone && idx>=0){
+    // День закрыт — фиксируем осколок как полностью открытый
+    app.shards[idx]=true;
+    app.dayClosed=true;
+    app.shardsToday=1;
+    const done=app.shards.filter(Boolean).length;
+    isFinalShard=(done===TOTAL);
+  }
+
+  // Перерисовка витража (частичное проявление или полное открытие)
   rebuildVitrazh();
 
   // Эффекты
-  spawnFlash(e.clientX, e.clientY);
-  spawnParticles(e.clientX, e.clientY);
+  if(e){ spawnFlash(e.clientX, e.clientY); spawnParticles(e.clientX, e.clientY); }
   showToast('main-toast');
 
-  // Кнопка отмены последнего действия
-  showUndo(idx);
-
-  // Все действия дня?
-  const allDone=app.actions.every((_,i)=>app.todayDone.has(i));
-  if(allDone){
-    document.getElementById('v-stk').textContent=app.activeDays.length;
-    const masterMsgs=[
-      'День закрыт. Витраж светится твоим усилием',
-      'Все осколки дня вложены. Продолжай — образ проясняется',
-      'Так держать! Каждый день ты ближе к полному витражу',
+  // Сообщение мастера
+  if(allDone && !isFinalShard){
+    const msgs=[
+      'День закрыт. Осколок засиял твоим усилием',
+      'Все действия дня выполнены — осколок полностью проявлен. До завтра',
+      'Так держать! Ещё один день пути позади',
     ];
-    document.getElementById('master-msg').textContent=masterMsgs[Math.floor(Math.random()*masterMsgs.length)];
+    document.getElementById('master-msg').textContent=msgs[Math.floor(Math.random()*msgs.length)];
+    if(document.getElementById('v-stk')) document.getElementById('v-stk').textContent=app.activeDays.length;
   }
 
   // Витраж завершён?
-  const done=app.shards.filter(Boolean).length;
-  const isFinalShard=(done===TOTAL);
   if(isFinalShard){
     document.getElementById('main-vcard').classList.add('glow');
     document.getElementById('main-done-banner').classList.add('show');
-    const endMsgs=['Витраж завершён! Образ открыт полностью','Мастер восхищён. Весь свет на месте'];
-    document.getElementById('master-msg').textContent=endMsgs[Math.floor(Math.random()*endMsgs.length)];
-    // Засчитываем витраж как завершённый СРАЗУ — независимо от того,
-    // добавит пользователь инсайт или нажмёт «Позже».
+    document.getElementById('master-msg').textContent='Витраж завершён! Образ открыт полностью';
     registerCompletedVitrazh();
   }
 
@@ -2307,26 +2370,16 @@ function tapShard(idx, e, actionIdx){
   updateUI();
   updateGallery();
 
-  // Решаем, открывать ли форму впечатления автоматически.
-  // Финальный осколок (витраж завершён) — всегда (это особый момент завершения).
-  // Иначе следуем настройке settings.memoPrompt:
-  //   'each'  — после каждого осколка
-  //   'first' — только для первого осколка за день
-  //   'never' — не открывать автоматически (можно добавить позже тапом по осколку)
-  _pendingCompletion = isFinalShard;
-  let autoOpen = isFinalShard;
-  if(!isFinalShard){
+  // Форма впечатления — только когда осколок ПОЛНОСТЬЮ открыт (день закрыт)
+  if(allDone && idx>=0){
+    _pendingCompletion = isFinalShard;
     const mode = settings.memoPrompt || 'each';
-    if(mode==='each') autoOpen = true;
-    else if(mode==='first') autoOpen = (app.shardsToday===1); // первый осколок за сегодня
-    else autoOpen = false; // 'never'
-  }
-  if(autoOpen){
-    setTimeout(()=>{ if(app.shards[idx]) openMemoModal(idx); }, 650);
-  } else {
-    // Не открываем форму — показываем мягкую ненавязчивую подсказку,
-    // что впечатление можно добавить позже, нажав на осколок.
-    showMemoHint();
+    const autoOpen = isFinalShard || (mode==='each') || (mode==='first');
+    if(autoOpen){
+      setTimeout(()=>{ if(app.shards[idx]) openMemoModal(idx); }, 650);
+    } else {
+      showMemoHint();
+    }
   }
   scheduleSave();
 }
@@ -2337,7 +2390,7 @@ let _justCompletedId = null;
 function registerCompletedVitrazh(){
   const completedAt = new Date().toLocaleString('ru');
   app.completed.push({
-    name:'Витраж '+app.sphereName,
+    name:app.vitrazhName||('Витраж '+app.sphereName),
     sphere:app.sphere,
     sphereName:app.sphereName,
     emoji:app.sphereEmoji,
@@ -2369,20 +2422,13 @@ function buildActionsList(){
     const pencil = done ? '' : `<button class="act-edit" onclick="event.stopPropagation();editAction(${i})" title="Изменить">✎</button>`;
     d.innerHTML=`<div class="act-dot">${done?'✓':''}</div><div style="flex:1"><div class="act-name" style="${done?'text-decoration:line-through;opacity:.4;':''}">${a}</div></div>${pencil}<div class="act-light">+10 ✦</div>`;
     if(!done){
-      d.onclick=()=>{
-        const n=app.shards.findIndex(s=>!s);
-        if(n!==-1){
-          const el=document.getElementById(`main-sf${n}`);
-          const wrap=document.getElementById('vg-wrap');
-          const rect=el ? el.getBoundingClientRect() : wrap.getBoundingClientRect();
-          // Передаём индекс выбранного действия (i), чтобы отметить именно его
-          tapShard(n,{clientX:rect.left+rect.width/2,clientY:rect.top+rect.height/2}, i);
-        }
+      d.onclick=(ev)=>{
+        markActionDone(i, {clientX:ev.clientX, clientY:ev.clientY});
       };
       // Долгое нажатие (≈550мс) — редактирование текста действия
       attachLongPress(d, ()=>editAction(i));
     } else {
-      // Повторный тап по выполненному действию снимает отметку и закрывает его осколок
+      // Повторный тап по выполненному действию снимает отметку
       d.onclick=()=>unmarkAction(i);
     }
     c.appendChild(d);
@@ -2509,36 +2555,40 @@ function closeEditAction(){
   else attachAll();
 })();
 function unmarkAction(actIdx){
+  ensureDayFresh();
   if(!app.todayDone.has(actIdx)) return;
-  // Находим осколок, который был открыт этим действием
-  let shardIdx=-1;
-  if(app.shardActionIdx){
-    for(const k in app.shardActionIdx){
-      if(app.shardActionIdx[k]===actIdx){ shardIdx=parseInt(k,10); break; }
-    }
-  }
-  // Если связь не сохранилась — закрываем последний открытый осколок
-  if(shardIdx<0){
-    for(let i=app.shards.length-1;i>=0;i--){ if(app.shards[i]){ shardIdx=i; break; } }
-  }
+
   app.todayDone.delete(actIdx);
-  if(shardIdx>=0 && app.shards[shardIdx]){
-    app.shards[shardIdx]=false;
-    app.shardColors[shardIdx]=null;
-    app.shardDates[shardIdx]=null;
-    app.shardMemos[shardIdx]=null;
-    app.light=Math.max(0, app.light-10);
-    app.totalDone=Math.max(0, app.totalDone-1);
-    app.shardsToday=Math.max(0, app.shardsToday-1);
-    if(app.shardActionIdx) delete app.shardActionIdx[shardIdx];
+  app.light=Math.max(0, app.light-10);
+  app.totalDone=Math.max(0, app.totalDone-1);
+
+  // Если день был закрыт (осколок дня уже открыт) — откатываем открытие осколка,
+  // т.к. теперь выполнены не все действия.
+  if(app.dayClosed){
+    const idx=todayShardIndexOpened();
+    if(idx>=0){
+      app.shards[idx]=false;
+      app.shardColors[idx]=null;
+      // дату/заметку оставляем только если сохранять нечего — очищаем, т.к. осколок снова не открыт
+      app.shardMemos[idx]=null;
+    }
+    app.dayClosed=false;
+    app.shardsToday=0;
+    document.getElementById('main-vcard').classList.remove('glow');
+    document.getElementById('main-done-banner').classList.remove('show');
   }
-  document.getElementById('main-vcard').classList.remove('glow');
-  document.getElementById('main-done-banner').classList.remove('show');
-  hideUndo();
+
   rebuildVitrazh();
   buildActionsList();
   updateUI();
+  updateGallery();
   saveProgress();
+}
+
+// Индекс последнего открытого осколка (осколок сегодняшнего закрытого дня)
+function todayShardIndexOpened(){
+  for(let i=app.shards.length-1;i>=0;i--){ if(app.shards[i]) return i; }
+  return -1;
 }
 
 function updateUI(){
@@ -2932,16 +2982,23 @@ function renderSuggestChips(){
   cont.innerHTML='';
   const used = currentActionValues();
 
+  // Когда полей действий много (6+), места мало — прячем подпись «Идеи…»,
+  // чтобы освободить место хотя бы под один ряд чипов.
+  const actionCount = document.querySelectorAll('#act-list-wrap .action-inp-row').length;
+  const label = document.getElementById('act-suggest-label');
+  if(label) label.style.display = actionCount >= 6 ? 'none' : 'flex';
+
   // Сколько рядов подсказок помещается в доступную высоту.
   // Чем больше полей действий добавлено — тем меньше места и тем меньше рядов.
   const ROW_H = 46; // высота ряда чипа + отступ (px)
   let avail = cont.clientHeight;
   if(!avail || avail < ROW_H){
     // контейнер ещё не измерен (экран мог быть скрыт) — оценим по окну
-    avail = Math.max(ROW_H*2, Math.min(window.innerHeight*0.42, 380));
+    avail = Math.max(ROW_H, Math.min(window.innerHeight*0.42, 380));
   }
   let rowCount = Math.max(1, Math.floor(avail / ROW_H));
   rowCount = Math.min(rowCount, 8, sugg.length); // разумный потолок
+  rowCount = Math.max(1, rowCount); // всегда минимум один ряд
 
   // Создаём ряды
   const rows=[];
@@ -3013,13 +3070,15 @@ function openMemoModal(idx){
   // Show existing content
   const cv=document.getElementById('memo-content-view');
   const tv=document.getElementById('memo-text-view');
+  const tdel=document.getElementById('memo-text-del');
   const pv=document.getElementById('memo-photo-view');
+  const pdel=document.getElementById('memo-photo-del');
   const av=document.getElementById('memo-audio-view');
   const adel=document.getElementById('memo-audio-del');
   if(m.text||m.photo||m.audioUrl){
     cv.style.display='block';
-    if(m.text){tv.style.display='block';tv.textContent=m.text;}else{tv.style.display='none';}
-    if(m.photo){pv.style.display='block';pv.src=m.photo;}else{pv.style.display='none';}
+    if(m.text){tv.style.display='block';tv.textContent=m.text;tdel.style.display='block';}else{tv.style.display='none';tdel.style.display='none';}
+    if(m.photo){pv.style.display='block';pv.src=m.photo;pdel.style.display='block';}else{pv.style.display='none';pdel.style.display='none';}
     if(m.audioUrl){av.style.display='block';av.src=m.audioUrl;adel.style.display='block';}else{av.style.display='none';adel.style.display='none';}
   } else {cv.style.display='none';}
   // Reset edit fields
@@ -3071,6 +3130,33 @@ function deleteMemoAudio(){  const idx=app.currentMemoIdx;
   document.getElementById('memo-audio-del').style.display='none';
   saveProgress();
   // Перерисовываем витраж (индикатор заметки мог исчезнуть)
+  if(typeof rebuildVitrazh==='function') rebuildVitrazh();
+}
+function deleteMemoText(){
+  const idx=app.currentMemoIdx;
+  if(idx<0||!app.shardMemos[idx]) return;
+  if(!confirm('Удалить текстовый комментарий из этой заметки?')) return;
+  app.shardMemos[idx].text=null;
+  // Очищаем и поле редактирования, чтобы при сохранении текст не вернулся
+  const mt=document.getElementById('memo-text'); if(mt) mt.value='';
+  const m=app.shardMemos[idx];
+  if(!m.text && !m.photo && !m.audioUrl) app.shardMemos[idx]=null;
+  document.getElementById('memo-text-view').style.display='none';
+  document.getElementById('memo-text-del').style.display='none';
+  saveProgress();
+  if(typeof rebuildVitrazh==='function') rebuildVitrazh();
+}
+function deleteMemoPhotoSaved(){
+  const idx=app.currentMemoIdx;
+  if(idx<0||!app.shardMemos[idx]) return;
+  if(!confirm('Удалить фотографию из этой заметки?')) return;
+  app.shardMemos[idx].photo=null;
+  app.memoPhotoData=null;
+  const m=app.shardMemos[idx];
+  if(!m.text && !m.photo && !m.audioUrl) app.shardMemos[idx]=null;
+  document.getElementById('memo-photo-view').style.display='none';
+  document.getElementById('memo-photo-del').style.display='none';
+  saveProgress();
   if(typeof rebuildVitrazh==='function') rebuildVitrazh();
 }
 /* ══ ВЫБОР ИСТОЧНИКА ФОТО ══ */
@@ -3556,7 +3642,7 @@ function updateGallery(){
     if(currentDone){
       const card=createGalleryCard({
         id: app.activeId,
-        name:'Витраж '+app.sphereName,
+        name:app.vitrazhName||('Витраж '+app.sphereName),
         sphere:app.sphere,
         sphereName:app.sphereName,
         emoji:app.sphereEmoji,
@@ -3637,7 +3723,7 @@ function deleteVitrazh(v){
 
 // Сбрасывает состояние текущего витража (без онбординга) — после удаления единственного активного
 function resetCurrentVitrazhState(){
-  app.sphere=null; app.sphereName=''; app.sphereEmoji='🌙'; app.sphereColor='#4a80d0';
+  app.sphere=null; app.sphereName=''; app.vitrazhName=''; app.sphereEmoji='🌙'; app.sphereColor='#4a80d0';
   app.actions=[];
   app.shards=new Array(TOTAL).fill(false);
   app.shardColors=new Array(TOTAL).fill(null);
@@ -3963,23 +4049,31 @@ function showFullscreenVitrazh(v){
       const cv=buildVitrazhMaskCanvas(v.shards, W, H, preset, false);
       cv.style.cssText='width:100%;display:block;border-radius:12px;cursor:pointer;';
       svgWrap.innerHTML=''; svgWrap.appendChild(cv);
-      // Клик по открытому осколку — добавить/посмотреть заметку
+      // Тап по открытому осколку с заметкой — прокрутка к его комментарию в списке ниже
       cv.onclick=(e)=>{
         const rect=cv.getBoundingClientRect();
         const nx=(e.clientX-rect.left)/rect.width, ny=(e.clientY-rect.top)/rect.height;
         const sid=maskShardAt(nx,ny);
-        if(sid>=1 && v.shards[sid-1]) openArchivedMemoEditor(v, sid-1);
+        if(sid>=1 && v.shards[sid-1]){
+          const m=v.shardMemos&&v.shardMemos[sid-1];
+          if(m&&(m.text||m.photo||m.audioUrl)) scrollToArchivedMemo(sid-1);
+        }
       };
-      // Золотые точки для осколков с заметками
+      // Камни (как на главном экране) для осколков с заметками
       const cents=preset.centroids||{};
       Object.keys(cents).forEach(k=>{
         const i=parseInt(k,10)-1;
         if(!v.shards[i]||!v.shardMemos||!v.shardMemos[i]) return;
         const m=v.shardMemos[i]; if(!m.text&&!m.photo&&!m.audioUrl) return;
+        const type=memoGemType(m); if(!type) return;
         const c=cents[k];
-        const dot=document.createElement('div');
-        dot.style.cssText=`position:absolute;left:calc(18px + ${c[0]}*(100% - 36px));top:${c[1]*100}%;width:10px;height:10px;border-radius:50%;background:#f0c060;border:1.5px solid #0a0a14;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 0 6px rgba(240,192,96,.6);`;
-        svgWrap.appendChild(dot);
+        const gem=document.createElement('div');
+        gem.className='gem-inlay';
+        gem.style.left=`calc(18px + ${c[0]}*(100% - 36px))`;
+        gem.style.top=`${c[1]*100}%`;
+        gem.innerHTML=gemSVGMarkup(type.kind);
+        gem.addEventListener('click', e=>{ e.stopPropagation(); scrollToArchivedMemo(i); });
+        svgWrap.appendChild(gem);
       });
     });
     };
@@ -4006,24 +4100,31 @@ function showFullscreenVitrazh(v){
       hit.style.cursor = opened ? 'pointer' : 'default';
       hit.addEventListener('click', ()=>{
         if(!v.shards[i]) return; // закрытый осколок в завершённом витраже не трогаем
-        openArchivedMemoEditor(v, i);
+        const m=v.shardMemos&&v.shardMemos[i];
+        if(m&&(m.text||m.photo||m.audioUrl)) scrollToArchivedMemo(i);
       });
       svg.appendChild(hit);
     });
-    // Gold dots for shards with memos
+    // Камни для осколков с заметками (как на главном экране)
     polys.forEach((pts,i)=>{
       if(!v.shardMemos[i]||!v.shards[i]) return;
       const m = v.shardMemos[i];
       if(!m.text&&!m.photo&&!m.audioUrl) return;
+      const type=memoGemType(m); if(!type) return;
       const cx = pts.reduce((s,p)=>s+p[0],0)/pts.length;
       const cy = pts.reduce((s,p)=>s+p[1],0)/pts.length;
-      const NS = 'http://www.w3.org/2000/svg';
-      const dot = document.createElementNS(NS,'circle');
-      dot.setAttribute('cx',(cx+8).toFixed(1)); dot.setAttribute('cy',(cy-8).toFixed(1));
-      dot.setAttribute('r','5'); dot.setAttribute('fill','#f0c060');
-      dot.setAttribute('stroke','#0a0a14'); dot.setAttribute('stroke-width','1');
-      dot.style.pointerEvents='none';
-      svg.appendChild(dot);
+      const NS='http://www.w3.org/2000/svg';
+      const fo=document.createElementNS(NS,'foreignObject');
+      const sz=18;
+      fo.setAttribute('x',(cx-sz/2).toFixed(1)); fo.setAttribute('y',(cy-sz/2).toFixed(1));
+      fo.setAttribute('width',sz); fo.setAttribute('height',sz);
+      fo.style.overflow='visible'; fo.style.cursor='pointer';
+      const div=document.createElement('div');
+      div.style.cssText='width:'+sz+'px;height:'+sz+'px;';
+      div.innerHTML=gemSVGMarkup(type.kind);
+      div.addEventListener('click', e=>{ e.stopPropagation(); scrollToArchivedMemo(i); });
+      fo.appendChild(div);
+      svg.appendChild(fo);
     });
   }
   svgWrap.appendChild(svg);
@@ -4075,16 +4176,18 @@ function shareCompletedVitrazh(v){
   renderVitrazhToCanvas(v).then(cv=>{
     const sphereName=v.name||'витраж';
     const text=`Мой витраж «${sphereName}» собран целиком! ✦ Каждый осколок — выполненное действие. Собери свой в приложении Витраж`;
-    if(!cv){ // не удалось отрисовать — делимся текстом
-      _shareText(text); return;
-    }
+    if(!cv){ _shareText(text); return; }
     cv.toBlob((blob)=>{
-      if(blob && navigator.canShare && navigator.canShare({files:[new File([blob],'vitrazh.png',{type:'image/png'})]})){
+      // Веб-стандарт: делимся картинкой-файлом, если браузер это поддерживает
+      if(blob && navigator.canShare){
         const file=new File([blob],'vitrazh.png',{type:'image/png'});
-        navigator.share({files:[file], text}).catch(()=>_shareText(text));
-      } else {
-        _shareText(text);
+        if(navigator.canShare({files:[file]})){
+          navigator.share({files:[file], text}).catch(()=>_shareText(text));
+          return;
+        }
       }
+      // Иначе (в т.ч. Telegram, где share картинкой часто недоступен) — делимся текстом
+      _shareText(text);
     }, 'image/png');
   });
 }
@@ -4092,25 +4195,71 @@ function _shareText(text){
   const tg=window.Telegram&&window.Telegram.WebApp;
   if(tg && tg.openTelegramLink){
     tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent('https://t.me/')+'&text='+encodeURIComponent(text));
-  } else if(navigator.share){ navigator.share({text}).catch(()=>{}); }
-  else if(navigator.clipboard){ navigator.clipboard.writeText(text).then(()=>alert('Текст скопирован!')).catch(()=>alert(text)); }
-  else alert(text);
+    return;
+  }
+  if(navigator.share){ navigator.share({text}).catch(()=>{}); return; }
+  if(navigator.clipboard){ navigator.clipboard.writeText(text).then(()=>toast('Текст скопирован')).catch(()=>alert(text)); return; }
+  alert(text);
 }
 
-// Сохранить картинку витража в галерею (скачать файл)
+// Сохранить картинку витража. В обычном браузере — скачивание файла.
+// В Telegram скачивание ненадёжно, поэтому открываем картинку в новой вкладке,
+// откуда её можно сохранить долгим нажатием.
 function saveVitrazhImage(v){
   renderVitrazhToCanvas(v).then(cv=>{
     if(!cv){ alert('Не удалось подготовить изображение'); return; }
+    const tg=window.Telegram&&window.Telegram.WebApp;
+    const isTelegram = !!(tg && tg.initData!==undefined);
     cv.toBlob((blob)=>{
       if(!blob){ alert('Не удалось сохранить'); return; }
       const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;
-      a.download='vitrazh-'+(v.name||'образ').replace(/\s+/g,'_')+'.png';
-      document.body.appendChild(a); a.click();
-      setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+      if(isTelegram){
+        // В Telegram: открываем картинку — пользователь сохраняет долгим нажатием
+        try{
+          if(tg.openLink){ tg.openLink(url); }
+          else { window.open(url,'_blank'); }
+          toast('Открыл картинку — сохрани долгим нажатием');
+        }catch(e){ window.open(url,'_blank'); }
+        setTimeout(()=>URL.revokeObjectURL(url), 60000);
+      } else {
+        const a=document.createElement('a');
+        a.href=url;
+        a.download='vitrazh-'+(v.name||'образ').replace(/\s+/g,'_')+'.png';
+        document.body.appendChild(a); a.click();
+        setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+        toast('Картинка сохранена');
+      }
     }, 'image/png');
   });
+}
+// Маленькое всплывающее уведомление
+function toast(msg){
+  let t=document.getElementById('vitrazh-toast');
+  if(!t){
+    t=document.createElement('div'); t.id='vitrazh-toast';
+    t.style.cssText='position:fixed;left:50%;bottom:calc(80px + var(--pad-bottom));transform:translateX(-50%);background:rgba(20,18,40,.96);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;z-index:3000;box-shadow:0 6px 24px rgba(0,0,0,.4);opacity:0;transition:opacity .25s;pointer-events:none;max-width:80vw;text-align:center;';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  requestAnimationFrame(()=>{ t.style.opacity='1'; });
+  clearTimeout(t._h);
+  t._h=setTimeout(()=>{ t.style.opacity='0'; }, 2600);
+}
+
+// Прокручивает к комментарию осколка в списке «История осколков» и подсвечивает его.
+// Используется на экране просмотра завершённого витража (тап по осколку).
+function scrollToArchivedMemo(idx){
+  const item = document.getElementById('fs-memo-'+idx);
+  if(!item) return false;
+  item.scrollIntoView({behavior:'smooth', block:'center'});
+  // Подсветка
+  item.style.borderColor = 'var(--accent2)';
+  item.style.boxShadow = '0 0 0 2px rgba(124,111,255,.35)';
+  setTimeout(()=>{
+    item.style.borderColor = '';
+    item.style.boxShadow = '';
+  }, 1600);
+  return true;
 }
 
 function appendFullscreenExtras(v, overlay){
@@ -4146,7 +4295,9 @@ function appendFullscreenExtras(v, overlay){
       histWrap.appendChild(histTitle);
       memos.forEach(({m,i,date})=>{
         const item = document.createElement('div');
-        item.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:8px;';
+        item.id = 'fs-memo-'+i;
+        item.className = 'fs-memo-item';
+        item.style.cssText = 'background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:8px;scroll-margin-top:80px;transition:border-color .3s,box-shadow .3s;';
         item.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">Осколок #${i+1} · ${date||''}</div>`;
         if(m.text){const t=document.createElement('div');t.style.cssText='font-size:13px;color:var(--text2);line-height:1.55;margin-bottom:6px;';t.textContent=m.text;item.appendChild(t);}
         if(m.photo){const img=document.createElement('img');img.src=m.photo;img.style.cssText='width:100%;border-radius:8px;margin-bottom:6px;';item.appendChild(img);}
