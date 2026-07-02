@@ -218,6 +218,7 @@ html.light-theme .m-msg{color:#46415e;}
 /* Vitrazh card */
 .vcard{margin:0 10px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:22px;padding:12px;position:relative;transition:border-color .6s,box-shadow .6s;}
 .vcard.glow{border-color:rgba(124,111,255,.6);box-shadow:0 0 50px rgba(100,80,255,.18);}
+.vcard.day-glow{border-color:rgba(140,120,255,.45);box-shadow:0 0 34px rgba(120,100,255,.14);}
 .vcard-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
 .vcard-name{font-size:15px;font-weight:600;}
 .vcard-sub{font-size:11px;color:var(--text2);margin-top:2px;}
@@ -498,16 +499,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       </div>
     </div>
 
-    <!-- Лимит осколков в день -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
-      <div style="font-size:13px;font-weight:600;margin-bottom:3px;">✋ Осколков в день</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Ограничение бережёт привычку от выгорания за один день</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <div class="opt-pill" data-val="1" onclick="selSetting(this,'dailyLimit',1)"><div class="opt-pill-title">1</div><div class="opt-pill-sub">Бережно</div></div>
-        <div class="opt-pill" data-val="3" onclick="selSetting(this,'dailyLimit',3)"><div class="opt-pill-title">3</div><div class="opt-pill-sub">Сбалансировано</div></div>
-        <div class="opt-pill sel" data-val="0" onclick="selSetting(this,'dailyLimit',0)"><div class="opt-pill-title">∞</div><div class="opt-pill-sub">Без лимита</div></div>
-      </div>
-    </div>
+    <!-- (Настройка «осколков в день» убрана: теперь 1 день = 1 осколок) -->
 
     <!-- Напоминание -->
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
@@ -1396,6 +1388,8 @@ function snapshotCurrentVitrazh(){
     isPresetImage:app.isPresetImage,
     streak:app.streak, light:app.light, totalDone:app.totalDone,
     shardsToday:app.shardsToday,
+    dayClosed:app.dayClosed,
+    dayDate:app.dayDate,
     todayDone:[...app.todayDone],
     activeDays: Array.isArray(app.activeDays)?[...app.activeDays]:[],
     shardActionIdx: Object.assign({}, app.shardActionIdx||{}),
@@ -1429,6 +1423,8 @@ function loadVitrazh(snap){
   app.streak=snap.streak||0; app.light=snap.light||0; app.totalDone=snap.totalDone||0;
   app.shardsToday=snap.shardsToday||0;
   app.todayDone=new Set(snap.todayDone||[]);
+  app.dayClosed=snap.dayClosed||false;
+  app.dayDate=snap.dayDate||null;
   app.activeDays=Array.isArray(snap.activeDays)?[...snap.activeDays]:[];
   app.shardActionIdx=Object.assign({}, snap.shardActionIdx||{});
   app.vTotal=snap.vTotal||TOTAL;
@@ -2095,6 +2091,30 @@ function drawLeadLines(ctx, cw, ch, idmap, mw, mh, revealed){
   ctx.restore();
 }
 
+// Данные о частичном проявлении сегодняшнего осколка для рендера.
+// Возвращает {idx, level} пока день не закрыт и есть незакрытый осколок; иначе null.
+function currentPartial(){
+  ensureDayFresh();
+  if(app.dayClosed) return null;          // день закрыт → осколок уже полностью открыт
+  const idx=todayShardIndex();
+  if(idx<0) return null;                    // витраж собран
+  const level=dayProgress();
+  if(level<=0) return null;                 // ещё ничего не сделано → полная интрига (тёмный)
+  return { idx, level };
+}
+
+// Лёгкое свечение карточки, когда сегодняшний осколок только что полностью проявлен
+function updateTodayGlow(wrap, preset, partial){
+  const card=document.getElementById('main-vcard');
+  if(!card) return;
+  // Полное открытие дня (не финал витража) — короткое мягкое свечение
+  if(app.dayClosed && app.shards.filter(Boolean).length<TOTAL){
+    card.classList.add('day-glow');
+  } else {
+    card.classList.remove('day-glow');
+  }
+}
+
 function rebuildVitrazh(){
   const wrap=document.getElementById('vg-wrap');
   vitrazh_W=wrap.offsetWidth||340;
@@ -2104,12 +2124,14 @@ function rebuildVitrazh(){
 
   // Маск-пресет (картинка-витраж с картой осколков) — рендерим через canvas
   if(preset && preset.mask && preset.map){
+    const partial=currentPartial();
     // Если canvas уже есть и ассеты загружены — перерисовываем НА МЕСТЕ,
     // без очистки контейнера. Это убирает мерцание всего изображения при открытии осколка.
     const existing=wrap.querySelector('canvas');
     if(existing && _maskAssets.base && _maskAssets.idData && _maskAssets.key===(preset.img+'|'+preset.map)){
-      redrawMaskCanvas(existing, app.shards, vitrazh_W, vitrazh_H, preset);
+      redrawMaskCanvas(existing, app.shards, vitrazh_W, vitrazh_H, preset, partial);
       refreshMaskDots(wrap, preset);
+      updateTodayGlow(wrap, preset, partial);
       return;
     }
     loadMaskAssets(preset, (err)=>{
@@ -2119,9 +2141,10 @@ function rebuildVitrazh(){
         wrap.innerHTML=''; wrap.appendChild(svg); addMemoIndicators(svg);
         return;
       }
-      const cv=buildVitrazhMaskCanvas(app.shards, vitrazh_W, vitrazh_H, preset, false);
+      const cv=buildVitrazhMaskCanvas(app.shards, vitrazh_W, vitrazh_H, preset, false, partial);
       wrap.innerHTML=''; wrap.style.position='relative'; wrap.appendChild(cv);
       attachMaskHitZones(wrap, preset);
+      updateTodayGlow(wrap, preset, partial);
     });
     return;
   }
@@ -2614,18 +2637,20 @@ function updateUI(){
   document.getElementById('p-sh').textContent=left;
   document.getElementById('g-pct').textContent=pct+'%';
 
-  // Подсказка про дневной лимит
+  // Подсказка под витражом
   const hint=document.getElementById('v-hint');
   if(hint){
-    if(done===0){
-      hint.textContent='Нажми на тёмный осколок — открой образ';
-    } else if(settings.dailyLimit>0){
-      const remainingToday=Math.max(0, settings.dailyLimit-app.shardsToday);
-      hint.textContent = remainingToday>0
-        ? `Сегодня доступно ещё ${remainingToday} из ${settings.dailyLimit} осколков`
-        : 'Дневной лимит достигнут — возвращайся завтра';
-      hint.style.opacity='1';
+    if(app.dayClosed){
+      hint.textContent='Осколок дня проявлен. Возвращайся завтра — путь строится по дню за раз';
+    } else if(done>=TOTAL){
+      hint.textContent='Витраж собран полностью';
+    } else {
+      const dp=Math.round(dayProgress()*100);
+      hint.textContent = dp>0
+        ? `Осколок дня проявлен на ${dp}% — выполни все действия, чтобы он засиял`
+        : 'Выполняй действия дня — осколок будет проявляться';
     }
+    hint.style.opacity='1';
   }
 }
 
@@ -4711,6 +4736,7 @@ function applyProgress(data){
   app.shards=data.shards||[]; app.shardColors=data.shardColors||[];
   app.shardMemos=data.shardMemos||[]; app.shardDates=data.shardDates||[];
   app.todayDone=new Set(data.todayDone||[]); app.shardsToday=data.shardsToday||0;
+  app.dayClosed=data.dayClosed||false; app.dayDate=data.dayDate||null;
   app.streak=data.streak||0; app.light=data.light||0; app.totalDone=data.totalDone||0;
   app.activeDays=Array.isArray(data.activeDays)?data.activeDays:[];
   app.shardActionIdx=data.shardActionIdx||{};
