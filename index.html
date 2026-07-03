@@ -795,11 +795,11 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <!-- Existing memo content -->
     <div id="memo-content-view" style="display:none;margin-bottom:14px;">
       <div id="memo-text-view" style="background:var(--bg3);border-radius:12px;padding:12px;font-size:14px;line-height:1.6;margin-bottom:4px;display:none;"></div>
-      <button id="memo-text-del" onclick="deleteMemoText()" style="display:none;background:none;border:none;color:var(--rose);cursor:pointer;font-size:12px;margin:0 0 8px;font-family:inherit;">✕ Удалить комментарий</button>
+      <button id="memo-text-del" onclick="deleteMemoText()" style="display:none;background:rgba(232,122,160,.12);border:1px solid rgba(232,122,160,.35);border-radius:10px;color:var(--rose);cursor:pointer;font-size:14px;padding:10px 14px;margin:0 0 10px;font-family:inherit;width:100%;">✕ Удалить комментарий</button>
       <img id="memo-photo-view" style="width:100%;border-radius:12px;margin-bottom:4px;display:none;" src="">
-      <button id="memo-photo-del" onclick="deleteMemoPhotoSaved()" style="display:none;background:none;border:none;color:var(--rose);cursor:pointer;font-size:12px;margin:0 0 8px;font-family:inherit;">✕ Удалить фото</button>
-      <audio id="memo-audio-view" controls style="width:100%;display:none;"></audio>
-      <button id="memo-audio-del" onclick="deleteMemoAudio()" style="display:none;background:none;border:none;color:var(--rose);cursor:pointer;font-size:12px;margin-top:4px;font-family:inherit;">✕ Удалить голосовое</button>
+      <button id="memo-photo-del" onclick="deleteMemoPhotoSaved()" style="display:none;background:rgba(232,122,160,.12);border:1px solid rgba(232,122,160,.35);border-radius:10px;color:var(--rose);cursor:pointer;font-size:14px;padding:10px 14px;margin:0 0 10px;font-family:inherit;width:100%;">✕ Удалить фото</button>
+      <audio id="memo-audio-view" controls style="width:100%;display:none;margin-bottom:6px;"></audio>
+      <button id="memo-audio-del" onclick="deleteMemoAudio()" style="display:none;background:rgba(232,122,160,.12);border:1px solid rgba(232,122,160,.35);border-radius:10px;color:var(--rose);cursor:pointer;font-size:14px;padding:11px 14px;margin-top:2px;font-family:inherit;width:100%;">✕ Удалить голосовое</button>
     </div>
     <!-- Add/edit memo -->
     <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Добавить впечатление</div>
@@ -1529,17 +1529,27 @@ const settings = {
 };
 
 // Вибрация телефона (если поддерживается и не отключена пользователем).
+// level: 'light' — лёгкий тап по витражу, 'heavy' — полное открытие осколка.
 // В Telegram используем нативный HapticFeedback, иначе — Web Vibration API.
-function vibrate(pattern){
+function vibrate(level){
   if(!settings.vibration) return;
   try{
     const tg=window.Telegram&&window.Telegram.WebApp;
-    if(tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred){
-      tg.HapticFeedback.impactOccurred('medium');
-      return;
+    if(tg && tg.HapticFeedback){
+      if(level==='heavy' && tg.HapticFeedback.notificationOccurred){
+        tg.HapticFeedback.notificationOccurred('success'); return;
+      }
+      if(tg.HapticFeedback.impactOccurred){
+        tg.HapticFeedback.impactOccurred(level==='heavy'?'heavy':'light'); return;
+      }
     }
   }catch(e){}
-  try{ if(navigator.vibrate) navigator.vibrate(pattern||20); }catch(e){}
+  // Веб-фолбэк: короткая для тапа, длиннее/паттерн для открытия
+  try{
+    if(navigator.vibrate){
+      navigator.vibrate(level==='heavy' ? [40,50,80] : 15);
+    }
+  }catch(e){}
 }
 
 function applyShardCountToGrid(count){
@@ -2448,6 +2458,8 @@ function tapShard(idx, e, actionIdx){
     openMemoModal(idx);
     return;
   }
+  // Лёгкая вибрация при каждом тапе именно по витражу (не по галочке действия)
+  vibrate('light');
   // Закрытый осколок: тап тратит 1 отметку (действие) и проявляет ИМЕННО его
   applyMark(idx, e, true);
 }
@@ -2517,8 +2529,8 @@ function applyMark(idx, e, fromTap){
   rebuildVitrazh();
   if(e){ spawnFlash(e.clientX, e.clientY); spawnParticles(e.clientX, e.clientY); }
   showToast('main-toast');
-  // Вибрация при полном открытии осколка (если не отключена в настройках)
-  if(shardJustOpened){ vibrate(isFinalShard ? [30,40,60] : 25); }
+  // Сильная вибрация при полном открытии осколка (если не отключена в настройках)
+  if(shardJustOpened){ vibrate('heavy'); }
 
   if(shardJustOpened && !isFinalShard){
     setMasterMsg(pick(MASTER_SHARD_OPENED));
@@ -2983,7 +2995,7 @@ function toggleTheme(){
 function toggleVibration(){
   settings.vibration = !settings.vibration;
   refreshSettingsLabels();
-  if(settings.vibration) vibrate(25); // короткий отклик-подтверждение
+  if(settings.vibration) vibrate('light'); // короткий отклик-подтверждение
   if(typeof saveProgress==='function') saveProgress();
 }
 
@@ -3348,6 +3360,7 @@ function openMemoModal(idx){
   _archiveTarget=null; // обычная заметка активного витража, не архив
   app.currentMemoIdx=idx;
   app.memoPhotoData=null; app.memoAudioUrl=null;
+  _memoPhotoChanged=false; _memoAudioChanged=false; // в этой сессии ещё ничего не добавляли
   const m=app.shardMemos[idx]||{};
   document.getElementById('memo-title').textContent='Осколок #'+(idx+1)+' — '+app.sphereName;
   document.getElementById('memo-date').textContent=app.shardDates[idx]||'—';
@@ -3555,6 +3568,7 @@ function applyCapturedPhoto(dataUrl){
     if(pv) pv.style.display='block';
   } else {
     app.memoPhotoData=dataUrl;
+    _memoPhotoChanged=true;
     const pv=document.getElementById('memo-photo-preview');
     const im=document.getElementById('memo-photo-img');
     if(im) im.src=dataUrl;
@@ -3563,10 +3577,12 @@ function applyCapturedPhoto(dataUrl){
 }
 
 function closeCamera(){
-  // НЕ останавливаем поток — держим его живым, чтобы при следующем открытии
-  // камеры разрешение не запрашивалось снова. Просто отключаем видео и прячем.
+  // Останавливаем поток камеры — гасит индикатор «камера включена».
+  // Разрешение сохраняется браузером, поэтому при следующем открытии
+  // камеры повторного запроса согласия не будет.
   const video=document.getElementById('camera-view')?.querySelector('#camera-stream');
   try{ if(video){ video.pause(); video.srcObject=null; } }catch(e){}
+  stopCameraStream();
   document.getElementById('camera-view').style.display='none';
 }
 
@@ -3594,6 +3610,7 @@ function memoPhotoChange(e){
   const file=e.target.files[0]; if(!file)return;
   compressImageFile(file, (dataUrl)=>{
     app.memoPhotoData=dataUrl;
+    _memoPhotoChanged=true;
     const preview=document.getElementById('memo-photo-preview');
     document.getElementById('memo-photo-img').src=dataUrl;
     preview.style.display='block';
@@ -3628,15 +3645,18 @@ function compressImageFile(file, cb){
   };
   r.readAsDataURL(file);
 }
-function clearMemoPhoto(){ app.memoPhotoData=null; document.getElementById('memo-photo-preview').style.display='none'; }
+function clearMemoPhoto(){ app.memoPhotoData=null; _memoPhotoChanged=true; document.getElementById('memo-photo-preview').style.display='none'; }
 let _memoRecording=false;
+let _memoPhotoChanged=false; // добавляли ли фото в текущей сессии заметки
+let _memoAudioChanged=false; // записывали ли аудио в текущей сессии заметки
 
-/* ══ ОБЩИЙ ДОСТУП К МИКРОФОНУ ══
-   Запрашиваем разрешение ОДИН раз и держим поток живым,
-   чтобы браузер больше не переспрашивал при каждой записи. */
+/* ══ ДОСТУП К МИКРОФОНУ ══
+   Разрешение выдаётся браузером один раз и сохраняется. Поэтому поток
+   можно запрашивать заново перед каждой записью и ОСТАНАВЛИВАТЬ сразу после —
+   индикатор «микрофон включён» гаснет, а повторного запроса разрешения нет
+   (браузер помнит выданное согласие для этого origin). */
 let _sharedMicStream=null;
 function getMicStream(){
-  // Если поток уже есть и активен — переиспользуем (без повторного запроса)
   if(_sharedMicStream && _sharedMicStream.active){
     return Promise.resolve(_sharedMicStream);
   }
@@ -3648,9 +3668,13 @@ function getMicStream(){
     return stream;
   });
 }
-// Поток НЕ останавливаем после записи (чтобы не терять разрешение).
-// Эта функция-заглушка оставлена для совместимости вызовов.
-function releaseMicStream(stream){ /* намеренно не глушим — держим разрешение */ }
+// Останавливаем микрофон после записи — гасит индикатор. Разрешение сохраняется.
+function releaseMicStream(){
+  if(_sharedMicStream){
+    try{ _sharedMicStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+    _sharedMicStream=null;
+  }
+}
 
 let _memoStopResolve=null; // резолвится когда onstop собрал blob
 function startMemoAudio(){
@@ -3667,6 +3691,7 @@ function startMemoAudio(){
     rec.onstop=()=>{
       const blob=new Blob(chunks,{type:'audio/webm'});
       app.memoAudioUrl=URL.createObjectURL(blob);
+      _memoAudioChanged=true;
       // Показываем плеер с возможностью удалить
       const cv=document.getElementById('memo-content-view');
       const av=document.getElementById('memo-audio-view');
@@ -3677,6 +3702,7 @@ function startMemoAudio(){
       const st=document.getElementById('memo-audio-status'); if(st) st.style.display='none';
       const btn=document.getElementById('memo-audio-btn'); if(btn) btn.textContent='🎙 Запись';
       _memoRecording=false;
+      releaseMicStream(); // гасим индикатор микрофона
       if(_memoStopResolve){ _memoStopResolve(); _memoStopResolve=null; }
     };
     rec.start();
@@ -3709,8 +3735,8 @@ function saveMemo(){
       const existing=v.shardMemos[idx]||{};
       v.shardMemos[idx]={
         text: text||existing.text||'',
-        photo: app.memoPhotoData||existing.photo||null,
-        audioUrl: app.memoAudioUrl||existing.audioUrl||null,
+        photo: _memoPhotoChanged ? (app.memoPhotoData||null) : (existing.photo||null),
+        audioUrl: _memoAudioChanged ? (app.memoAudioUrl||null) : (existing.audioUrl||null),
         date: (v.shardDates&&v.shardDates[idx])||existing.date||new Date().toLocaleString('ru')
       };
       _archiveTarget=null;
@@ -3729,8 +3755,8 @@ function saveMemo(){
     const existing=app.shardMemos[idx]||{};
     app.shardMemos[idx]={
       text: text||existing.text||'',
-      photo: app.memoPhotoData||existing.photo||null,
-      audioUrl: app.memoAudioUrl||existing.audioUrl||null,
+      photo: _memoPhotoChanged ? (app.memoPhotoData||null) : (existing.photo||null),
+      audioUrl: _memoAudioChanged ? (app.memoAudioUrl||null) : (existing.audioUrl||null),
       date: app.shardDates[idx]||new Date().toLocaleString('ru')
     };
     closeMemo();
@@ -4488,40 +4514,40 @@ function renderVitrazhToCanvas(v){
 // Поделиться завершённым витражом. В Telegram сразу открываем нативное окно
 // «Поделиться» с текстом (это работает надёжно). Картинку в Telegram через
 // navigator.share передать нельзя, поэтому там делимся текстом-приглашением.
+// Делится КАРТИНКОЙ витража через системное окно «Поделиться»
+// (чаты, соцсети, сторис и т.д.). Если поделиться файлом нельзя — запасной текст.
 function shareCompletedVitrazh(v){
   const sphereName=v.name||v.sphereName||'витраж';
   const text=`Мой витраж «${sphereName}» собран целиком! ✦ Собери свой в приложении Витраж`;
-  const tg=window.Telegram&&window.Telegram.WebApp;
-  const isTelegram = !!(tg && tg.initData!==undefined && tg.initData!=='');
-
-  // В Telegram — сразу нативный «Поделиться» (надёжно, без ожидания рендера)
-  if(isTelegram && tg.openTelegramLink){
-    try{
-      tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent('https://t.me/')+'&text='+encodeURIComponent(text));
-      return;
-    }catch(e){ /* упадём в общий путь ниже */ }
-  }
-
-  // Вне Telegram — пробуем поделиться картинкой через Web Share API
+  toast('Готовлю изображение…');
   renderVitrazhToCanvas(v).then(cv=>{
-    if(cv && cv.toBlob && navigator.canShare){
-      cv.toBlob((blob)=>{
-        try{
-          const file=new File([blob],'vitrazh.png',{type:'image/png'});
-          if(blob && navigator.canShare({files:[file]})){
-            navigator.share({files:[file], text}).catch(()=>_shareText(text));
-            return;
-          }
-        }catch(e){}
-        _shareText(text);
-      }, 'image/png');
-    } else {
-      _shareText(text);
-    }
-  }).catch(()=>_shareText(text));
+    if(!cv || !cv.toBlob){ _shareFallback(text); return; }
+    cv.toBlob((blob)=>{
+      if(!blob){ _shareFallback(text); return; }
+      const file=new File([blob],'vitrazh.png',{type:'image/png'});
+      // Системное окно «Поделиться» с картинкой — даёт чаты, соцсети, сторис
+      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        navigator.share({files:[file], text}).then(()=>{
+          hideToast();
+        }).catch((err)=>{
+          // Пользователь отменил — просто закрываем тост; иначе запасной путь
+          if(err && err.name==='AbortError'){ hideToast(); }
+          else _shareFallback(text);
+        });
+      } else {
+        _shareFallback(text);
+      }
+    }, 'image/png');
+  }).catch(()=>_shareFallback(text));
 }
-function _shareText(text){
-  if(navigator.share){ navigator.share({text}).catch(()=>_copyText(text)); return; }
+// Запасной вариант: поделиться текстом (если картинку отдать нельзя)
+function _shareFallback(text){
+  const tg=window.Telegram&&window.Telegram.WebApp;
+  if(tg && tg.openTelegramLink){
+    tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent('https://t.me/')+'&text='+encodeURIComponent(text));
+    hideToast(); return;
+  }
+  if(navigator.share){ navigator.share({text}).then(hideToast).catch(()=>_copyText(text)); return; }
   _copyText(text);
 }
 function _copyText(text){
@@ -4529,34 +4555,42 @@ function _copyText(text){
   else alert(text);
 }
 
-// Сохранить картинку витража. Вне Telegram — скачивание файла.
-// В Telegram скачивание файла блокируется, поэтому открываем картинку
-// (её можно сохранить долгим нажатием).
+// «В галерею» — сохранить картинку витража. На мобильных лучший способ —
+// то же системное окно «Поделиться» с картинкой (там есть «Сохранить изображение»).
+// На десктопе — обычное скачивание файла.
 function saveVitrazhImage(v){
   toast('Готовлю изображение…');
   renderVitrazhToCanvas(v).then(cv=>{
-    if(!cv){ toast('Не удалось подготовить изображение'); return; }
-    const tg=window.Telegram&&window.Telegram.WebApp;
-    const isTelegram = !!(tg && tg.initData!==undefined && tg.initData!=='');
+    if(!cv || !cv.toBlob){ toast('Не удалось подготовить изображение'); return; }
     cv.toBlob((blob)=>{
       if(!blob){ toast('Не удалось сохранить'); return; }
-      const url=URL.createObjectURL(blob);
-      if(isTelegram){
-        try{
-          if(tg.openLink){ tg.openLink(url); toast('Открыл картинку — сохрани долгим нажатием'); }
-          else { window.open(url,'_blank'); }
-        }catch(e){ window.open(url,'_blank'); }
-        setTimeout(()=>URL.revokeObjectURL(url), 60000);
+      const file=new File([blob],'vitrazh.png',{type:'image/png'});
+      // Мобильные: системное окно с опцией «Сохранить изображение»
+      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        navigator.share({files:[file]}).then(()=>hideToast()).catch((err)=>{
+          if(err && err.name==='AbortError'){ hideToast(); }
+          else _downloadBlob(blob, v);
+        });
       } else {
-        const a=document.createElement('a');
-        a.href=url;
-        a.download='vitrazh-'+(v.name||v.sphereName||'образ').replace(/\s+/g,'_')+'.png';
-        document.body.appendChild(a); a.click();
-        setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
-        toast('Картинка сохранена');
+        _downloadBlob(blob, v);
       }
     }, 'image/png');
   }).catch(()=>toast('Не удалось подготовить изображение'));
+}
+function _downloadBlob(blob, v){
+  try{
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='vitrazh-'+((v&&(v.name||v.sphereName))||'образ').replace(/\s+/g,'_')+'.png';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ try{document.body.removeChild(a);}catch(_){}; URL.revokeObjectURL(url); }, 1000);
+    toast('Картинка сохранена');
+  }catch(e){ toast('Не удалось сохранить'); }
+}
+function hideToast(){
+  const t=document.getElementById('vitrazh-toast');
+  if(t){ t.style.opacity='0'; }
 }
 // Маленькое всплывающее уведомление
 function toast(msg){
@@ -4612,6 +4646,16 @@ function appendFullscreenExtras(v, overlay){
   // History list
   if(v.shardMemos){
     const memos = v.shardMemos.map((m,i)=>({m,i,date:v.shardDates?.[i]})).filter(x=>x.m&&(x.m.text||x.m.photo||x.m.audioUrl));
+    // Сортируем по хронологии открытия осколка (даты в формате «ДД.ММ.ГГГГ ЧЧ:ММ»),
+    // а не по индексу осколка — ведь осколки открываются в случайном порядке.
+    const parseRuDate=(s)=>{
+      if(!s) return 0;
+      const m=String(s).match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})(?:[ ,]+(\d{1,2}):(\d{2}))?/);
+      if(!m) return 0;
+      let [_,d,mo,y,h,mi]=m; y=y.length===2?('20'+y):y;
+      return new Date(+y,+mo-1,+d,+(h||0),+(mi||0)).getTime();
+    };
+    memos.sort((a,b)=>parseRuDate(a.date)-parseRuDate(b.date));
     if(memos.length){
       const histWrap = document.createElement('div');
       histWrap.style.cssText = 'margin:0 18px 20px;';
