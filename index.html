@@ -162,6 +162,10 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 .opt-pill{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;}
 .time-chip{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:7px 12px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;transition:all .15s;}
 .set-chip{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:13px 15px;font-size:14px;color:var(--text2);cursor:pointer;transition:all .15s;}
+/* Увеличенная область захвата для смахивания вниз: сам «грабер» тонкий, но зона
+   касания вокруг него большая (прозрачные отступы сверху/снизу). */
+.sheet-grabber{position:relative;display:block;height:22px;margin:-8px auto 8px;cursor:grab;touch-action:none;width:120px;}
+.sheet-grabber::before{content:"";position:absolute;top:11px;left:50%;transform:translateX(-50%);width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;}
 .set-chip b{color:var(--text);font-weight:600;}
 .set-chip:hover{border-color:var(--border2);}
 .set-chip.sel{border-color:var(--accent);background:rgba(124,111,255,.12);}
@@ -574,7 +578,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div id="main-content">
       <div class="master-card">
         <div class="m-av">🧙🏼‍♂️</div>
-        <div><div class="m-name">МАСТЕР-ВИТРАЖИСТ</div><div class="m-msg" id="master-msg">Каждый осколок открывает часть тайного образа. Что скрывается за стеклом — узнаешь сам</div></div>
+        <div><div class="m-name">МАСТЕР-ВИТРАЖИСТ</div><div class="m-msg" id="master-msg">Добро пожаловать в мастерскую. Отметь выполненное действие в списке ниже — и осколок начнёт проявляться</div></div>
       </div>
       <div class="vcard" id="main-vcard">
         <div class="toast" id="main-toast">+10 ✦</div>
@@ -660,7 +664,9 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div class="menu-item" onclick="openReminderSettings()">🔔<span id="menu-reminder-text">Напоминания от Мастера</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="openMemoPromptSettings()">✍️<span id="menu-memoprompt-text">Впечатления: после каждого</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleTheme()">🎨<span id="menu-theme-text">Тема: тёмная</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" onclick="toggleVibration()">📳<span id="menu-vibration-text">Вибрация: включена</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="shareVitrazh()">📤<span>Поделиться витражом</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" onclick="openSupport()">💬<span>Написать в поддержку</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="resetApp()">🔄<span>Начать заново</span><span class="mi-arrow">›</span></div>
     </div>
     <div class="nav">
@@ -673,7 +679,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 <!-- ══ НАСТРОЙКА: ЛИМИТ ОСКОЛКОВ ══ -->
 <div id="set-limit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeLimitModal()">
   <div id="set-limit-sheet" style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;">
-    <div class="sheet-grabber" data-close="closeLimitModal" style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;cursor:grab;touch-action:none;"></div>
+    <div class="sheet-grabber" data-close="closeLimitModal"></div>
     <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Лимит осколков в день</div>
     <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Сколько осколков можно закрашивать за один день. Бережёт привычку от выгорания.</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
@@ -689,7 +695,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 <!-- ══ НАСТРОЙКА: НАПОМИНАНИЯ ══ -->
 <div id="set-reminder-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeReminderModal()">
   <div id="set-reminder-sheet" style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;">
-    <div class="sheet-grabber" data-close="closeReminderModal" style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;cursor:grab;touch-action:none;"></div>
+    <div class="sheet-grabber" data-close="closeReminderModal"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
       <div style="font-size:16px;font-weight:600;">Напоминания от Мастера</div>
       <div class="toggle on" id="set-rem-toggle" onclick="toggleReminderSetting()"><div class="toggle-knob"></div></div>
@@ -707,7 +713,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 <!-- ══ НАСТРОЙКА: ФОРМА ВПЕЧАТЛЕНИЯ ══ -->
 <div id="set-memoprompt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeMemoPromptModal()">
   <div id="set-memoprompt-sheet" style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;">
-    <div class="sheet-grabber" data-close="closeMemoPromptModal" style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;cursor:grab;touch-action:none;"></div>
+    <div class="sheet-grabber" data-close="closeMemoPromptModal"></div>
     <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Форма впечатления</div>
     <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Когда предлагать оставить впечатление к закрашенному осколку. Впечатление всегда можно добавить позже — просто нажми на открытый осколок.</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
@@ -735,7 +741,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
   </div>
 </div>
 
-<div id="photo-choice" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closePhotoChoice()">
+<div id="photo-choice" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2400;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closePhotoChoice()">
   <div style="background:var(--bg2);border-radius:24px 24px 0 0;padding:16px;padding-bottom:calc(16px + var(--pad-bottom));width:100%;max-width:420px;">
     <div style="width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;margin:0 auto 14px;"></div>
     <div style="font-size:15px;font-weight:600;text-align:center;margin-bottom:14px;">Добавить фото</div>
@@ -753,7 +759,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 </div>
 
 <!-- ══ ВСТРОЕННАЯ КАМЕРА (getUserMedia) — надёжно работает там, где input capture игнорируется ══ -->
-<div id="camera-view" style="display:none;position:fixed;inset:0;background:#000;z-index:1200;flex-direction:column;">
+<div id="camera-view" style="display:none;position:fixed;inset:0;background:#000;z-index:2600;flex-direction:column;">
   <video id="camera-stream" autoplay playsinline muted style="flex:1;width:100%;object-fit:cover;background:#000;"></video>
   <canvas id="camera-canvas" style="display:none;"></canvas>
   <div style="position:absolute;top:0;left:0;right:0;padding:calc(14px + var(--pad-top)) 18px 14px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(rgba(0,0,0,.5),transparent);">
@@ -805,7 +811,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 </div>
 
 <!-- ══ COMPLETION MODAL ══ -->
-<div id="completion-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+<div id="completion-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2300;align-items:center;justify-content:center;padding:24px;">
   <div style="background:var(--bg2);border-radius:24px;padding:24px;padding-bottom:calc(24px + var(--pad-bottom));width:100%;max-width:380px;max-height:90vh;overflow-y:auto;">
     <div style="text-align:center;margin-bottom:20px;">
       <div style="font-size:48px;margin-bottom:12px;">✦</div>
@@ -871,6 +877,20 @@ const PRESET_GEOMETRY={"sleep":{"15":{"ratio": 1.25, "img": "presets/moon3-15.jp
     }
   }
 })();
+
+/* ══════════════════════════════════════════════
+   УТИЛИТЫ БЕЗОПАСНОСТИ
+══════════════════════════════════════════════ */// Экранирует пользовательский текст перед вставкой через innerHTML (защита от XSS
+// и от поломки вёрстки, если в названии действия/витража есть символы < > & " ').
+function escapeHtml(s){
+  if(s==null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
 
 /* ══════════════════════════════════════════════
    СОСТОЯНИЕ
@@ -1503,7 +1523,22 @@ const settings = {
   reminderOn: true,
   theme: 'dark',        // 'dark' или 'light'
   memoPrompt: 'each',   // 'each' = после каждого осколка, 'first' = только первый за день, 'never' = никогда
+  vibration: true,      // вибрация при открытии осколка
 };
+
+// Вибрация телефона (если поддерживается и не отключена пользователем).
+// В Telegram используем нативный HapticFeedback, иначе — Web Vibration API.
+function vibrate(pattern){
+  if(!settings.vibration) return;
+  try{
+    const tg=window.Telegram&&window.Telegram.WebApp;
+    if(tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred){
+      tg.HapticFeedback.impactOccurred('medium');
+      return;
+    }
+  }catch(e){}
+  try{ if(navigator.vibrate) navigator.vibrate(pattern||20); }catch(e){}
+}
 
 function applyShardCountToGrid(count){
   TOTAL=count;
@@ -1929,6 +1964,14 @@ function initMainScreen(){
   if(updateMainEmptyState()) return;
   if(typeof hideUndo==='function') hideUndo();
   document.getElementById('v-name').textContent=app.vitrazhName||('Витраж '+app.sphereName);
+  // Снимаем возможные «завершённые» состояния прошлого витража (свечение/баннер),
+  // если текущий витраж ещё не собран — иначе на свежем витраже могло остаться
+  // ложное поздравление с завершением.
+  const done0 = app.shards ? app.shards.filter(Boolean).length : 0;
+  if(done0 < (TOTAL||15)){
+    const vc=document.getElementById('main-vcard'); if(vc){ vc.classList.remove('glow'); vc.classList.remove('day-glow'); }
+    const db=document.getElementById('main-done-banner'); if(db) db.classList.remove('show');
+  }
 
   // Ждём два кадра чтобы браузер успел сделать layout
   requestAnimationFrame(()=>{
@@ -1947,6 +1990,7 @@ function initMainScreen(){
       updateUI();
       updateGallery();
       refreshSettingsLabels();
+      updateMasterMessage(); // корректное сообщение под текущий этап (без устаревших)
     });
   });
 }
@@ -2471,23 +2515,20 @@ function applyMark(idx, e, fromTap){
   rebuildVitrazh();
   if(e){ spawnFlash(e.clientX, e.clientY); spawnParticles(e.clientX, e.clientY); }
   showToast('main-toast');
+  // Вибрация при полном открытии осколка (если не отключена в настройках)
+  if(shardJustOpened){ vibrate(isFinalShard ? [30,40,60] : 25); }
 
   if(shardJustOpened && !isFinalShard){
-    const msgs=[
-      'Осколок полностью проявлен! Свет занял своё место',
-      'Ещё один осколок засиял. Образ проясняется',
-      'Красиво! Осколок открыт целиком',
-    ];
-    document.getElementById('master-msg').textContent=msgs[Math.floor(Math.random()*msgs.length)];
+    setMasterMsg(pick(MASTER_SHARD_OPENED));
     if(document.getElementById('v-stk')) document.getElementById('v-stk').textContent=app.activeDays.length;
   } else if(!shardJustOpened && app.dayClosed){
-    document.getElementById('master-msg').textContent='Отметки на сегодня вложены. Возвращайся завтра — путь строится по дню за раз';
+    setMasterMsg('Отметки на сегодня вложены. Возвращайся завтра — путь строится по дню за раз');
   }
 
   if(isFinalShard){
     document.getElementById('main-vcard').classList.add('glow');
     document.getElementById('main-done-banner').classList.add('show');
-    document.getElementById('master-msg').textContent='Витраж завершён! Образ открыт полностью';
+    setMasterMsg('Витраж завершён! Образ открыт полностью. Ты прошёл весь путь');
     registerCompletedVitrazh();
   }
 
@@ -2550,7 +2591,7 @@ function buildActionsList(){
     d.className='act-card'+(done?' done':'');
     // У невыполненного действия — карандашик для редактирования текста
     const pencil = done ? '' : `<button class="act-edit" onclick="event.stopPropagation();editAction(${i})" title="Изменить">✎</button>`;
-    d.innerHTML=`<div class="act-dot">${done?'✓':''}</div><div style="flex:1"><div class="act-name" style="${done?'text-decoration:line-through;opacity:.4;':''}">${a}</div></div>${pencil}<div class="act-light">+10 ✦</div>`;
+    d.innerHTML=`<div class="act-dot">${done?'✓':''}</div><div style="flex:1"><div class="act-name" style="${done?'text-decoration:line-through;opacity:.4;':''}">${escapeHtml(a)}</div></div>${pencil}<div class="act-light">+10 ✦</div>`;
     if(!done){
       d.onclick=(ev)=>{
         markActionDone(i, {clientX:ev.clientX, clientY:ev.clientY});
@@ -2808,6 +2849,68 @@ function showToast(id){
 // Мягкая ненавязчивая подсказка: показываем её редко (раз за сессию),
 // чтобы не надоедать. Кратко меняем текст подсказки под витражом и возвращаем обратно.
 let _memoHintShown=false;
+/* ══════════════════════════════════════════════
+   СООБЩЕНИЯ МАСТЕРА-ВИТРАЖИСТА
+   Первые сообщения — обучающие (как пользоваться приложением),
+   дальше — удерживающие (мотивация возвращаться каждый день).
+   Выбор зависит от того, сколько осколков уже открыто (этап пути).
+══════════════════════════════════════════════ */
+
+// Обучающие сообщения для самого начала пути (0–2 открытых осколка).
+const MASTER_TEACHING = [
+  'Добро пожаловать в мастерскую. Отметь выполненное действие в списке ниже — и осколок начнёт проявляться',
+  'Каждое выполненное действие проявляет осколок. Можно нажимать и прямо на стекло — свет ляжет туда',
+  'Когда все действия дня выполнены — осколок засияет полностью. Один день — один осколок',
+  'Совет мастера: отмечай честно. Витраж — это хроника твоей настоящей жизни, а не гонка',
+];
+
+// Удерживающие/мотивационные сообщения для дальнейшего пути.
+const MASTER_RETENTION = [
+  'Образ проявляется день за днём. Возвращайся — стекло ждёт твоего света',
+  'Каждый осколок — прожитый тобой день. Продолжай, и увидишь целое',
+  'Постоянство важнее скорости. Один осколок в день — и витраж будет твоим',
+  'Ты уже прошёл часть пути. Не останавливайся — образ всё ближе',
+  'Мастерство рождается из повторения. Ещё один день — ещё один осколок',
+];
+
+// Сообщения при полном открытии осколка.
+const MASTER_SHARD_OPENED = [
+  'Осколок полностью проявлен! Свет занял своё место',
+  'Ещё один осколок засиял. Образ проясняется',
+  'Красиво! Осколок открыт целиком',
+];
+
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function setMasterMsg(text){
+  const m=document.getElementById('master-msg');
+  if(m) m.textContent=text;
+}
+
+// Устанавливает сообщение мастера в зависимости от текущего этапа пути.
+// Вызывается при входе на главный экран и при старте нового витража —
+// гарантирует, что не останется устаревшего сообщения (в т.ч. ложного
+// «поздравления с завершённым днём» на свежем витраже).
+function updateMasterMessage(){
+  const opened = app.shards ? app.shards.filter(Boolean).length : 0;
+  const total = TOTAL || (app.shards ? app.shards.length : 15);
+
+  if(opened>=total && total>0){
+    setMasterMsg('Витраж завершён! Образ открыт полностью. Ты прошёл весь путь');
+    return;
+  }
+  // День уже закрыт (все отметки на сегодня потрачены) — зовём вернуться завтра
+  if(app.dayClosed){
+    setMasterMsg('Отметки на сегодня вложены. Возвращайся завтра — путь строится по дню за раз');
+    return;
+  }
+  // Начало пути — обучаем. Дальше — удерживаем.
+  if(opened<=2){
+    setMasterMsg(MASTER_TEACHING[Math.min(opened, MASTER_TEACHING.length-1)]);
+  } else {
+    setMasterMsg(pick(MASTER_RETENTION));
+  }
+}
+
 function showMemoHint(){
   if(_memoHintShown) return; // только один раз за сессию — не назойливо
   _memoHintShown=true;
@@ -2875,6 +2978,13 @@ function toggleTheme(){
   if(typeof saveProgress==='function') saveProgress();
 }
 
+function toggleVibration(){
+  settings.vibration = !settings.vibration;
+  refreshSettingsLabels();
+  if(settings.vibration) vibrate(25); // короткий отклик-подтверждение
+  if(typeof saveProgress==='function') saveProgress();
+}
+
 /* ══ ОБНОВЛЕНИЕ ПОДПИСЕЙ В НАСТРОЙКАХ ══ */
 function refreshSettingsLabels(){
   const limitText=document.getElementById('menu-limit-text');
@@ -2887,6 +2997,8 @@ function refreshSettingsLabels(){
     :'Напоминания выключены';
   const themeText=document.getElementById('menu-theme-text');
   if(themeText) themeText.textContent = settings.theme==='light' ? 'Тема: светлая' : 'Тема: тёмная';
+  const vibText=document.getElementById('menu-vibration-text');
+  if(vibText) vibText.textContent = settings.vibration ? 'Вибрация: включена' : 'Вибрация: выключена';
   const mpText=document.getElementById('menu-memoprompt-text');
   if(mpText){
     const mp=settings.memoPrompt||'each';
@@ -2961,6 +3073,31 @@ function setMemoPrompt(val){
 function closeMemoPromptModal(){ document.getElementById('set-memoprompt-modal').style.display='none'; }
 
 /* ══ ПОДЕЛИТЬСЯ ВИТРАЖОМ ══ */
+// ── ТЕХПОДДЕРЖКА ──
+// Имя бота поддержки. Замени 'VitrazhSupportBot' на реальный username своего бота
+// (без @). Кнопка открывает чат с ботом; технические данные помогут тебе быстрее
+// разобраться в проблеме пользователя.
+const SUPPORT_BOT = 'VitrazhSupportBot';
+
+function openSupport(){
+  // Собираем полезные тех.данные (пользователь может стереть их перед отправкой)
+  const tg=window.Telegram&&window.Telegram.WebApp;
+  const platform = (tg && tg.platform) ? tg.platform : 'web';
+  const version = (tg && tg.version) ? tg.version : '—';
+  const done = app.shards ? app.shards.filter(Boolean).length : 0;
+  const total = TOTAL || 15;
+  const vname = app.vitrazhName || app.sphereName || '—';
+  const info = `\n\n———\n(тех. данные для поддержки, можно не менять)\nПлатформа: ${platform} · Telegram ${version}\nВитраж: ${vname} · ${done}/${total}`;
+  const prefill = `Здравствуйте! У меня вопрос по приложению Витраж:\n\n[опишите вопрос здесь]${info}`;
+
+  const link = 'https://t.me/'+SUPPORT_BOT+'?text='+encodeURIComponent(prefill);
+  if(tg && tg.openTelegramLink){
+    tg.openTelegramLink(link);
+  } else {
+    window.open(link, '_blank');
+  }
+}
+
 function shareVitrazh(){
   const done=app.shards.filter(Boolean).length;
   const total=TOTAL;
@@ -3340,21 +3477,19 @@ async function startCameraStream(){
   const video=document.getElementById('camera-stream');
   const errBox=document.getElementById('camera-error');
   const errText=document.getElementById('camera-error-text');
-  // Останавливаем прежний поток, если был
-  stopCameraStream();
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
     errText.textContent='Камера недоступна в этом приложении. Можно выбрать фото из галереи.';
     errBox.style.display='flex';
     return;
   }
-  // Если разрешение уже проверено через Permissions API как выданное — помечаем,
-  // чтобы не считать повторный вызов «первым запросом».
-  try{
-    if(navigator.permissions && navigator.permissions.query){
-      const st=await navigator.permissions.query({name:'camera'});
-      if(st.state==='granted') _camPermGranted=true;
-    }
-  }catch(e){ /* Permissions API для камеры есть не везде — не критично */ }
+  // Если поток уже создан и активен — ПЕРЕИСПОЛЬЗУЕМ его, не вызывая getUserMedia
+  // повторно. Это ключ к тому, чтобы разрешение спрашивалось лишь один раз.
+  if(_camStream && _camStream.active){
+    video.srcObject=_camStream;
+    errBox.style.display='none';
+    try{ await video.play(); }catch(e){}
+    return;
+  }
   try{
     _camStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: _camFacing } },
@@ -3372,6 +3507,8 @@ async function startCameraStream(){
   }
 }
 
+// Полная остановка потока камеры (освобождает камеру). Вызываем только когда
+// действительно нужно освободить устройство: смена камеры или выход из приложения.
 function stopCameraStream(){
   if(_camStream){
     try{ _camStream.getTracks().forEach(t=>t.stop()); }catch(e){}
@@ -3381,7 +3518,8 @@ function stopCameraStream(){
 
 function flipCamera(){
   _camFacing = (_camFacing==='environment') ? 'user' : 'environment';
-  startCameraStream();
+  stopCameraStream();     // для смены камеры нужен новый поток
+  startCameraStream();    // разрешение уже выдано — повторно не спросят
 }
 
 function captureCameraPhoto(){
@@ -3423,7 +3561,10 @@ function applyCapturedPhoto(dataUrl){
 }
 
 function closeCamera(){
-  stopCameraStream();
+  // НЕ останавливаем поток — держим его живым, чтобы при следующем открытии
+  // камеры разрешение не запрашивалось снова. Просто отключаем видео и прячем.
+  const video=document.getElementById('camera-view')?.querySelector('#camera-stream');
+  try{ if(video){ video.pause(); video.srcObject=null; } }catch(e){}
   document.getElementById('camera-view').style.display='none';
 }
 
@@ -3449,12 +3590,39 @@ function onPhotoChosen(e){
 
 function memoPhotoChange(e){
   const file=e.target.files[0]; if(!file)return;
+  compressImageFile(file, (dataUrl)=>{
+    app.memoPhotoData=dataUrl;
+    const preview=document.getElementById('memo-photo-preview');
+    document.getElementById('memo-photo-img').src=dataUrl;
+    preview.style.display='block';
+  });
+}
+
+// Сжимает загруженное фото (уменьшает размер и качество), чтобы оно поместилось
+// в localStorage. Телефонные фото по 3-8 МБ иначе переполняют хранилище и не
+// сохраняются. Приводим к макс. 1280px по длинной стороне, JPEG 0.82.
+function compressImageFile(file, cb){
   const r=new FileReader();
   r.onload=ev=>{
-    app.memoPhotoData=ev.target.result;
-    const preview=document.getElementById('memo-photo-preview');
-    document.getElementById('memo-photo-img').src=ev.target.result;
-    preview.style.display='block';
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width, h=img.height;
+      const maxSide=1280;
+      if(w>maxSide || h>maxSide){
+        if(w>=h){ h=Math.round(h*maxSide/w); w=maxSide; }
+        else { w=Math.round(w*maxSide/h); h=maxSide; }
+      }
+      try{
+        const cv=document.createElement('canvas');
+        cv.width=w; cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        cb(cv.toDataURL('image/jpeg', 0.82));
+      }catch(err){
+        cb(ev.target.result); // фолбэк: если canvas не сработал — как есть
+      }
+    };
+    img.onerror=()=>cb(ev.target.result);
+    img.src=ev.target.result;
   };
   r.readAsDataURL(file);
 }
@@ -3575,13 +3743,11 @@ let _compEditId=null; // если редактируем уже завершён
 
 function compPhotoChange(e){
   const file=e.target.files[0]; if(!file)return;
-  const r=new FileReader();
-  r.onload=ev=>{
-    app.compPhotoData=ev.target.result;
-    document.getElementById('comp-photo-img').src=ev.target.result;
+  compressImageFile(file, (dataUrl)=>{
+    app.compPhotoData=dataUrl;
+    document.getElementById('comp-photo-img').src=dataUrl;
     document.getElementById('comp-photo-preview').style.display='block';
-  };
-  r.readAsDataURL(file);
+  });
 }
 function clearCompPhoto(){ app.compPhotoData=null; document.getElementById('comp-photo-preview').style.display='none'; }
 let _compRecording=false;
@@ -3897,7 +4063,7 @@ function createGalleryCard(v){
   card.innerHTML=`
     <div class="gal-card-hdr">
       <div>
-        <div style="font-size:15px;font-weight:600;">${v.emoji} ${v.name}</div>
+        <div style="font-size:15px;font-weight:600;">${escapeHtml(v.emoji)} ${escapeHtml(v.name)}</div>
         <div style="font-size:12px;color:var(--text2);margin-top:2px;">${v.done} из ${v.total} открыто${v.isActive?'':' · завершён '+( v.completedAt||'')} </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -4176,7 +4342,7 @@ function showFullscreenVitrazh(v){
   // Header
   const hdr = document.createElement('div');
   hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:16px 20px;flex-shrink:0;';
-  hdr.innerHTML = `<div><div style="font-size:18px;font-weight:600;color:var(--text);">${v.emoji} ${v.name}</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Завершён ${v.completedAt||''}</div></div>
+  hdr.innerHTML = `<div><div style="font-size:18px;font-weight:600;color:var(--text);">${escapeHtml(v.emoji)} ${escapeHtml(v.name)}</div><div style="font-size:12px;color:var(--text2);margin-top:3px;">Завершён ${escapeHtml(v.completedAt||'')}</div></div>
     <button onclick="document.getElementById('vitrazh-overlay').style.display='none'" style="background:none;border:none;font-size:24px;color:var(--text2);cursor:pointer;">✕</button>`;
   overlay.appendChild(hdr);
 
@@ -4283,7 +4449,8 @@ function showFullscreenVitrazh(v){
 // Рендерит завершённый витраж в картинку (canvas) и возвращает её как Promise<canvas>
 function renderVitrazhToCanvas(v){
   return new Promise((resolve)=>{
-    const preset = (v.sphere && v.total) ? getPreset(v.sphere, v.total) : null;
+    const vtot = v.total || v.vTotal || TOTAL;
+    const preset = v.sphere ? getPreset(v.sphere, vtot) : null;
     const W=720, ratio = preset && preset.ratio ? preset.ratio : 1.4;
     const H=Math.round(W*ratio);
     if(preset && preset.mask && preset.map){
@@ -4316,66 +4483,78 @@ function renderVitrazhToCanvas(v){
   });
 }
 
-// Поделиться картинкой завершённого витража
+// Поделиться завершённым витражом. В Telegram сразу открываем нативное окно
+// «Поделиться» с текстом (это работает надёжно). Картинку в Telegram через
+// navigator.share передать нельзя, поэтому там делимся текстом-приглашением.
 function shareCompletedVitrazh(v){
+  const sphereName=v.name||v.sphereName||'витраж';
+  const text=`Мой витраж «${sphereName}» собран целиком! ✦ Собери свой в приложении Витраж`;
+  const tg=window.Telegram&&window.Telegram.WebApp;
+  const isTelegram = !!(tg && tg.initData!==undefined && tg.initData!=='');
+
+  // В Telegram — сразу нативный «Поделиться» (надёжно, без ожидания рендера)
+  if(isTelegram && tg.openTelegramLink){
+    try{
+      tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent('https://t.me/')+'&text='+encodeURIComponent(text));
+      return;
+    }catch(e){ /* упадём в общий путь ниже */ }
+  }
+
+  // Вне Telegram — пробуем поделиться картинкой через Web Share API
   renderVitrazhToCanvas(v).then(cv=>{
-    const sphereName=v.name||'витраж';
-    const text=`Мой витраж «${sphereName}» собран целиком! ✦ Каждый осколок — выполненное действие. Собери свой в приложении Витраж`;
-    if(!cv){ _shareText(text); return; }
-    cv.toBlob((blob)=>{
-      // Веб-стандарт: делимся картинкой-файлом, если браузер это поддерживает
-      if(blob && navigator.canShare){
-        const file=new File([blob],'vitrazh.png',{type:'image/png'});
-        if(navigator.canShare({files:[file]})){
-          navigator.share({files:[file], text}).catch(()=>_shareText(text));
-          return;
-        }
-      }
-      // Иначе (в т.ч. Telegram, где share картинкой часто недоступен) — делимся текстом
+    if(cv && cv.toBlob && navigator.canShare){
+      cv.toBlob((blob)=>{
+        try{
+          const file=new File([blob],'vitrazh.png',{type:'image/png'});
+          if(blob && navigator.canShare({files:[file]})){
+            navigator.share({files:[file], text}).catch(()=>_shareText(text));
+            return;
+          }
+        }catch(e){}
+        _shareText(text);
+      }, 'image/png');
+    } else {
       _shareText(text);
-    }, 'image/png');
-  });
+    }
+  }).catch(()=>_shareText(text));
 }
 function _shareText(text){
-  const tg=window.Telegram&&window.Telegram.WebApp;
-  if(tg && tg.openTelegramLink){
-    tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent('https://t.me/')+'&text='+encodeURIComponent(text));
-    return;
-  }
-  if(navigator.share){ navigator.share({text}).catch(()=>{}); return; }
-  if(navigator.clipboard){ navigator.clipboard.writeText(text).then(()=>toast('Текст скопирован')).catch(()=>alert(text)); return; }
-  alert(text);
+  if(navigator.share){ navigator.share({text}).catch(()=>_copyText(text)); return; }
+  _copyText(text);
+}
+function _copyText(text){
+  if(navigator.clipboard){ navigator.clipboard.writeText(text).then(()=>toast('Текст скопирован')).catch(()=>alert(text)); }
+  else alert(text);
 }
 
-// Сохранить картинку витража. В обычном браузере — скачивание файла.
-// В Telegram скачивание ненадёжно, поэтому открываем картинку в новой вкладке,
-// откуда её можно сохранить долгим нажатием.
+// Сохранить картинку витража. Вне Telegram — скачивание файла.
+// В Telegram скачивание файла блокируется, поэтому открываем картинку
+// (её можно сохранить долгим нажатием).
 function saveVitrazhImage(v){
+  toast('Готовлю изображение…');
   renderVitrazhToCanvas(v).then(cv=>{
-    if(!cv){ alert('Не удалось подготовить изображение'); return; }
+    if(!cv){ toast('Не удалось подготовить изображение'); return; }
     const tg=window.Telegram&&window.Telegram.WebApp;
-    const isTelegram = !!(tg && tg.initData!==undefined);
+    const isTelegram = !!(tg && tg.initData!==undefined && tg.initData!=='');
     cv.toBlob((blob)=>{
-      if(!blob){ alert('Не удалось сохранить'); return; }
+      if(!blob){ toast('Не удалось сохранить'); return; }
       const url=URL.createObjectURL(blob);
       if(isTelegram){
-        // В Telegram: открываем картинку — пользователь сохраняет долгим нажатием
         try{
-          if(tg.openLink){ tg.openLink(url); }
+          if(tg.openLink){ tg.openLink(url); toast('Открыл картинку — сохрани долгим нажатием'); }
           else { window.open(url,'_blank'); }
-          toast('Открыл картинку — сохрани долгим нажатием');
         }catch(e){ window.open(url,'_blank'); }
         setTimeout(()=>URL.revokeObjectURL(url), 60000);
       } else {
         const a=document.createElement('a');
         a.href=url;
-        a.download='vitrazh-'+(v.name||'образ').replace(/\s+/g,'_')+'.png';
+        a.download='vitrazh-'+(v.name||v.sphereName||'образ').replace(/\s+/g,'_')+'.png';
         document.body.appendChild(a); a.click();
         setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
         toast('Картинка сохранена');
       }
     }, 'image/png');
-  });
+  }).catch(()=>toast('Не удалось подготовить изображение'));
 }
 // Маленькое всплывающее уведомление
 function toast(msg){
@@ -4693,7 +4872,7 @@ function serializeProgress(){
     TOTAL:TOTAL,
     completed:(app.completed||[]).map(lightVitrazh),
     activeVitrazhi:(app.activeVitrazhi||[]).map(lightVitrazh),
-    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt},
+    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt, vibration:settings.vibration},
     started: !document.getElementById('app-screen').classList.contains('hidden')
   };
 }
@@ -4880,6 +5059,7 @@ function applyProgress(data){
     settings.reminderOn=data.settings.reminderOn!==false;
     settings.theme=data.settings.theme||'dark';
     settings.memoPrompt=data.settings.memoPrompt||'each';
+    settings.vibration=data.settings.vibration!==false; // по умолчанию включена
     applyTheme(settings.theme);
   }
   TOTAL = data.TOTAL || data.vTotal || 30;
@@ -4982,7 +5162,12 @@ function bootWithProgress(){
 
 // Сохраняем прогресс перед закрытием/скрытием страницы
 window.addEventListener('beforeunload', ()=>{ try{ saveProgress(); }catch(e){} });
-window.addEventListener('pagehide', ()=>{ try{ saveProgress(); }catch(e){} });
+window.addEventListener('pagehide', ()=>{
+  try{ saveProgress(); }catch(e){}
+  // Освобождаем камеру и микрофон при закрытии приложения
+  try{ if(typeof stopCameraStream==='function') stopCameraStream(); }catch(e){}
+  try{ if(_sharedMicStream){ _sharedMicStream.getTracks().forEach(t=>t.stop()); _sharedMicStream=null; } }catch(e){}
+});
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ try{ saveProgress(); }catch(e){} } });
 
 // Запускаем загрузку прогресса как можно раньше
