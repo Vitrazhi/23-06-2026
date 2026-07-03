@@ -474,6 +474,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     </div>
 
     <button class="btn btn-primary" onclick="nextOb()" style="margin-top:auto;flex-shrink:0;">Дальше →</button>
+    <div id="ob2-hint" style="display:none;font-size:13px;color:var(--rose);text-align:center;margin-top:8px;flex-shrink:0;line-height:1.5;">Добавь хотя бы одно действие — из подсказок ниже или своё. Это то, что будет открывать осколки твоего витража ✦</div>
     <div class="ob-dots" style="flex-shrink:0;"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot on"></div><div class="ob-dot"></div></div>
   </div>
 
@@ -951,6 +952,20 @@ setInterval(updateClocks,30000);
 /* ══ ONBOARDING ══ */
 let obStep=0;
 function nextOb(){
+  // На шаге действий (2) не пускаем дальше без хотя бы одного заполненного действия
+  if(obStep===2){
+    const filled = Array.from(document.querySelectorAll('.dyn-act-input'))
+      .map(i=>i.value.trim()).filter(Boolean);
+    const hint=document.getElementById('ob2-hint');
+    if(!filled.length){
+      if(hint) hint.style.display='block';
+      // Лёгкий фокус на первое поле, чтобы подсказать, куда вводить
+      const first=document.querySelector('.dyn-act-input');
+      if(first){ try{ first.focus(); }catch(e){} }
+      return;
+    }
+    if(hint) hint.style.display='none';
+  }
   document.getElementById('ob'+obStep).classList.remove('on');
   obStep++;
   document.getElementById('ob'+obStep).classList.add('on');
@@ -1348,19 +1363,21 @@ function startApp(){
   // Collect dynamic actions from ob2
   const actInputs = document.querySelectorAll('.dyn-act-input');
   const collectedActions = Array.from(actInputs).map(i=>i.value.trim()).filter(Boolean);
+  // Действий не может не быть — создание витража блокируется на шаге 2 без них.
+  // Но на всякий случай подстрахуемся: если действий нет, не запускаем.
   if(!collectedActions.length){
-    const defaults={
-      sleep:['Лечь до 23:00','Убрать телефон в 22:30','Принять тёплую ванну'],
-      sport:['Зарядка 15 минут','10 000 шагов','Стакан воды утром'],
-      work:['Глубокий фокус 90 мин','Без соцсетей до обеда','Список задач с вечера'],
-      calm:['Медитация 10 минут','Прогулка без телефона','Дневник благодарности'],
-      food:['Завтрак без сахара','2 литра воды','Овощи в каждый приём'],
-      creative:['30 минут творчества','Зарисовка идеи','Без отвлечений 1 час'],
-    };
-    app.actions=(defaults[app.sphere]||['Действие 1','Действие 2','Действие 3']);
-  } else {
-    app.actions=collectedActions;
+    const hint=document.getElementById('ob2-hint');
+    if(hint) hint.style.display='block';
+    // Возвращаем пользователя на шаг действий
+    try{
+      document.getElementById('ob'+obStep).classList.remove('on');
+      obStep=2;
+      document.getElementById('ob2').classList.add('on');
+      initActFields();
+    }catch(e){}
+    return;
   }
+  app.actions=collectedActions;
 
   // Гарантируем чистое состояние цветов перед запуском
   app.shards=new Array(TOTAL).fill(false);
@@ -1540,14 +1557,15 @@ function vibrate(level){
     var tg=window.Telegram&&window.Telegram.WebApp;
     if(tg && tg.HapticFeedback){
       if(level==='heavy'){
-        // success-нотификация ощущается сильнее и работает на Android
+        // Полное открытие — самый сильный отклик: success-нотификация
+        // (работает на Android) + тяжёлый импакт для усиления.
         if(tg.HapticFeedback.notificationOccurred){ tg.HapticFeedback.notificationOccurred('success'); done=true; }
-        else if(tg.HapticFeedback.impactOccurred){ tg.HapticFeedback.impactOccurred('heavy'); done=true; }
+        if(tg.HapticFeedback.impactOccurred){ tg.HapticFeedback.impactOccurred('heavy'); done=true; }
       } else {
-        // Частичное закрашивание — ощутимый, но не сильный отклик.
-        // 'medium' заметнее 'light', но слабее 'heavy'/success (полное открытие).
-        if(tg.HapticFeedback.impactOccurred){ tg.HapticFeedback.impactOccurred('medium'); done=true; }
-        else if(tg.HapticFeedback.selectionChanged){ tg.HapticFeedback.selectionChanged(); done=true; }
+        // Частичное закрашивание — теперь сильный импакт ('heavy'),
+        // чтобы отклик был хорошо ощутимым при каждом тапе по осколку.
+        if(tg.HapticFeedback.impactOccurred){ tg.HapticFeedback.impactOccurred('heavy'); done=true; }
+        else if(tg.HapticFeedback.notificationOccurred){ tg.HapticFeedback.notificationOccurred('warning'); done=true; }
       }
     }
   }catch(e){}
@@ -1555,7 +1573,7 @@ function vibrate(level){
   // т.к. на части устройств haptic «проглатывается», а navigator.vibrate срабатывает.
   try{
     if(navigator.vibrate){
-      navigator.vibrate(level==='heavy' ? [35,45,70] : 30);
+      navigator.vibrate(level==='heavy' ? [40,50,90] : 55);
     }
   }catch(e){}
 }
@@ -3197,6 +3215,11 @@ function addActionField(focusNew){
     ${delBtn}`;
   wrap.appendChild(row);
   const inp=row.querySelector('input');
+  // Как только пользователь что-то вводит — прячем подсказку о необходимости действия
+  inp.addEventListener('input', ()=>{
+    const hint=document.getElementById('ob2-hint');
+    if(hint && inp.value.trim()) hint.style.display='none';
+  });
   // Когда поле получает фокус (открывается клавиатура) — подкручиваем его в зону видимости,
   // чтобы пользователь видел, что печатает (иначе клавиатура перекрывает поле).
   inp.addEventListener('focus', ()=>{
@@ -3356,6 +3379,9 @@ function addSuggestedAction(text){
   }
   renumberActions();
   renderSuggestChips(); // обновляем состояние чипов (отметить использованные)
+  // Подсказка добавлена — прячем предупреждение о необходимости действия
+  const hint=document.getElementById('ob2-hint');
+  if(hint) hint.style.display='none';
 }
 
 /* ══ MEMO MODAL ══ */
@@ -3434,16 +3460,26 @@ function closeMemo(){
   }
 }
 function deleteMemoAudio(){  const idx=app.currentMemoIdx;
-  if(idx<0||!app.shardMemos[idx]) return;
+  if(idx<0) return;
   if(!confirm('Удалить голосовое сообщение из этой заметки?')) return;
-  app.shardMemos[idx].audioUrl=null;
+  // Сбрасываем только что записанное (ещё не сохранённое) аудио
   app.memoAudioUrl=null;
   _memoAudioChanged=true; // удаление — это изменение: при сохранении не вернём старое
-  // Если в заметке больше ничего нет — очищаем её
-  const m=app.shardMemos[idx];
-  if(!m.text && !m.photo && !m.audioUrl) app.shardMemos[idx]=null;
-  document.getElementById('memo-audio-view').style.display='none';
+  // И удаляем из сохранённой заметки, если она есть
+  if(app.shardMemos[idx]){
+    app.shardMemos[idx].audioUrl=null;
+    const m=app.shardMemos[idx];
+    if(!m.text && !m.photo && !m.audioUrl) app.shardMemos[idx]=null;
+  }
+  // Прячем плеер и кнопку, останавливаем воспроизведение
+  const av=document.getElementById('memo-audio-view');
+  if(av){ try{ av.pause(); }catch(e){} av.removeAttribute('src'); av.style.display='none'; }
   document.getElementById('memo-audio-del').style.display='none';
+  // Если в области сохранённого контента больше ничего нет — прячем её
+  const cv=document.getElementById('memo-content-view');
+  const tv=document.getElementById('memo-text-view');
+  const pv=document.getElementById('memo-photo-view');
+  if(cv && (!tv||tv.style.display==='none') && (!pv||pv.style.display==='none')){ cv.style.display='none'; }
   saveProgress();
   // Перерисовываем витраж (индикатор заметки мог исчезнуть)
   if(typeof rebuildVitrazh==='function') rebuildVitrazh();
@@ -5244,9 +5280,12 @@ function bootWithProgress(){
 window.addEventListener('beforeunload', ()=>{ try{ saveProgress(); }catch(e){} });
 window.addEventListener('pagehide', ()=>{
   try{ saveProgress(); }catch(e){}
-  // Полностью освобождаем камеру и микрофон при закрытии приложения
-  try{ if(typeof stopCameraStream==='function') stopCameraStream(); }catch(e){}
-  try{ if(typeof stopMicStreamFully==='function') stopMicStreamFully(); }catch(e){}
+  // ВАЖНО: НЕ останавливаем камеру/микрофон здесь. На мобильных pagehide
+  // срабатывает при сворачивании приложения/блокировке экрана, а не только при
+  // закрытии. Если глушить поток тут — при возврате Telegram снова спросит
+  // разрешение. Поэтому держим поток живым; ОС сама освободит его при реальном
+  // уничтожении WebView. Индикатор может гореть дольше — это осознанный выбор
+  // в пользу «не спрашивать разрешение повторно».
 });
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ try{ saveProgress(); }catch(e){} } });
 
