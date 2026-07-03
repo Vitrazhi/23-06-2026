@@ -676,6 +676,10 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     </div>
   </div>
 
+</div>
+</div>
+
+<!-- ══ МОДАЛКИ (вынесены на верхний уровень из #app-screen/.phone: трансформации экрана ломали position:fixed, из-за чего на десктопе нельзя было печатать в форме комментария) ══ -->
 <!-- ══ НАСТРОЙКА: ЛИМИТ ОСКОЛКОВ ══ -->
 <div id="set-limit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeLimitModal()">
   <div id="set-limit-sheet" style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;">
@@ -833,8 +837,6 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <button class="btn btn-primary" onclick="saveCompletion()" style="margin-bottom:10px;">Сохранить ✦</button>
     <button class="btn btn-ghost" onclick="closeCompletion()" style="font-size:13px;padding:11px;">Позже</button>
   </div>
-</div>
-</div>
 </div>
 
 <script>
