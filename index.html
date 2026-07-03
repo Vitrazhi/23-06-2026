@@ -1529,25 +1529,31 @@ const settings = {
 };
 
 // Вибрация телефона (если поддерживается и не отключена пользователем).
-// level: 'light' — лёгкий тап по витражу, 'heavy' — полное открытие осколка.
-// В Telegram используем нативный HapticFeedback, иначе — Web Vibration API.
+// level: 'light' — лёгкий тап, 'heavy' — полное открытие осколка.
+// ВАЖНО: на Android Telegram impactOccurred часто не срабатывает, а
+// notificationOccurred работает надёжно — поэтому для 'heavy' используем его.
+// Вибрацию нужно вызывать СИНХРОННО в обработчике жеста пользователя.
 function vibrate(level){
   if(!settings.vibration) return;
+  var done=false;
   try{
-    const tg=window.Telegram&&window.Telegram.WebApp;
+    var tg=window.Telegram&&window.Telegram.WebApp;
     if(tg && tg.HapticFeedback){
-      if(level==='heavy' && tg.HapticFeedback.notificationOccurred){
-        tg.HapticFeedback.notificationOccurred('success'); return;
-      }
-      if(tg.HapticFeedback.impactOccurred){
-        tg.HapticFeedback.impactOccurred(level==='heavy'?'heavy':'light'); return;
+      if(level==='heavy'){
+        // success-нотификация ощущается сильнее и работает на Android
+        if(tg.HapticFeedback.notificationOccurred){ tg.HapticFeedback.notificationOccurred('success'); done=true; }
+        else if(tg.HapticFeedback.impactOccurred){ tg.HapticFeedback.impactOccurred('heavy'); done=true; }
+      } else {
+        if(tg.HapticFeedback.impactOccurred){ tg.HapticFeedback.impactOccurred('light'); done=true; }
+        else if(tg.HapticFeedback.selectionChanged){ tg.HapticFeedback.selectionChanged(); done=true; }
       }
     }
   }catch(e){}
-  // Веб-фолбэк: короткая для тапа, длиннее/паттерн для открытия
+  // Веб-фолбэк (работает не во всех WebView, но не мешает): вызываем всегда,
+  // т.к. на части устройств haptic «проглатывается», а navigator.vibrate срабатывает.
   try{
     if(navigator.vibrate){
-      navigator.vibrate(level==='heavy' ? [40,50,80] : 15);
+      navigator.vibrate(level==='heavy' ? [35,45,70] : 18);
     }
   }catch(e){}
 }
@@ -3389,6 +3395,11 @@ function openMemoModal(idx){
 let _pendingCompletion = false; // на финальном осколке: открыть инсайт после закрытия заметки
 function closeMemo(){
   document.getElementById('memo-modal').style.display='none';
+  // Подстраховка: если запись ещё идёт или поток микрофона остался — глушим,
+  // чтобы индикатор микрофона не висел после закрытия формы.
+  try{ if(app.memoRecorder && app.memoRecorder.state!=='inactive'){ app.memoRecorder.onstop=null; app.memoRecorder.stop(); } }catch(e){}
+  _memoRecording=false;
+  releaseMicStream();
   const mt=document.getElementById('memo-text');
   if(mt) mt.style.display='';
   const ab=document.getElementById('memo-audio-btn');
@@ -3824,6 +3835,10 @@ function finalizeCompAudio(){
 
 function closeCompletion(){
   document.getElementById('completion-modal').style.display='none';
+  // Подстраховка: глушим запись/микрофон инсайта, если остались активны
+  try{ if(app.compRecorder && app.compRecorder.state!=='inactive'){ app.compRecorder.onstop=null; app.compRecorder.stop(); } }catch(e){}
+  _compRecording=false;
+  releaseMicStream();
   // Если это было завершение нового витража (не редактирование) —
   // витраж уже засчитан, просто переключаемся дальше без инсайта.
   if(_compEditId===null && _justCompletedId!==null){
