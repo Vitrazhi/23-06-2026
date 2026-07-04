@@ -71,30 +71,59 @@ html,body{height:100%;background:var(--app-bg);font-family:'Onest',-apple-system
 .screen.slide-left{transform:translateX(-100%);}
 .screen.slide-right{transform:translateX(100%);}
 
-/* ══ PHONE FRAME (desktop preview) ══ */
-.phone{width:390px;height:844px;background:var(--bg);border-radius:48px;border:1.5px solid rgba(255,255,255,0.11);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 120px rgba(0,0,0,0.85),0 0 0 1px rgba(255,255,255,0.05);position:relative;}
+/* ══ PHONE FRAME ══
+   Раньше на десктопе показывалась маленькая «рамка-телефон». Теперь приложение
+   ВСЕГДА раскрывается на весь экран (телефон/планшет/десктоп), а контент внутри
+   ограничен разумной шириной по центру, чтобы на широких экранах он не
+   растягивался, а выглядел аккуратно. ══ */
+.phone{
+  width:100%; height:100%;
+  background:var(--bg);
+  overflow:hidden; display:flex; flex-direction:column;
+  position:relative;
+  border:none; border-radius:0; box-shadow:none;
+}
 
-/* ══ Десктоп: аккуратная рамка-телефон по центру, с ambient-фоном.
-   На невысоких экранах кадр ужимается по высоте, чтобы всегда влезал. ══ */
+/* ══ Десктоп/планшет: контент по центру с максимальной шириной,
+   мягкий ambient-фон по краям экрана. ══ */
 @media (min-width:481px){
   body{background:
-    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(124,111,255,.16), transparent 70%),
-    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(95,240,216,.08), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 50% 0%, rgba(124,111,255,.14), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 50% 100%, rgba(95,240,216,.07), transparent 70%),
     var(--app-bg);
   }
   html.light-theme body{background:
-    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(124,111,255,.14), transparent 70%),
-    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(180,148,255,.10), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 50% 0%, rgba(124,111,255,.12), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 50% 100%, rgba(180,148,255,.09), transparent 70%),
     var(--app-bg);
   }
+  .screen{align-items:stretch;justify-content:center;}
+  /* Приложение занимает всю высоту, но по ширине — колонка по центру */
   .phone,.ob-wrap{
-    /* Влезаем по высоте: не выше 92% высоты окна, сохраняя пропорции ~0.462 */
-    height:min(844px, 92vh);
-    width:min(390px, calc(92vh * 0.462));
-    max-height:92vh;
+    width:100%;
+    max-width:520px;   /* аккуратная ширина контента на больших экранах */
+    height:100%;
+    max-height:none;
+    margin:0 auto;
+    border-radius:0;
+    /* Тонкие боковые грани, чтобы визуально отделить колонку от фона */
+    box-shadow:0 0 0 1px rgba(255,255,255,.05), 0 0 80px rgba(0,0,0,.4);
   }
+  html.light-theme .phone,
+  html.light-theme .ob-wrap{
+    box-shadow:0 0 0 1px rgba(20,16,40,.06), 0 0 80px rgba(80,70,140,.12);
+  }
+  /* Фейковый статус-бар не нужен на десктопе */
+  .status-bar{display:none;}
+  /* Небольшой отступ сверху вместо статус-бара (только вне Telegram —
+     в Telegram отступ задаётся через --pad-top под меню клиента) */
+  body:not(.tg-mode) .phone > div[id^="tab-"]{padding-top:16px;}
+  #ob-screen{padding:0;}
 }
-.status-bar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;}
+
+/* Фейковый статус-бар (время/WiFi) имел смысл только внутри рамки-телефона.
+   Теперь приложение полноэкранное — этот декоративный бар не нужен нигде. */
+.status-bar{display:none;height:44px;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;}
 .sb-time{font-size:15px;font-weight:600;}
 .sb-ic{font-size:11px;color:var(--text2);}
 .scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
@@ -148,7 +177,7 @@ body.tg-mode #ob-screen{padding:0;}
 
 /* ══ ONBOARDING ══ */
 #ob-screen{background:radial-gradient(ellipse at 50% 30%, #1a1040 0%, #050310 60%);}
-.ob-wrap{width:390px;max-height:844px;background:var(--bg);border-radius:48px;border:1.5px solid rgba(255,255,255,0.11);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 120px rgba(0,0,0,0.85);position:relative;}
+.ob-wrap{width:100%;height:100%;max-height:none;background:var(--bg);border:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;position:relative;}
 .ob-step{display:none;flex:1;flex-direction:column;padding:48px 28px 28px;justify-content:center;gap:18px;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;position:relative;}
 .ob-step.on{display:flex;}
 body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
