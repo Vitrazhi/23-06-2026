@@ -73,6 +73,27 @@ html,body{height:100%;background:var(--app-bg);font-family:'Onest',-apple-system
 
 /* ══ PHONE FRAME (desktop preview) ══ */
 .phone{width:390px;height:844px;background:var(--bg);border-radius:48px;border:1.5px solid rgba(255,255,255,0.11);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 40px 120px rgba(0,0,0,0.85),0 0 0 1px rgba(255,255,255,0.05);position:relative;}
+
+/* ══ Десктоп: аккуратная рамка-телефон по центру, с ambient-фоном.
+   На невысоких экранах кадр ужимается по высоте, чтобы всегда влезал. ══ */
+@media (min-width:481px){
+  body{background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(124,111,255,.16), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(95,240,216,.08), transparent 70%),
+    var(--app-bg);
+  }
+  html.light-theme body{background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(124,111,255,.14), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(180,148,255,.10), transparent 70%),
+    var(--app-bg);
+  }
+  .phone,.ob-wrap{
+    /* Влезаем по высоте: не выше 92% высоты окна, сохраняя пропорции ~0.462 */
+    height:min(844px, 92vh);
+    width:min(390px, calc(92vh * 0.462));
+    max-height:92vh;
+  }
+}
 .status-bar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;}
 .sb-time{font-size:15px;font-weight:600;}
 .sb-ic{font-size:11px;color:var(--text2);}
@@ -671,7 +692,6 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
         <button class="btn btn-primary" style="font-size:14px;padding:13px;">399 ₽ / месяц — открыть</button>
       </div>
       <div class="sec-label" style="margin:0 18px 9px;">Настройки</div>
-      <div class="menu-item" onclick="openLimitSettings()">✋<span id="menu-limit-text">Лимит осколков: без ограничений</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="openReminderSettings()">🔔<span id="menu-reminder-text">Напоминания от Мастера</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="openMemoPromptSettings()">✍️<span id="menu-memoprompt-text">Впечатления: после каждого</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleTheme()">🎨<span id="menu-theme-text">Тема: тёмная</span><span class="mi-arrow">›</span></div>
@@ -827,7 +847,8 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 
 <!-- ══ COMPLETION MODAL ══ -->
 <!-- ══ ФИНАЛЬНОЕ ПРАЗДНОВАНИЕ ЗАВЕРШЕНИЯ ВИТРАЖА ══ -->
-<div id="celebrate-modal" style="display:none;position:fixed;inset:0;z-index:2350;align-items:center;justify-content:center;padding:24px;overflow:hidden;background:radial-gradient(circle at 50% 40%, rgba(124,111,255,.28), rgba(4,6,15,.94) 70%);">
+<div id="celebrate-modal" style="display:none;position:fixed;inset:0;z-index:2350;align-items:center;justify-content:center;padding:24px;overflow:hidden;background:#04060f;">
+  <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 38%, rgba(124,111,255,.35), rgba(124,111,255,.05) 55%, transparent 75%);"></div>
   <div id="celebrate-rays" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
   <div id="celebrate-card" style="position:relative;text-align:center;max-width:360px;width:100%;">
     <div id="celebrate-emblem" style="font-size:72px;line-height:1;margin-bottom:18px;filter:drop-shadow(0 0 24px rgba(124,111,255,.8));">🪞</div>
@@ -2126,100 +2147,78 @@ function redrawMaskCanvas(cv, revealed, W, H, preset, partial){
 }
 
 // Собственно отрисовка содержимого canvas-витража (одна функция для создания и перерисовки)
+// Композитим всё (изображение + затемнение закрытых осколков + свинцовые линии)
+// в offscreen-канве РОДНОГО разрешения карты, затем переносим на экранную канву
+// с интерполяцией. Так края осколков и линии сглаживаются при любом масштабе —
+// особенно заметно на десктопе, где канва крупная.
 function paintMaskCanvas(cv, revealed, partial){
   const ctx=cv.getContext('2d');
   ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
   const cw=cv.width, ch=cv.height;
 
   const light = _isLightTheme();
-  // 1) Фон под витражом — под тему
   ctx.fillStyle = light ? '#eceaf4' : '#04060f'; ctx.fillRect(0,0,cw,ch);
 
   if(!_maskAssets.base || !_maskAssets.idData){ return; }
+  const mw=_maskAssets.w, mh=_maskAssets.h;
 
-  // 2) Рисуем полное изображение
-  ctx.drawImage(_maskAssets.base, 0,0, cw,ch);
-
-  // Осколки, проявленные частично: map {shardIndex: level 0..1}.
-  // Поддерживаем и старый формат {idx,level} на всякий случай.
   let partMap={};
   if(partial){
     if(typeof partial.idx==='number'){ if(partial.idx>=0 && partial.level>0) partMap[partial.idx]=partial.level; }
     else partMap=partial;
   }
 
-  // 3) Затемняем закрытые осколки по карте id-map
-  const idmap=_maskAssets.idData, mw=_maskAssets.w, mh=_maskAssets.h;
-  const out=ctx.getImageData(0,0,cw,ch);
-  const od=out.data, idd=idmap.data;
-  const colMap=new Int32Array(cw);
-  for(let x=0;x<cw;x++){ let mx=(x*mw/cw)|0; if(mx>=mw)mx=mw-1; colMap[x]=mx; }
-  // Цвет «непроявленного» стекла — под тему. В светлой теме такой же светло-серый,
-  // как у осколков в сферах без изображения (#c8c6d6), в тёмной — прежний тёмный.
+  // Offscreen-композит в родном разрешении карты
+  const off = _maskComposite || (_maskComposite=document.createElement('canvas'));
+  if(off.width!==mw || off.height!==mh){ off.width=mw; off.height=mh; }
+  const octx=off.getContext('2d',{willReadFrequently:true});
+  octx.imageSmoothingEnabled=true; octx.imageSmoothingQuality='high';
+  octx.clearRect(0,0,mw,mh);
+  octx.drawImage(_maskAssets.base, 0,0, mw,mh);
+
+  const idd=_maskAssets.idData.data;
+  const out=octx.getImageData(0,0,mw,mh);
+  const od=out.data;
   const DR = light ? 200 : 30, DG = light ? 198 : 33, DB = light ? 214 : 48;
-  // Уровень проявления по id осколка (1..15) → level
   const levelById=new Float32Array(16);
   for(const k in partMap){ const sid=(+k)+1; if(sid>=1&&sid<=15) levelById[sid]=Math.max(0,Math.min(1,partMap[k])); }
-  for(let y=0;y<ch;y++){
-    let my=(y*mh/ch)|0; if(my>=mh)my=mh-1;
-    const idRow=my*mw;
-    const outRow=y*cw;
-    for(let x=0;x<cw;x++){
-      const sid=idd[(idRow+colMap[x])*4]; // shard id in red channel (1..15)
-      if(sid>=1 && revealed[sid-1]) continue; // открытый осколок — оставляем как есть
-      const oi=(outRow+x)*4;
-      const lv = sid>=1 ? levelById[sid] : 0;
-      if(lv>0){
-        // Частично проявленный осколок: смешиваем изображение с тёмным стеклом.
-        // level 0 → полностью тёмный (интрига), level 1 → полное изображение.
-        const t=lv;
-        od[oi]   = od[oi]  *t + DR*(1-t);
-        od[oi+1] = od[oi+1]*t + DG*(1-t);
-        od[oi+2] = od[oi+2]*t + DB*(1-t);
-      } else {
-        // Закрытый осколок — полностью непрозрачное тёмное стекло
-        od[oi]   = DR;
-        od[oi+1] = DG;
-        od[oi+2] = DB;
-      }
+  // Цвет свинцовой линии
+  const LR = light ? 152 : 8, LG = light ? 150 : 9, LB = light ? 170 : 16;
+  const npx=mw*mh;
+  // 1) Затемняем закрытые/частичные осколки
+  for(let p=0;p<npx;p++){
+    const sid=idd[p*4];
+    if(sid>=1 && revealed[sid-1]) continue;
+    const oi=p*4;
+    const lv = sid>=1 ? levelById[sid] : 0;
+    if(lv>0){
+      const t=lv;
+      od[oi]   = od[oi]  *t + DR*(1-t);
+      od[oi+1] = od[oi+1]*t + DG*(1-t);
+      od[oi+2] = od[oi+2]*t + DB*(1-t);
+    } else {
+      od[oi]=DR; od[oi+1]=DG; od[oi+2]=DB;
     }
   }
-  ctx.putImageData(out,0,0);
-
-  // 4) Свинцовые линии между закрытыми осколками
-  drawLeadLines(ctx, cw, ch, idmap, mw, mh, revealed);
-}
-
-// Рисует тёмные «свинцовые» линии на границах осколков.
-// Если переданы revealed — линия рисуется только там, где хотя бы один
-// из соседних осколков ещё закрыт (чтобы не перекрывать родную золотистую линию).
-function drawLeadLines(ctx, cw, ch, idmap, mw, mh, revealed){
-  const idd=idmap.data;
-  ctx.save();
-  ctx.fillStyle='rgba(6,7,14,0.92)';
-  const sx=cw/mw, sy=ch/mh;
-  const isClosed=(sid)=>{
-    if(!revealed) return true;          // если статус не передан — рисуем всё (как раньше)
-    if(sid<1) return true;
-    return !revealed[sid-1];            // закрыт, если осколок ещё не открыт
-  };
-  for(let y=1;y<mh;y++){
-    for(let x=1;x<mw;x++){
-      const c=idd[(y*mw+x)*4];
-      const l=idd[(y*mw+x-1)*4];
-      const u=idd[((y-1)*mw+x)*4];
-      if(c!==l || c!==u){
-        // Граница между разными осколками. Рисуем линию только если хотя бы один
-        // из участников границы закрыт. Между двумя открытыми — пропускаем.
-        const anyClosed = isClosed(c) || (c!==l && isClosed(l)) || (c!==u && isClosed(u));
-        if(anyClosed){
-          ctx.fillRect(Math.floor(x*sx)-1, Math.floor(y*sy)-1, Math.ceil(sx)+2, Math.ceil(sy)+2);
-        }
-      }
+  // 2) Свинцовые линии на границах (там, где хотя бы один осколок закрыт)
+  const isClosed=(sid)=>{ if(!revealed) return true; if(sid<1) return true; return !revealed[sid-1]; };
+  for(let y=0;y<mh;y++){
+    for(let x=0;x<mw;x++){
+      const i=y*mw+x;
+      const c=idd[i*4];
+      let edge=false;
+      if(x>0){ const l=idd[(i-1)*4]; if(c!==l && (isClosed(c)||isClosed(l))) edge=true; }
+      if(!edge && y>0){ const u=idd[(i-mw)*4]; if(c!==u && (isClosed(c)||isClosed(u))) edge=true; }
+      if(edge){ const o=i*4; od[o]=LR; od[o+1]=LG; od[o+2]=LB; }
     }
   }
-  ctx.restore();
+  octx.putImageData(out,0,0);
+
+  // 3) Переносим композит на экран с интерполяцией — сглаживает все края и линии
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(off, 0,0, mw,mh, 0,0, cw,ch);
 }
+let _maskComposite=null;
 
 // Данные о частичном проявлении для рендера: map {shardIndex: level}.
 // Показываем все частично проявленные осколки (игрок мог подсветить несколько).
