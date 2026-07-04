@@ -2229,15 +2229,21 @@ function paintMaskCanvas(cv, revealed, partial){
       od[oi]=DR; od[oi+1]=DG; od[oi+2]=DB;
     }
   }
-  // 2) Свинцовые линии на границах (там, где хотя бы один осколок закрыт)
+  // 2) Свинцовые линии рисуем ТОЛЬКО между двумя закрытыми осколками.
+  //    На границе, где хотя бы один осколок ОТКРЫТ, ничего не трогаем — там
+  //    видна родная золотистая линия из самого изображения (она ровная и цельная).
+  //    Раньше мы рисовали линию, если закрыт хотя бы один сосед — из-за этого
+  //    поверх золотой линии открытого осколка ложилась наша тёмная, и граница
+  //    выглядела «рваной»/двойной. Теперь линия открытого осколка остаётся чистой.
   const isClosed=(sid)=>{ if(!revealed) return true; if(sid<1) return true; return !revealed[sid-1]; };
   for(let y=0;y<mh;y++){
     for(let x=0;x<mw;x++){
       const i=y*mw+x;
       const c=idd[i*4];
       let edge=false;
-      if(x>0){ const l=idd[(i-1)*4]; if(c!==l && (isClosed(c)||isClosed(l))) edge=true; }
-      if(!edge && y>0){ const u=idd[(i-mw)*4]; if(c!==u && (isClosed(c)||isClosed(u))) edge=true; }
+      // Линия только если ОБА соседних осколка закрыты (тёмное поле ↔ тёмное поле)
+      if(x>0){ const l=idd[(i-1)*4]; if(c!==l && isClosed(c) && isClosed(l)) edge=true; }
+      if(!edge && y>0){ const u=idd[(i-mw)*4]; if(c!==u && isClosed(c) && isClosed(u)) edge=true; }
       if(edge){ const o=i*4; od[o]=LR; od[o+1]=LG; od[o+2]=LB; }
     }
   }
