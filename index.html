@@ -882,9 +882,9 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
   <div id="celebrate-card" style="position:relative;text-align:center;max-width:360px;width:100%;">
     <div id="celebrate-emblem" style="font-size:72px;line-height:1;margin-bottom:18px;filter:drop-shadow(0 0 24px rgba(124,111,255,.8));">🪞</div>
     <div style="font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);margin-bottom:10px;font-weight:600;">Витраж собран</div>
-    <div id="celebrate-title" style="font-size:26px;font-weight:700;color:#fff;margin-bottom:14px;line-height:1.25;">Образ проявлен<br>полностью ✦</div>
-    <div id="celebrate-text" style="font-size:15px;color:rgba(255,255,255,.82);line-height:1.6;margin-bottom:12px;">Ты прошёл весь путь — день за днём, осколок за осколком. Это законченная хроника твоей трансформации.</div>
-    <div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.55;margin-bottom:24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 14px;">✦ Готовый витраж теперь хранится в разделе <b style="color:rgba(255,255,255,.85)">«Собор»</b> — там собираются все твои завершённые витражи.</div>
+    <div id="celebrate-title" style="font-size:26px;font-weight:700;color:#fff;margin-bottom:14px;line-height:1.25;">Ты дошёл<br>до конца ✦</div>
+    <div id="celebrate-text" style="font-size:15px;color:rgba(255,255,255,.86);line-height:1.65;margin-bottom:12px;">Каждый осколок здесь — это твой день, твоё усилие, твой выбор не сдаваться. Ты собрал этот образ сам, шаг за шагом. Это не просто картинка — это завершённая хроника твоей трансформации, и она принадлежит только тебе. Мы гордимся тобой ✨</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.55;margin-bottom:24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 14px;">✦ Твой витраж навсегда останется в разделе <b style="color:rgba(255,255,255,.85)">«Собор»</b> — там живут все образы, которые ты проявил. Возвращайся к ним, когда захочешь вспомнить свой путь.</div>
     <button class="btn btn-primary" id="celebrate-share-btn" style="margin-bottom:10px;">✦ Поделиться витражом</button>
     <button class="btn btn-ghost" id="celebrate-continue-btn" style="font-size:14px;padding:12px;color:rgba(255,255,255,.75);">Дальше →</button>
   </div>
@@ -3168,11 +3168,16 @@ function setMemoPrompt(val){
 function closeMemoPromptModal(){ document.getElementById('set-memoprompt-modal').style.display='none'; }
 
 /* ══ ПОДЕЛИТЬСЯ ВИТРАЖОМ ══ */
+// Username основного чат-бота приложения (без @). Используется в ссылках
+// «поделиться», чтобы люди попадали прямо в приложение. При переезде на другой
+// бот достаточно поменять здесь.
+const APP_BOT = 'vitrazhist_bot';
+const APP_BOT_URL = 'https://t.me/'+APP_BOT;
+
 // ── ТЕХПОДДЕРЖКА ──
-// Имя бота поддержки. Замени 'VitrazhSupportBot' на реальный username своего бота
-// (без @). Кнопка открывает чат с ботом; технические данные помогут тебе быстрее
-// разобраться в проблеме пользователя.
-const SUPPORT_BOT = 'VitrazhSupportBot';
+// Username аккаунта/бота поддержки (без @). Кнопка открывает чат с ним;
+// технические данные помогут быстрее разобраться в проблеме пользователя.
+const SUPPORT_BOT = 'ideaname';
 
 function openSupport(){
   // Собираем полезные тех.данные (пользователь может стереть их перед отправкой)
@@ -3199,17 +3204,17 @@ function shareVitrazh(){
   const sphereName=app.sphereName||'свою цель';
   const text=`Я собираю витраж «${sphereName}» в приложении Витраж — уже ${done} из ${total} осколков! Каждое выполненное действие открывает кусочек тайного образа. ✦`;
   const tg=window.Telegram&&window.Telegram.WebApp;
-  // В Telegram — нативное окно «Поделиться»
+  // В Telegram — нативное окно «Поделиться» со ссылкой на бот приложения
   if(tg && tg.openTelegramLink){
-    const url='https://t.me/share/url?url='+encodeURIComponent('https://t.me/')+'&text='+encodeURIComponent(text);
+    const url='https://t.me/share/url?url='+encodeURIComponent(APP_BOT_URL)+'&text='+encodeURIComponent(text);
     tg.openTelegramLink(url);
     return;
   }
   // Веб — Web Share API, иначе копируем в буфер
   if(navigator.share){
-    navigator.share({text}).catch(()=>{});
+    navigator.share({text:text+'\n'+APP_BOT_URL}).catch(()=>{});
   } else if(navigator.clipboard){
-    navigator.clipboard.writeText(text).then(()=>alert('Текст скопирован — можно вставить и поделиться!')).catch(()=>alert(text));
+    navigator.clipboard.writeText(text+'\n'+APP_BOT_URL).then(()=>alert('Текст скопирован — можно вставить и поделиться!')).catch(()=>alert(text));
   } else {
     alert(text);
   }
@@ -3519,7 +3524,7 @@ function showCelebration(){
   if(!modal) return;
   // Название завершённого витража в заголовке
   const t=document.getElementById('celebrate-title');
-  if(t) t.innerHTML='Образ проявлен<br>полностью ✦';
+  if(t) t.innerHTML='Ты дошёл<br>до конца ✦';
   modal.style.display='flex'; // инлайновый display:none иначе перебивает класс .show
   modal.classList.add('show');
   vibrate('heavy');
@@ -4727,7 +4732,7 @@ function renderVitrazhToCanvas(v){
 // (чаты, соцсети, сторис и т.д.). Если поделиться файлом нельзя — запасной текст.
 function shareCompletedVitrazh(v){
   const sphereName=v.name||v.sphereName||'витраж';
-  const text=`Мой витраж «${sphereName}» собран целиком! ✦ Собери свой в приложении Витраж`;
+  const text=`Мой витраж «${sphereName}» собран целиком! ✦ Собери свой в приложении Витраж: ${APP_BOT_URL}`;
   toast('Готовлю изображение…');
   renderVitrazhToCanvas(v).then(cv=>{
     if(!cv || !cv.toBlob){ _shareFallback(text); return; }
@@ -4753,7 +4758,7 @@ function shareCompletedVitrazh(v){
 function _shareFallback(text){
   const tg=window.Telegram&&window.Telegram.WebApp;
   if(tg && tg.openTelegramLink){
-    tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent('https://t.me/')+'&text='+encodeURIComponent(text));
+    tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(APP_BOT_URL)+'&text='+encodeURIComponent(text));
     hideToast(); return;
   }
   if(navigator.share){ navigator.share({text}).then(hideToast).catch(()=>_copyText(text)); return; }
