@@ -340,6 +340,16 @@ html.has-saved-progress #ob-screen{display:none !important;}
 html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 #boot-splash svg{width:72px;height:72px;filter:drop-shadow(0 0 22px rgba(124,111,255,.5));animation:bootpulse 1.4s ease-in-out infinite;}
 @keyframes bootpulse{0%,100%{opacity:.7;transform:scale(.96)}50%{opacity:1;transform:scale(1.02)}}
+/* ══ Празднование завершения витража ══ */
+@keyframes celebFade{from{opacity:0}to{opacity:1}}
+@keyframes celebEmblem{0%{opacity:0;transform:scale(.3) rotate(-12deg)}55%{opacity:1;transform:scale(1.18) rotate(4deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes celebCard{0%{opacity:0;transform:translateY(24px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes celebGlow{0%,100%{filter:drop-shadow(0 0 18px rgba(124,111,255,.6))}50%{filter:drop-shadow(0 0 34px rgba(124,111,255,1))}}
+@keyframes confettiFall{0%{opacity:0;transform:translateY(-40px) rotate(0)}10%{opacity:1}100%{opacity:0;transform:translateY(105vh) rotate(720deg)}}
+#celebrate-modal.show{display:flex;animation:celebFade .4s ease;}
+#celebrate-modal.show #celebrate-emblem{animation:celebEmblem .9s cubic-bezier(.2,.8,.3,1.2), celebGlow 2.6s ease-in-out 1s infinite;}
+#celebrate-modal.show #celebrate-card{animation:celebCard .7s ease .15s both;}
+.confetti-piece{position:absolute;top:-20px;width:9px;height:14px;border-radius:2px;will-change:transform,opacity;}
 </style>
 </head>
 <body>
@@ -463,7 +473,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <button class="btn btn-ghost" id="add-action-btn" onclick="addActionField(true)" style="margin-top:0;font-size:13px;padding:10px;">+ Добавить действие</button>
 
     <!-- Подсказки действий для выбранной сферы -->
-    <div id="act-suggest-wrap" style="display:none;flex:1 1 auto;min-height:0;flex-direction:column;">
+    <div id="act-suggest-wrap" style="display:none;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden;">
       <div id="act-suggest-label" style="font-size:12px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-shrink:0;">
         <span style="color:var(--accent2);">✦</span> Идеи — нажми, чтобы добавить · листай вбок ↔
       </div>
@@ -473,8 +483,8 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       </div>
     </div>
 
-    <button class="btn btn-primary" onclick="nextOb()" style="margin-top:auto;flex-shrink:0;">Дальше →</button>
-    <div id="ob2-hint" style="display:none;font-size:13px;color:var(--rose);text-align:center;margin-top:8px;flex-shrink:0;line-height:1.5;">Добавь хотя бы одно действие — из подсказок ниже или своё. Это то, что будет открывать осколки твоего витража ✦</div>
+    <div id="ob2-hint" style="display:none;font-size:13px;color:var(--rose);text-align:center;flex-shrink:0;line-height:1.45;padding:8px 10px;margin-top:6px;background:rgba(232,122,160,.1);border:1px solid rgba(232,122,160,.3);border-radius:10px;">Добавь хотя бы одно действие — из подсказок выше или своё ✦</div>
+    <button class="btn btn-primary" onclick="nextOb()" style="margin-top:10px;flex-shrink:0;">Дальше →</button>
     <div class="ob-dots" style="flex-shrink:0;"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot on"></div><div class="ob-dot"></div></div>
   </div>
 
@@ -816,6 +826,20 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 </div>
 
 <!-- ══ COMPLETION MODAL ══ -->
+<!-- ══ ФИНАЛЬНОЕ ПРАЗДНОВАНИЕ ЗАВЕРШЕНИЯ ВИТРАЖА ══ -->
+<div id="celebrate-modal" style="display:none;position:fixed;inset:0;z-index:2350;align-items:center;justify-content:center;padding:24px;overflow:hidden;background:radial-gradient(circle at 50% 40%, rgba(124,111,255,.28), rgba(4,6,15,.94) 70%);">
+  <div id="celebrate-rays" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
+  <div id="celebrate-card" style="position:relative;text-align:center;max-width:360px;width:100%;">
+    <div id="celebrate-emblem" style="font-size:72px;line-height:1;margin-bottom:18px;filter:drop-shadow(0 0 24px rgba(124,111,255,.8));">🪞</div>
+    <div style="font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);margin-bottom:10px;font-weight:600;">Витраж собран</div>
+    <div id="celebrate-title" style="font-size:26px;font-weight:700;color:#fff;margin-bottom:14px;line-height:1.25;">Образ проявлен<br>полностью ✦</div>
+    <div id="celebrate-text" style="font-size:15px;color:rgba(255,255,255,.82);line-height:1.6;margin-bottom:12px;">Ты прошёл весь путь — день за днём, осколок за осколком. Это законченная хроника твоей трансформации.</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.55;margin-bottom:24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 14px;">✦ Готовый витраж теперь хранится в разделе <b style="color:rgba(255,255,255,.85)">«Собор»</b> — там собираются все твои завершённые витражи.</div>
+    <button class="btn btn-primary" id="celebrate-share-btn" style="margin-bottom:10px;">✦ Поделиться витражом</button>
+    <button class="btn btn-ghost" id="celebrate-continue-btn" style="font-size:14px;padding:12px;color:rgba(255,255,255,.75);">Дальше →</button>
+  </div>
+</div>
+
 <div id="completion-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2300;align-items:center;justify-content:center;padding:24px;">
   <div style="background:var(--bg2);border-radius:24px;padding:24px;padding-bottom:calc(24px + var(--pad-bottom));width:100%;max-width:380px;max-height:90vh;overflow-y:auto;">
     <div style="text-align:center;margin-bottom:20px;">
@@ -2107,8 +2131,9 @@ function paintMaskCanvas(cv, revealed, partial){
   ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
   const cw=cv.width, ch=cv.height;
 
-  // 1) Тёмный фон
-  ctx.fillStyle='#04060f'; ctx.fillRect(0,0,cw,ch);
+  const light = _isLightTheme();
+  // 1) Фон под витражом — под тему
+  ctx.fillStyle = light ? '#eceaf4' : '#04060f'; ctx.fillRect(0,0,cw,ch);
 
   if(!_maskAssets.base || !_maskAssets.idData){ return; }
 
@@ -2129,7 +2154,9 @@ function paintMaskCanvas(cv, revealed, partial){
   const od=out.data, idd=idmap.data;
   const colMap=new Int32Array(cw);
   for(let x=0;x<cw;x++){ let mx=(x*mw/cw)|0; if(mx>=mw)mx=mw-1; colMap[x]=mx; }
-  const DR=30, DG=33, DB=48; // цвет тёмного «непроявленного» стекла
+  // Цвет «непроявленного» стекла — под тему. В светлой теме такой же светло-серый,
+  // как у осколков в сферах без изображения (#c8c6d6), в тёмной — прежний тёмный.
+  const DR = light ? 200 : 30, DG = light ? 198 : 33, DB = light ? 214 : 48;
   // Уровень проявления по id осколка (1..15) → level
   const levelById=new Float32Array(16);
   for(const k in partMap){ const sid=(+k)+1; if(sid>=1&&sid<=15) levelById[sid]=Math.max(0,Math.min(1,partMap[k])); }
@@ -3453,15 +3480,89 @@ function closeMemo(){
     const cins=document.getElementById('comp-insight'); if(cins) cins.value='';
     const caw=document.getElementById('comp-audio-wrap'); if(caw) caw.style.display='none';
     const cpp=document.getElementById('comp-photo-preview'); if(cpp) cpp.style.display='none';
-    setTimeout(()=>{
-      document.getElementById('comp-title').textContent='Витраж «'+app.sphereName+'» завершён!';
-      document.getElementById('completion-modal').style.display='flex';
-    }, 350);
+    // Сначала — финальное празднование, затем (по «Дальше») форма инсайта
+    setTimeout(()=>{ showCelebration(); }, 300);
   }
 }
+
+/* ══ ФИНАЛЬНОЕ ПРАЗДНОВАНИЕ ══ */
+function showCelebration(){
+  const modal=document.getElementById('celebrate-modal');
+  if(!modal) return;
+  // Название завершённого витража в заголовке
+  const t=document.getElementById('celebrate-title');
+  if(t) t.innerHTML='Образ проявлен<br>полностью ✦';
+  modal.style.display='flex'; // инлайновый display:none иначе перебивает класс .show
+  modal.classList.add('show');
+  vibrate('heavy');
+  spawnConfetti();
+  // Кнопки
+  const shareBtn=document.getElementById('celebrate-share-btn');
+  const contBtn=document.getElementById('celebrate-continue-btn');
+  if(shareBtn) shareBtn.onclick=()=>{
+    // Делимся только что завершённым витражом (последний в completed)
+    const v=(app.completed&&app.completed.length)?app.completed[app.completed.length-1]:null;
+    if(v && typeof shareCompletedVitrazh==='function') shareCompletedVitrazh(v);
+  };
+  if(contBtn) contBtn.onclick=()=>{ closeCelebration(); };
+}
+function closeCelebration(){
+  const modal=document.getElementById('celebrate-modal');
+  if(modal){ modal.classList.remove('show'); modal.style.display='none'; }
+  const rays=document.getElementById('celebrate-rays'); if(rays) rays.innerHTML='';
+  // Переходим к форме инсайта
+  setTimeout(()=>{
+    document.getElementById('comp-title').textContent='Витраж «'+app.sphereName+'» завершён!';
+    document.getElementById('completion-modal').style.display='flex';
+  }, 250);
+}
+function spawnConfetti(){
+  const box=document.getElementById('celebrate-rays');
+  if(!box) return;
+  box.innerHTML='';
+  const colors=['#7c6fff','#b794ff','#5ff0d8','#ff9cc0','#f0c060','#6f9bff'];
+  const N=46;
+  for(let i=0;i<N;i++){
+    const p=document.createElement('div');
+    p.className='confetti-piece';
+    p.style.left=(Math.random()*100)+'%';
+    p.style.background=colors[i%colors.length];
+    const dur=(2.4+Math.random()*1.8);
+    const delay=(Math.random()*0.8);
+    p.style.animation=`confettiFall ${dur}s linear ${delay}s forwards`;
+    p.style.width=(6+Math.random()*6)+'px';
+    p.style.height=(10+Math.random()*8)+'px';
+    if(Math.random()<0.4) p.style.borderRadius='50%';
+    box.appendChild(p);
+  }
+  // Убираем конфетти по завершении, чтобы не копились
+  setTimeout(()=>{ if(box) box.innerHTML=''; }, 6000);
+}
+// Нужно ли спрашивать подтверждение удаления заметки осколка.
+// Правило: если осколок открыт СЕГОДНЯ (редактируется в тот же день) —
+// не спрашиваем (пользователь только что это добавил). Если осколок открыт
+// раньше (вчера и ранее) — спрашиваем, чтобы не потерять старую запись случайно.
+function shardEditedToday(idx){
+  const ds = app.shardDates && app.shardDates[idx];
+  if(!ds) return true; // нет даты — считаем «сегодня», не мешаем удалять
+  // Формат даты: «ДД.ММ.ГГГГ ЧЧ:ММ»
+  const m = String(ds).match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})/);
+  if(!m) return true;
+  let [_, d, mo, y] = m; y = y.length===2 ? ('20'+y) : y;
+  const shardDay = d.padStart(2,'0')+'.'+mo.padStart(2,'0')+'.'+y;
+  const now = new Date();
+  const today = String(now.getDate()).padStart(2,'0')+'.'+String(now.getMonth()+1).padStart(2,'0')+'.'+now.getFullYear();
+  return shardDay===today;
+}
+function confirmDeleteIfOld(idx, what){
+  // Сегодня — без вопроса; раньше — спрашиваем
+  if(shardEditedToday(idx)) return true;
+  return confirm('Удалить '+what+' из этой заметки?');
+}
+
 function deleteMemoAudio(){  const idx=app.currentMemoIdx;
   if(idx<0) return;
-  if(!confirm('Удалить голосовое сообщение из этой заметки?')) return;
+  if(!confirmDeleteIfOld(idx, 'голосовое сообщение')) return;
   // Сбрасываем только что записанное (ещё не сохранённое) аудио
   app.memoAudioUrl=null;
   _memoAudioChanged=true; // удаление — это изменение: при сохранении не вернём старое
@@ -3487,7 +3588,7 @@ function deleteMemoAudio(){  const idx=app.currentMemoIdx;
 function deleteMemoText(){
   const idx=app.currentMemoIdx;
   if(idx<0||!app.shardMemos[idx]) return;
-  if(!confirm('Удалить текстовый комментарий из этой заметки?')) return;
+  if(!confirmDeleteIfOld(idx, 'текстовый комментарий')) return;
   app.shardMemos[idx].text=null;
   // Очищаем и поле редактирования, чтобы при сохранении текст не вернулся
   const mt=document.getElementById('memo-text'); if(mt) mt.value='';
@@ -3501,7 +3602,7 @@ function deleteMemoText(){
 function deleteMemoPhotoSaved(){
   const idx=app.currentMemoIdx;
   if(idx<0||!app.shardMemos[idx]) return;
-  if(!confirm('Удалить фотографию из этой заметки?')) return;
+  if(!confirmDeleteIfOld(idx, 'фотографию')) return;
   app.shardMemos[idx].photo=null;
   app.memoPhotoData=null;
   _memoPhotoChanged=true; // удаление — это изменение: при сохранении не вернём старое
@@ -4253,6 +4354,16 @@ function createGalleryCard(v){
     histPanel.style.display='none';
     const memos=v.shardMemos.map((m,i)=>({m,i,date:v.shardDates?v.shardDates[i]:null}))
       .filter(x=>x.m&&(x.m.text||x.m.photo||x.m.audioUrl));
+    // Хронологический порядок по дате открытия осколка (осколки открываются
+    // не по порядку номеров, а случайно), формат «ДД.ММ.ГГГГ ЧЧ:ММ».
+    const parseRuDateH=(s)=>{
+      if(!s) return 0;
+      const mm=String(s).match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})(?:[ ,]+(\d{1,2}):(\d{2}))?/);
+      if(!mm) return 0;
+      let [_,d,mo,y,h,mi]=mm; y=y.length===2?('20'+y):y;
+      return new Date(+y,+mo-1,+d,+(h||0),+(mi||0)).getTime();
+    };
+    memos.sort((a,b)=>parseRuDateH(a.date)-parseRuDateH(b.date));
     if(memos.length===0){
       histBtn.textContent='Нет заметок';
       histBtn.disabled=true;
