@@ -882,8 +882,8 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
   <div id="celebrate-card" style="position:relative;text-align:center;max-width:360px;width:100%;">
     <div id="celebrate-emblem" style="font-size:72px;line-height:1;margin-bottom:18px;filter:drop-shadow(0 0 24px rgba(124,111,255,.8));">🪞</div>
     <div style="font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);margin-bottom:10px;font-weight:600;">Витраж собран</div>
-    <div id="celebrate-title" style="font-size:26px;font-weight:700;color:#fff;margin-bottom:14px;line-height:1.25;">Ты дошёл<br>до конца ✦</div>
-    <div id="celebrate-text" style="font-size:15px;color:rgba(255,255,255,.86);line-height:1.65;margin-bottom:12px;">Каждый осколок здесь — это твой день, твоё усилие, твой выбор не сдаваться. Ты собрал этот образ сам, шаг за шагом. Это не просто картинка — это завершённая хроника твоей трансформации, и она принадлежит только тебе. Мы гордимся тобой ✨</div>
+    <div id="celebrate-title" style="font-size:26px;font-weight:700;color:#fff;margin-bottom:14px;line-height:1.25;">Твой образ<br>проявлен ✦</div>
+    <div id="celebrate-text" style="font-size:15px;color:rgba(255,255,255,.86);line-height:1.65;margin-bottom:12px;">Каждый осколок здесь — это твой день, твоё усилие, твой выбор не сдаваться. Ты собрал этот образ сам, шаг за шагом. Это не просто картинка — это завершённая хроника твоей трансформации, и она принадлежит только тебе. Мы искренне гордимся тобой ✨</div>
     <div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.55;margin-bottom:24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 14px;">✦ Твой витраж навсегда останется в разделе <b style="color:rgba(255,255,255,.85)">«Собор»</b> — там живут все образы, которые ты проявил. Возвращайся к ним, когда захочешь вспомнить свой путь.</div>
     <button class="btn btn-primary" id="celebrate-share-btn" style="margin-bottom:10px;">✦ Поделиться витражом</button>
     <button class="btn btn-ghost" id="celebrate-continue-btn" style="font-size:14px;padding:12px;color:rgba(255,255,255,.75);">Дальше →</button>
@@ -2158,9 +2158,14 @@ function loadMaskAssets(preset, cb){
 
 function buildVitrazhMaskCanvas(revealed, W, H, preset, forPreview, partial){
   const cv=document.createElement('canvas');
-  // Рендерим в высоком разрешении для чёткости
+  // Рендерим в высоком разрешении для чёткости, но не выше родного разрешения
+  // картинки-основы (864×1080) — иначе просто растягиваем и мылим детали.
   const dpr=Math.min(window.devicePixelRatio||1, 2.5);
-  cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  const srcW=(_maskAssets&&_maskAssets.w)||864;
+  let pxW=Math.round(W*dpr);
+  if(srcW && pxW>srcW) pxW=srcW; // не превышаем родное разрешение
+  const ratio = pxW/(W||1);
+  cv.width=pxW; cv.height=Math.round(H*ratio);
   cv.style.width='100%'; cv.style.display='block'; cv.style.borderRadius=forPreview?'8px':'12px';
   paintMaskCanvas(cv, revealed, partial);
   return cv;
@@ -2168,9 +2173,12 @@ function buildVitrazhMaskCanvas(revealed, W, H, preset, forPreview, partial){
 
 // Перерисовка существующего canvas НА МЕСТЕ (без пересоздания DOM) — убирает мерцание
 function redrawMaskCanvas(cv, revealed, W, H, preset, partial){
-  // Размер не меняем, если он уже корректный (ширина по DPR)
   const dpr=Math.min(window.devicePixelRatio||1, 2.5);
-  const wantW=Math.round(W*dpr), wantH=Math.round(H*dpr);
+  const srcW=(_maskAssets&&_maskAssets.w)||864;
+  let pxW=Math.round(W*dpr);
+  if(srcW && pxW>srcW) pxW=srcW;
+  const ratio = pxW/(W||1);
+  const wantW=pxW, wantH=Math.round(H*ratio);
   if(cv.width!==wantW || cv.height!==wantH){ cv.width=wantW; cv.height=wantH; }
   paintMaskCanvas(cv, revealed, partial);
 }
@@ -2214,19 +2222,41 @@ function paintMaskCanvas(cv, revealed, partial){
   // Цвет свинцовой линии
   const LR = light ? 152 : 8, LG = light ? 150 : 9, LB = light ? 170 : 16;
   const npx=mw*mh;
-  // 1) Затемняем закрытые/частичные осколки
-  for(let p=0;p<npx;p++){
-    const sid=idd[p*4];
-    if(sid>=1 && revealed[sid-1]) continue;
-    const oi=p*4;
-    const lv = sid>=1 ? levelById[sid] : 0;
-    if(lv>0){
-      const t=lv;
-      od[oi]   = od[oi]  *t + DR*(1-t);
-      od[oi+1] = od[oi+1]*t + DG*(1-t);
-      od[oi+2] = od[oi+2]*t + DB*(1-t);
-    } else {
-      od[oi]=DR; od[oi+1]=DG; od[oi+2]=DB;
+  // Определяем «золотую» линию: тёплый яркий пиксель (R заметно больше B).
+  const isGold=(r,g,b)=> (r>120 && r>b+35 && g>b+10 && r>=g-10);
+  // Есть ли рядом (в пределах 1px) ОТКРЫТЫЙ осколок — тогда золотую линию сохраняем,
+  // чтобы контур открытого осколка был цельным (не «съеденным» соседним тёмным).
+  const bordersOpen=(x,y)=>{
+    for(let dy=-1;dy<=1;dy++){
+      for(let dx=-1;dx<=1;dx++){
+        if(!dx&&!dy) continue;
+        const nx=x+dx, ny=y+dy;
+        if(nx<0||ny<0||nx>=mw||ny>=mh) continue;
+        const ns=idd[(ny*mw+nx)*4];
+        if(ns>=1 && revealed[ns-1]) return true;
+      }
+    }
+    return false;
+  };
+  // 1) Затемняем закрытые/частичные осколки (сохраняя золотые линии у открытых)
+  for(let y=0;y<mh;y++){
+    for(let x=0;x<mw;x++){
+      const p=y*mw+x;
+      const sid=idd[p*4];
+      if(sid>=1 && revealed[sid-1]) continue; // открытый осколок — как есть
+      const oi=p*4;
+      // Золотую линию, граничащую с ОТКРЫТЫМ осколком, не затемняем —
+      // это сохраняет цельный золотой контур проявленного осколка.
+      if(isGold(od[oi],od[oi+1],od[oi+2]) && bordersOpen(x,y)) continue;
+      const lv = sid>=1 ? levelById[sid] : 0;
+      if(lv>0){
+        const t=lv;
+        od[oi]   = od[oi]  *t + DR*(1-t);
+        od[oi+1] = od[oi+1]*t + DG*(1-t);
+        od[oi+2] = od[oi+2]*t + DB*(1-t);
+      } else {
+        od[oi]=DR; od[oi+1]=DG; od[oi+2]=DB;
+      }
     }
   }
   // 2) Свинцовые линии рисуем ТОЛЬКО между двумя закрытыми осколками.
@@ -3530,7 +3560,7 @@ function showCelebration(){
   if(!modal) return;
   // Название завершённого витража в заголовке
   const t=document.getElementById('celebrate-title');
-  if(t) t.innerHTML='Ты дошёл<br>до конца ✦';
+  if(t) t.innerHTML='Твой образ<br>проявлен ✦';
   modal.style.display='flex'; // инлайновый display:none иначе перебивает класс .show
   modal.classList.add('show');
   vibrate('heavy');
@@ -4828,18 +4858,47 @@ function toast(msg){
 
 // Прокручивает к комментарию осколка в списке «История осколков» и подсвечивает его.
 // Используется на экране просмотра завершённого витража (тап по осколку).
+// Своя анимация прокрутки с короткой длительностью — быстрее, чем стандартный
+// browser smooth-scroll (у которого длительность не регулируется).
 function scrollToArchivedMemo(idx){
   const item = document.getElementById('fs-memo-'+idx);
   if(!item) return false;
-  item.scrollIntoView({behavior:'smooth', block:'center'});
-  // Подсветка
-  item.style.borderColor = 'var(--accent2)';
-  item.style.boxShadow = '0 0 0 2px rgba(124,111,255,.35)';
-  setTimeout(()=>{
-    item.style.borderColor = '';
-    item.style.boxShadow = '';
-  }, 1600);
+  // Ищем прокручиваемый контейнер (оверлей просмотра витража)
+  let sc = item.parentElement;
+  while(sc && sc!==document.body){
+    const oy = getComputedStyle(sc).overflowY;
+    if((oy==='auto'||oy==='scroll') && sc.scrollHeight>sc.clientHeight) break;
+    sc = sc.parentElement;
+  }
+  const doHighlight=()=>{
+    item.style.borderColor = 'var(--accent2)';
+    item.style.boxShadow = '0 0 0 2px rgba(124,111,255,.35)';
+    setTimeout(()=>{ item.style.borderColor=''; item.style.boxShadow=''; }, 1600);
+  };
+  if(sc && sc!==document.body){
+    // Целевая позиция: центрируем элемент в контейнере
+    const target = sc.scrollTop + (item.getBoundingClientRect().top - sc.getBoundingClientRect().top) - (sc.clientHeight/2 - item.offsetHeight/2);
+    _animateScroll(sc, Math.max(0,target), 320, doHighlight); // 320мс — быстро, но плавно
+  } else {
+    item.scrollIntoView({behavior:'smooth', block:'center'});
+    doHighlight();
+  }
   return true;
+}
+// Плавная прокрутка контейнера к позиции за заданное время (мс)
+function _animateScroll(el, to, duration, done){
+  const start = el.scrollTop;
+  const diff = to - start;
+  if(Math.abs(diff)<2){ el.scrollTop=to; if(done)done(); return; }
+  const t0 = performance.now();
+  const ease = (p)=> p<0.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2; // easeInOutQuad
+  function step(now){
+    const p = Math.min(1, (now-t0)/duration);
+    el.scrollTop = start + diff*ease(p);
+    if(p<1) requestAnimationFrame(step);
+    else if(done) done();
+  }
+  requestAnimationFrame(step);
 }
 
 function appendFullscreenExtras(v, overlay){
