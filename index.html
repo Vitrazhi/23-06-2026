@@ -523,15 +523,17 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <button class="btn btn-ghost" id="add-action-btn" onclick="addActionField(true)" style="margin-top:0;font-size:13px;padding:10px;">+ Добавить действие</button>
 
     <!-- Подсказки действий для выбранной сферы -->
-    <div id="act-suggest-wrap" style="display:none;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden;">
+    <div id="act-suggest-wrap" style="display:none;flex:0 1 auto;min-height:0;flex-direction:column;overflow:hidden;margin-top:2px;">
       <div id="act-suggest-label" style="font-size:12px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-shrink:0;">
         <span style="color:var(--accent2);">✦</span> Идеи — нажми, чтобы добавить · листай вбок ↔
       </div>
-      <div style="position:relative;flex:1 1 auto;min-height:52px;">
+      <div id="act-suggest-viewport" style="position:relative;flex:0 0 auto;min-height:46px;">
         <div id="act-suggest-chips" class="sugg-carousel"></div>
         <div class="sugg-fade" aria-hidden="true"></div>
       </div>
     </div>
+
+    <div class="ob-spacer" style="flex:0 1 auto;min-height:14px;max-height:32px;"></div>
 
     <div id="ob2-hint" style="display:none;font-size:13px;color:var(--rose);text-align:center;flex-shrink:0;line-height:1.45;padding:8px 10px;margin-top:6px;background:rgba(232,122,160,.1);border:1px solid rgba(232,122,160,.3);border-radius:10px;">Добавь хотя бы одно действие — из подсказок выше или своё ✦</div>
     <button class="btn btn-primary" onclick="nextOb()" style="margin-top:10px;flex-shrink:0;">Дальше →</button>
@@ -716,13 +718,14 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
         <div class="stat-card"><div class="sv ac" id="p-sh">30</div><div class="sn">Осталось</div></div>
       </div>
       <div class="premium-banner">
-        <div style="font-size:15px;font-weight:600;margin-bottom:5px;">✦ Мастерская Тиффани</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:13px;line-height:1.55;">Безлимит витражей, редкие текстуры и личный ИИ-наставник.</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:5px;">✦ Полный доступ ко всему</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:13px;line-height:1.55;">Открой все возможности приложения.</div>
         <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;">
-          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Безлимит витражей и сфер</div>
-          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Текстуры: Тиффани, Космос, Мороз</div>
-          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>ИИ-наставник с личными советами</div>
-          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Загрузка своих изображений</div>
+          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Безлимит витражей одновременно</div>
+          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Безлимит фото и аудио в заметках</div>
+          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Статистика и аналитика пути</div>
+          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Витраж из своего фото</div>
+          <div style="font-size:13px;color:var(--text2);display:flex;gap:8px;"><span style="color:var(--accent2);">✦</span>Эксклюзивные витражи</div>
         </div>
         <button class="btn btn-primary" onclick="switchTab('shop',null)" style="font-size:14px;padding:13px;">Открыть в Лавке ✦</button>
       </div>
@@ -1695,7 +1698,7 @@ function startNewVitrazh(){
   if(!isPremium() && activeVitrazhiCount() >= FREE_LIMITS.maxActiveVitrazhi){
     showPremiumGate(
       'Несколько витражей одновременно',
-      'В бесплатной версии можно вести один витраж за раз. Заверши текущий — или открой безлимит витражей в Мастерской Тиффани, чтобы собирать несколько параллельно.'
+      'В бесплатной версии можно вести один витраж за раз. Заверши текущий — или открой безлимит витражей в Лавке, чтобы собирать несколько параллельно.'
     );
     return;
   }
@@ -2407,7 +2410,7 @@ function openCustomVitrazh(){
   if(!isPremium()){
     showPremiumGate(
       'Витраж из своего фото',
-      'Превращай любое своё изображение в настоящий витраж со стеклянной фактурой. Функция доступна в Мастерской Тиффани.'
+      'Превращай любое своё изображение в настоящий витраж со стеклянной фактурой. Функция доступна по подписке — открой её в Лавке.'
     );
     return;
   }
@@ -3394,7 +3397,7 @@ function renderStats(){
   if(!isPremium()){
     body.innerHTML = paywallCard(
       'Статистика и аналитика пути',
-      'Отслеживай серии дней, динамику, тепловую карту активности и собранные витражи на красивом экране. Доступно в Мастерской Тиффани.'
+      'Отслеживай серии дней, динамику, тепловую карту активности и собранные витражи на красивом экране. Доступно по подписке — открой в Лавке.'
     );
     return;
   }
@@ -3586,7 +3589,7 @@ function renderShop(){
     <div style="padding:4px 18px 0;">
       <div style="background:linear-gradient(135deg,#7c6fff,#5f4bd8 60%,#3b2b8a);border-radius:20px;padding:22px 20px;position:relative;overflow:hidden;margin-bottom:8px;box-shadow:0 12px 40px rgba(124,111,255,.35);">
         <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%);"></div>
-        <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:600;margin-bottom:8px;">✦ Мастерская Тиффани</div>
+        <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:600;margin-bottom:8px;">✦ Полный доступ</div>
         <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:10px;line-height:1.3;">${prem?'Подписка активна ✦':'Полный доступ ко всему'}</div>
         <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
           ${['Безлимит витражей одновременно','Безлимит фото и аудио в заметках','Статистика и аналитика пути','Витраж из своего фото','Эксклюзивные витражи'].map(f=>`<div style="font-size:13px;color:rgba(255,255,255,.9);display:flex;gap:8px;align-items:flex-start;"><span>✦</span><span>${f}</span></div>`).join('')}
@@ -3594,7 +3597,7 @@ function renderShop(){
         ${prem ? `<button class="btn" onclick="togglePremiumTest()" style="width:100%;background:rgba(255,255,255,.18);color:#fff;font-size:13px;padding:12px;">Активна · управлять</button>` : `
         <div style="display:flex;gap:8px;">
           <button class="btn" onclick="buySubscription('month')" style="flex:1;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:13px;padding:12px;">199 ₽ / мес</button>
-          <button class="btn" onclick="buySubscription('year')" style="flex:1.3;background:#fff;color:#5f4bd8;font-weight:700;font-size:13px;padding:12px;">1490 ₽ / год<div style="font-size:10px;font-weight:500;opacity:.7;">выгодно −38%</div></button>
+          <button class="btn" onclick="buySubscription('year')" style="flex:1.3;background:#fff;color:#5f4bd8;font-weight:700;font-size:13px;padding:12px;">2780 ₽ / год<div style="font-size:10px;font-weight:500;opacity:.7;">выгодно −16%</div></button>
         </div>`}
       </div>
     </div>`;
@@ -3621,6 +3624,7 @@ function renderShop(){
   if(carousel){
     carousel.addEventListener('touchstart', e=>{ e.stopPropagation(); }, {passive:true});
     carousel.addEventListener('touchmove', e=>{ e.stopPropagation(); }, {passive:true});
+    carousel.addEventListener('touchend', e=>{ e.stopPropagation(); }, {passive:true});
   }
 }
 function openShopItem(id){
@@ -4052,7 +4056,7 @@ function shareVitrazh(){
   const done=app.shards.filter(Boolean).length;
   const total=TOTAL;
   const sphereName=app.sphereName||'свою цель';
-  const text=`Я собираю витраж «${sphereName}» в приложении Витраж — уже ${done} из ${total} осколков! Каждое выполненное действие открывает кусочек тайного образа. ✦`;
+  const text=`Я собираю витраж «${sphereName}» в приложении Витражист — уже ${done} из ${total} осколков! Каждое выполненное действие открывает кусочек тайного образа. ✦`;
   const tg=window.Telegram&&window.Telegram.WebApp;
   // В Telegram — нативное окно «Поделиться» со ссылкой на бот приложения
   if(tg && tg.openTelegramLink){
@@ -4225,17 +4229,21 @@ function renderSuggestChips(){
   const label = document.getElementById('act-suggest-label');
   if(label) label.style.display = actionCount >= 6 ? 'none' : 'flex';
 
-  // Сколько рядов подсказок помещается в доступную высоту.
-  // Чем больше полей действий добавлено — тем меньше места и тем меньше рядов.
+  // Сколько рядов подсказок показать. По умолчанию целимся в 2 ряда (чтобы чипы
+  // занимали больше места и разрыв до кнопки был меньше). При большом числе полей
+  // действий (6-7) ужимаем до 1 ряда, чтобы он гарантированно помещался целиком
+  // и не обрезался. Высоту вьюпорта задаём ТОЧНО кратной высоте ряда — тогда
+  // ни один ряд не режется по горизонтали.
   const ROW_H = 46; // высота ряда чипа + отступ (px)
-  let avail = cont.clientHeight;
-  if(!avail || avail < ROW_H){
-    // контейнер ещё не измерен (экран мог быть скрыт) — оценим по окну
-    avail = Math.max(ROW_H, Math.min(window.innerHeight*0.42, 380));
-  }
-  let rowCount = Math.max(1, Math.floor(avail / ROW_H));
-  rowCount = Math.min(rowCount, 8, sugg.length); // разумный потолок
-  rowCount = Math.max(1, rowCount); // всегда минимум один ряд
+  let rowCount;
+  if(actionCount >= 6) rowCount = 1;
+  else if(actionCount >= 4) rowCount = 2;
+  else rowCount = 3; // мало полей — показываем 3 ряда, чтобы чипы заполняли место и разрыв до кнопки был меньше
+  rowCount = Math.max(1, Math.min(rowCount, sugg.length));
+
+  // Точная высота вьюпорта = целое число рядов (без обрезанных рядов)
+  const vp = document.getElementById('act-suggest-viewport');
+  if(vp){ vp.style.height = (rowCount*ROW_H) + 'px'; vp.style.minHeight = ROW_H + 'px'; }
 
   // Создаём ряды
   const rows=[];
@@ -4514,12 +4522,12 @@ function canAddMedia(type){
   const lim=FREE_LIMITS.mediaFromSecond;
   if(type==='photo' && cnt.photos>=lim.photos){
     showPremiumGate('Лимит фотографий',
-      'В бесплатной версии можно добавить до '+lim.photos+' фото на витраж (начиная со второго). Безлимит фото и аудио — в Мастерской Тиффани.');
+      'В бесплатной версии можно добавить до '+lim.photos+' фото на витраж (начиная со второго). Безлимит фото и аудио — по подписке в Лавке.');
     return false;
   }
   if(type==='audio' && cnt.audios>=lim.audios){
     showPremiumGate('Лимит голосовых',
-      'В бесплатной версии можно добавить до '+lim.audios+' голосовых на витраж (начиная со второго). Безлимит фото и аудио — в Мастерской Тиффани.');
+      'В бесплатной версии можно добавить до '+lim.audios+' голосовых на витраж (начиная со второго). Безлимит фото и аудио — по подписке в Лавке.');
     return false;
   }
   return true;
@@ -5612,7 +5620,7 @@ function renderVitrazhToCanvas(v){
 // (чаты, соцсети, сторис и т.д.). Если поделиться файлом нельзя — запасной текст.
 function shareCompletedVitrazh(v){
   const sphereName=v.name||v.sphereName||'витраж';
-  const text=`Мой витраж «${sphereName}» собран целиком! ✦ Собери свой в приложении Витраж: ${APP_BOT_URL}`;
+  const text=`Мой витраж «${sphereName}» собран целиком! ✦ Собери свой в приложении Витражист: ${APP_BOT_URL}`;
   toast('Готовлю изображение…');
   renderVitrazhToCanvas(v).then(cv=>{
     if(!cv || !cv.toBlob){ _shareFallback(text); return; }
@@ -5864,7 +5872,7 @@ function showArchivedMemo(v, idx){
 
 
 /* ══ СВАЙП ВЛЕВО/ВПРАВО ДЛЯ ПЕРЕКЛЮЧЕНИЯ РАЗДЕЛОВ ══ */
-const TAB_ORDER = ['main','gallery','profile'];
+const TAB_ORDER = ['main','gallery','stats','shop','profile'];
 function currentTabName(){
   for(const t of TAB_ORDER){
     const el=document.getElementById('tab-'+t);
