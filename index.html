@@ -3333,6 +3333,37 @@ function updateUI(){
 
 /* ══ TABS ══ */
 /* ══ РАЗДЕЛ «МОЙ ПУТЬ» (статистика) ══ */
+// Собирает по всем витражам (завершённым + активным + текущему) количество
+// открытых осколков по каждому календарному дню. Формат ключа: 'ГГГГ-ММ-ДД'.
+function collectDailyActivity(){
+  const byDay={};
+  const add=(ru)=>{
+    if(!ru) return;
+    // формат «ДД.ММ.ГГГГ ЧЧ:ММ»
+    const m=String(ru).match(/(\d{1,2})[.\/](\d{1,2})[.\/](\d{2,4})/);
+    if(!m) return;
+    let [_,d,mo,y]=m; y=y.length===2?('20'+y):y;
+    const key=y+'-'+mo.padStart(2,'0')+'-'+d.padStart(2,'0');
+    byDay[key]=(byDay[key]||0)+1;
+  };
+  (app.completed||[]).forEach(v=>{ (v.shardDates||[]).forEach(add); });
+  (app.activeVitrazhi||[]).forEach(v=>{ (v.shardDates||[]).forEach(add); });
+  (app.shardDates||[]).forEach(add);
+  return byDay;
+}
+// Разбивка открытых осколков по сферам (для диаграммы)
+function collectSphereBreakdown(){
+  const bySphere={};
+  const addV=(v)=>{
+    const key=v.sphereName||v.sphere||'—';
+    const n=(v.shards||[]).filter(Boolean).length;
+    if(n>0) bySphere[key]=(bySphere[key]||0)+n;
+  };
+  (app.completed||[]).forEach(addV);
+  (app.activeVitrazhi||[]).forEach(addV);
+  if(app.sphere) addV({sphereName:app.sphereName, sphere:app.sphere, shards:app.shards});
+  return bySphere;
+}
 function computeStats(){
   const completed = app.completed||[];
   const totalVitrazhi = completed.length;
@@ -3363,31 +3394,157 @@ function renderStats(){
   if(!isPremium()){
     body.innerHTML = paywallCard(
       'Статистика и аналитика пути',
-      'Отслеживай серии дней, динамику, собранные витражи и весь свой прогресс на красивом экране. Доступно в Мастерской Тиффани.'
+      'Отслеживай серии дней, динамику, тепловую карту активности и собранные витражи на красивом экране. Доступно в Мастерской Тиффани.'
     );
     return;
   }
   const s=computeStats();
-  const card=(val,label,accent)=>`<div class="stat-card" style="min-width:0;"><div class="sv ${accent||'ac'}" style="font-size:26px;">${val}</div><div class="sn">${label}</div></div>`;
+  const daily=collectDailyActivity();
+  const spheres=collectSphereBreakdown();
+
   body.innerHTML = `
-    <div style="padding:4px 18px 0;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-        ${card(s.totalVitrazhi,'Витражей собрано','teal')}
-        ${card(s.totalShards,'Осколков открыто','ac')}
-        ${card(s.streak+' дн','Серия подряд','gold')}
-        ${card(s.activeDays,'Активных дней','teal')}
-        ${card(s.memoCount,'Заметок оставлено','ac')}
-        ${card(s.light+' ✦','Света накоплено','gold')}
-      </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:15px;margin-bottom:12px;">
-        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;">✦ Витражей в работе сейчас</div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.55;">У тебя ${s.activeInProgress} ${plural(s.activeInProgress,'витраж','витража','витражей')} в работе${isPremium()?'':' (лимит бесплатной версии — 1)'}.</div>
-      </div>
-      <div style="background:linear-gradient(135deg,rgba(124,111,255,.1),rgba(95,240,216,.06));border:1px solid rgba(124,111,255,.25);border-radius:14px;padding:15px;">
-        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;">Твой путь продолжается</div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.55;">${statsEncouragement(s)}</div>
-      </div>
+    <div style="padding:2px 16px 22px;">
+      ${statHero(s)}
+      ${statMiniRow(s)}
+      ${heatmapCard(daily)}
+      ${trendCard(daily)}
+      ${sphereCard(spheres)}
+      ${encourageCard(s)}
     </div>`;
+}
+
+// Крупная карточка серии дней (акцент)
+function statHero(s){
+  return `<div style="background:linear-gradient(135deg,#7c6fff,#5f4bd8 55%,#3b2b8a);border-radius:20px;padding:20px;margin-bottom:12px;position:relative;overflow:hidden;box-shadow:0 12px 36px rgba(124,111,255,.3);">
+    <div style="position:absolute;top:-40px;right:-30px;width:140px;height:140px;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%);"></div>
+    <div style="position:relative;display:flex;align-items:center;gap:16px;">
+      <div style="font-size:44px;">🔥</div>
+      <div>
+        <div style="font-size:40px;font-weight:800;color:#fff;line-height:1;">${s.streak}<span style="font-size:18px;font-weight:600;opacity:.85;"> дн</span></div>
+        <div style="font-size:13px;color:rgba(255,255,255,.85);margin-top:4px;">Серия подряд · продолжай ✦</div>
+      </div>
+    </div>
+  </div>`;
+}
+// Ряд мини-показателей
+function statMiniRow(s){
+  const cell=(v,l)=>`<div style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:13px 8px;text-align:center;min-width:0;">
+    <div style="font-size:22px;font-weight:700;color:var(--text);">${v}</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:3px;line-height:1.25;">${l}</div></div>`;
+  return `<div style="display:flex;gap:9px;margin-bottom:14px;">
+    ${cell(s.totalVitrazhi,'Витражей')}
+    ${cell(s.totalShards,'Осколков')}
+    ${cell(s.activeDays,'Активных дней')}
+    ${cell(s.light+'✦','Света')}
+  </div>`;
+}
+
+// Тепловая карта активности (последние 12 недель) — как в топовых трекерах
+function heatmapCard(daily){
+  const weeks=12, days=weeks*7;
+  const today=new Date(); today.setHours(0,0,0,0);
+  // Находим максимум для нормализации цвета
+  let maxV=1;
+  const vals=[];
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const v=daily[key]||0; vals.push({d,v,key}); if(v>maxV)maxV=v;
+  }
+  // Строим сетку: 7 строк (дни недели) × 12 столбцов (недели)
+  const cell=8, gap=3;
+  const gw=weeks*(cell+gap), gh=7*(cell+gap);
+  let rects='';
+  vals.forEach((it,i)=>{
+    const col=Math.floor(i/7), row=i%7;
+    const x=col*(cell+gap), y=row*(cell+gap);
+    let fill='var(--bg3)';
+    if(it.v>0){
+      const t=Math.min(1, it.v/maxV);
+      // Градация фиолетового: слабый → яркий
+      if(t<0.34) fill='rgba(124,111,255,.35)';
+      else if(t<0.67) fill='rgba(124,111,255,.65)';
+      else fill='rgba(124,111,255,1)';
+    }
+    rects+=`<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2" fill="${fill}"/>`;
+  });
+  return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:15px;margin-bottom:14px;">
+    <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;">Активность за 12 недель</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+      <svg viewBox="0 0 ${gw} ${gh}" width="${gw}" height="${gh}" style="display:block;max-width:100%;height:auto;">${rects}</svg>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-top:10px;font-size:11px;color:var(--text3);">
+      меньше
+      <span style="width:9px;height:9px;border-radius:2px;background:var(--bg3);display:inline-block;"></span>
+      <span style="width:9px;height:9px;border-radius:2px;background:rgba(124,111,255,.35);display:inline-block;"></span>
+      <span style="width:9px;height:9px;border-radius:2px;background:rgba(124,111,255,.65);display:inline-block;"></span>
+      <span style="width:9px;height:9px;border-radius:2px;background:rgba(124,111,255,1);display:inline-block;"></span>
+      больше
+    </div>
+  </div>`;
+}
+
+// График динамики (area chart) за последние 14 дней
+function trendCard(daily){
+  const days=14;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const pts=[];
+  let maxV=1;
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const v=daily[key]||0; pts.push({d,v}); if(v>maxV)maxV=v;
+  }
+  const W=300, H=90, pad=6;
+  const stepX=(W-pad*2)/(days-1);
+  const yFor=(v)=> H-pad - (v/maxV)*(H-pad*2);
+  let line='', area='M '+pad+' '+(H-pad);
+  pts.forEach((p,i)=>{
+    const x=pad+i*stepX, y=yFor(p.v);
+    line+=(i===0?'M':'L')+' '+x.toFixed(1)+' '+y.toFixed(1)+' ';
+    area+=' L '+x.toFixed(1)+' '+y.toFixed(1);
+  });
+  area+=' L '+(pad+(days-1)*stepX)+' '+(H-pad)+' Z';
+  const total=pts.reduce((a,p)=>a+p.v,0);
+  return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:15px;margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:600;color:var(--text);">Динамика · 14 дней</div>
+      <div style="font-size:12px;color:var(--text3);">${total} ${plural(total,'осколок','осколка','осколков')}</div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" style="display:block;">
+      <defs><linearGradient id="trendg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(124,111,255,.45)"/><stop offset="1" stop-color="rgba(124,111,255,0)"/></linearGradient></defs>
+      <path d="${area}" fill="url(#trendg)"/>
+      <path d="${line}" fill="none" stroke="#7c6fff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+  </div>`;
+}
+
+// Разбивка по сферам (горизонтальные полосы)
+function sphereCard(spheres){
+  const entries=Object.entries(spheres).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  if(!entries.length){
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:15px;margin-bottom:14px;">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;">Осколки по сферам</div>
+      <div style="font-size:13px;color:var(--text3);">Пока нет данных — открой первые осколки.</div></div>`;
+  }
+  const max=Math.max(...entries.map(e=>e[1]));
+  const colors=['#7c6fff','#5ff0d8','#ff9cc0','#6f9bff','#f0c060','#b794ff'];
+  const rows=entries.map(([name,v],i)=>{
+    const pct=Math.round(v/max*100);
+    return `<div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--text2);">${name}</span><span style="color:var(--text3);">${v}</span></div>
+      <div style="height:8px;background:var(--bg3);border-radius:5px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${colors[i%colors.length]};border-radius:5px;"></div></div>
+    </div>`;
+  }).join('');
+  return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:15px;margin-bottom:14px;">
+    <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;">Осколки по сферам</div>${rows}</div>`;
+}
+
+function encourageCard(s){
+  return `<div style="background:linear-gradient(135deg,rgba(124,111,255,.1),rgba(95,240,216,.06));border:1px solid rgba(124,111,255,.25);border-radius:14px;padding:15px;">
+    <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;">Твой путь продолжается</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.55;">${statsEncouragement(s)}</div>
+  </div>`;
 }
 function statsEncouragement(s){
   if(s.totalVitrazhi===0 && s.totalShards<3) return 'Ты только в начале пути. Каждый осколок — шаг к первому завершённому образу.';
@@ -3445,7 +3602,7 @@ function renderShop(){
   // Story-карточки (вертикальные прямоугольники)
   const stories = SHOP_ITEMS.map(it=>`
     <div onclick="openShopItem('${it.id}')" style="flex:0 0 auto;width:130px;cursor:pointer;">
-      <div style="width:130px;height:180px;border-radius:16px;background:${it.grad};position:relative;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.3);display:flex;flex-direction:column;justify-content:space-between;padding:12px;">
+      <div style="width:130px;height:180px;border-radius:16px;background:${it.grad};position:relative;overflow:hidden;box-shadow:0 6px 18px rgba(80,60,140,.22);display:flex;flex-direction:column;justify-content:space-between;padding:12px;">
         <div style="align-self:flex-start;background:rgba(0,0,0,.28);border-radius:8px;padding:3px 8px;font-size:10px;color:#fff;font-weight:600;">${it.price}</div>
         <div style="font-size:40px;text-align:center;">${it.emoji}</div>
         <div><div style="font-size:13px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:2px;">${it.title}</div><div style="font-size:11px;color:rgba(255,255,255,.8);">${it.sub}</div></div>
@@ -3454,10 +3611,17 @@ function renderShop(){
 
   body.innerHTML = subCard + `
     <div style="padding:16px 0 6px 18px;font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;">Витражи и курсы</div>
-    <div style="display:flex;gap:12px;overflow-x:auto;padding:0 18px 18px;-webkit-overflow-scrolling:touch;">${stories}</div>
+    <div id="shop-carousel" style="display:flex;gap:12px;overflow-x:auto;padding:0 18px 18px;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;">${stories}</div>
     <div style="padding:0 18px 24px;">
       <div style="font-size:12px;color:var(--text3);line-height:1.5;text-align:center;">Оплата подписки и покупок появится вместе с сервером. Сейчас витрина в режиме предпросмотра.</div>
     </div>`;
+  // Не даём Telegram перехватывать горизонтальный свайп по карусели (иначе он
+  // листает разделы приложения вместо прокрутки товаров).
+  const carousel=document.getElementById('shop-carousel');
+  if(carousel){
+    carousel.addEventListener('touchstart', e=>{ e.stopPropagation(); }, {passive:true});
+    carousel.addEventListener('touchmove', e=>{ e.stopPropagation(); }, {passive:true});
+  }
 }
 function openShopItem(id){
   const it=SHOP_ITEMS.find(x=>x.id===id); if(!it) return;
@@ -3478,19 +3642,123 @@ function showPremiumGate(title, desc){
 function closePremiumGate(){ const m=document.getElementById('premium-gate'); if(m) m.style.display='none'; }
 function premiumGateToShop(){ closePremiumGate(); switchTab('shop',null); }
 
-// Строит нижнюю навигацию (5 разделов) во всех вкладках. Иконки — компактные SVG.
+// Строит нижнюю навигацию (5 разделов) во всех вкладках.
+// Иконки двухслойные: серая по умолчанию (.ic-grey) и цветная при выборе (.ic-color).
+// Каждой навигации даём уникальный суффикс для id градиентов, чтобы они не конфликтовали.
+function navIconSVG(tab, sfx){
+  if(tab==='main'){
+    return `<svg viewBox="0 0 84 110" width="22" height="22" style="display:block;">
+      <defs>
+        <linearGradient id="nv1${sfx}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient>
+        <linearGradient id="nv2${sfx}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient>
+        <linearGradient id="nv3${sfx}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient>
+        <linearGradient id="nv4${sfx}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient>
+      </defs>
+      <g class="ic-grey" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round">
+        <path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z"/>
+        <path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke-width="3"/>
+      </g>
+      <g class="ic-color">
+        <path d="M8,46 Q8,8 42,8 Q76,8 76,46 L76,98 Q76,102 72,102 L12,102 Q8,102 8,98 Z" fill="var(--vmark,#0a0c18)" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M42,12 Q72,12 72,46 L72,50 L42,50 Z" fill="url(#nv1${sfx})"/>
+        <path d="M42,12 L42,50 L12,50 L12,46 Q12,12 42,12 Z" fill="url(#nv2${sfx})"/>
+        <path d="M12,50 L42,50 L42,74 L12,74 Z" fill="url(#nv3${sfx})"/>
+        <path d="M42,50 L72,50 L72,74 L42,74 Z" fill="url(#nv4${sfx})"/>
+        <path d="M12,74 L42,74 L42,98 L12,98 Z" fill="url(#nv1${sfx})" opacity=".85"/>
+        <path d="M42,74 L72,74 L72,98 L42,98 Z" fill="url(#nv2${sfx})" opacity=".88"/>
+        <path d="M42,12 L42,98 M12,50 L72,50 M12,74 L72,74" stroke="var(--vmark,#0a0c18)" stroke-width="3" fill="none"/>
+      </g></svg>`;
+  }
+  if(tab==='gallery'){
+    return `<svg viewBox="0 0 28 28" width="22" height="22" style="display:block;overflow:visible;">
+      <defs>
+        <linearGradient id="cg1${sfx}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient>
+        <linearGradient id="cg2${sfx}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient>
+        <linearGradient id="cg3${sfx}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient>
+        <linearGradient id="cg4${sfx}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#e87aa0"/></linearGradient>
+      </defs>
+      <g class="ic-grey" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z"/><path d="M14 6.6v3"/>
+        <path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z"/>
+        <path d="M5.5 25V14c0-1.4.9-2.3 2-2.8M22.5 25V14c0-1.4-.9-2.3-2-2.8"/>
+        <path d="M3 25h22"/><path d="M8 25V18M20 25V18"/>
+      </g>
+      <g class="ic-color" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M11 13c0-1.7 1.3-3 3-3s3 1.3 3 3v12h-6z" fill="url(#cg2${sfx})" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M5.5 25V13.5c0-1.4.9-2.3 2.5-2.8L8 25z" fill="url(#cg1${sfx})" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M22.5 25V13.5c0-1.4-.9-2.3-2.5-2.8L20 25z" fill="url(#cg3${sfx})" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M14 2.5c1.3 1.1 1.3 3 0 4.1c-1.3-1.1-1.3-3 0-4.1z" fill="url(#cg4${sfx})" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M14 6.6v3" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M3 25h22" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      </g></svg>`;
+  }
+  if(tab==='stats'){
+    // Иконка «Путь»: восходящие столбцы + линия тренда
+    return `<svg viewBox="0 0 28 28" width="22" height="22" style="display:block;overflow:visible;">
+      <defs>
+        <linearGradient id="st1${sfx}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#6f9bff"/><stop offset="1" stop-color="#3b5bd0"/></linearGradient>
+        <linearGradient id="st2${sfx}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient>
+        <linearGradient id="st3${sfx}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient>
+      </defs>
+      <g class="ic-grey" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M4 24h20"/>
+        <path d="M7 24v-6M13 24v-11M19 24v-8"/>
+        <path d="M5 12l5-5 4 3 6-7" opacity=".75"/>
+      </g>
+      <g class="ic-color" stroke-linejoin="round" stroke-linecap="round">
+        <rect x="5" y="18" width="4" height="6" rx="1" fill="url(#st1${sfx})"/>
+        <rect x="11" y="13" width="4" height="11" rx="1" fill="url(#st2${sfx})"/>
+        <rect x="17" y="16" width="4" height="8" rx="1" fill="url(#st3${sfx})"/>
+        <path d="M4 24h20" fill="none" stroke="currentColor" stroke-width="1.7"/>
+        <path d="M5 12l5-5 4 3 6-7" fill="none" stroke="#ff9cc0" stroke-width="1.7"/>
+      </g></svg>`;
+  }
+  if(tab==='shop'){
+    // Иконка «Лавка»: сумка-мешочек
+    return `<svg viewBox="0 0 28 28" width="22" height="22" style="display:block;overflow:visible;">
+      <defs>
+        <linearGradient id="sh1${sfx}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#7c5cf0"/></linearGradient>
+        <linearGradient id="sh2${sfx}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient>
+      </defs>
+      <g class="ic-grey" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M5 9h18l-1.5 13a1 1 0 01-1 1H7.5a1 1 0 01-1-1z"/>
+        <path d="M9 9V7a5 5 0 0110 0v2" opacity=".85"/>
+      </g>
+      <g class="ic-color" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M5 9h18l-1.5 13a1 1 0 01-1 1H7.5a1 1 0 01-1-1z" fill="url(#sh1${sfx})" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M9 9V7a5 5 0 0110 0v2" fill="none" stroke="url(#sh2${sfx})" stroke-width="1.9"/>
+        <circle cx="10" cy="14" r="1.1" fill="var(--vmark,#0a0c18)"/><circle cx="18" cy="14" r="1.1" fill="var(--vmark,#0a0c18)"/>
+      </g></svg>`;
+  }
+  // profile (Мастерская)
+  return `<svg viewBox="0 0 28 28" width="22" height="22" style="display:block;overflow:visible;">
+    <defs>
+      <linearGradient id="tg2${sfx}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b794ff"/><stop offset="1" stop-color="#8a5cf0"/></linearGradient>
+      <linearGradient id="tg3${sfx}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ff0d8"/><stop offset="1" stop-color="#2fc0aa"/></linearGradient>
+    </defs>
+    <g class="ic-grey" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M13 13.5l3.5-9.5 7.5 7.5-9.5 3.5z"/><path d="M4.5 23.5l3-1 6.5-6.5-2-2-6.5 6.5z"/><path d="M15 11.5l1.5 1.5"/>
+    </g>
+    <g class="ic-color" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M13 13.5l3.5-9.5 7.5 7.5-9.5 3.5z" fill="url(#tg3${sfx})" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M4.5 23.5l3-1 6.5-6.5-2-2-6.5 6.5z" fill="url(#tg2${sfx})" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M15 11.5l1.5 1.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </g></svg>`;
+}
 function buildNavs(){
   const items=[
-    {tab:'main', label:'Витраж', ic:'<svg viewBox="0 0 24 28" width="21" height="21"><path d="M4,13 Q4,3 12,3 Q20,3 20,13 L20,25 Q20,26 19,26 L5,26 Q4,26 4,25 Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12,3 L12,26 M4,13 L20,13 M4,19 L20,19" stroke="currentColor" stroke-width="1.3" fill="none" opacity=".8"/></svg>'},
-    {tab:'gallery', label:'Собор', ic:'<svg viewBox="0 0 28 28" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M14 3l6 6v14a1 1 0 01-1 1H9a1 1 0 01-1-1V9z" opacity=".55"/><path d="M14 3l6 6M8 23V9l6-6M11 24v-6h6v6"/><path d="M4 24h20"/></svg>'},
-    {tab:'stats', label:'Путь', ic:'<svg viewBox="0 0 28 28" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M4 24h20"/><path d="M7 24v-7M13 24v-12M19 24v-9"/><path d="M5 11l5-5 4 3 6-7" opacity=".7"/></svg>'},
-    {tab:'shop', label:'Лавка', ic:'<svg viewBox="0 0 28 28" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"><path d="M5 9h18l-1.5 13a1 1 0 01-1 1H7.5a1 1 0 01-1-1z"/><path d="M9 9V7a5 5 0 0110 0v2" opacity=".8"/></svg>'},
-    {tab:'profile', label:'Мастерская', ic:'<svg viewBox="0 0 28 28" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 13.5l3.5-9.5 7.5 7.5-9.5 3.5z"/><path d="M4.5 23.5l3-1 6.5-6.5-2-2-6.5 6.5z"/><path d="M15 11.5l1.5 1.5"/></svg>'},
+    {tab:'main', label:'Витраж'},
+    {tab:'gallery', label:'Собор'},
+    {tab:'stats', label:'Путь'},
+    {tab:'shop', label:'Лавка'},
+    {tab:'profile', label:'Мастерская'},
   ];
-  const html = items.map(it=>
-    `<button class="ni" onclick="switchTab('${it.tab}',this)"><span class="ni-ic">${it.ic}</span>${it.label}</button>`
-  ).join('');
-  document.querySelectorAll('.nav[data-nav]').forEach(nav=>{ nav.innerHTML=html; });
+  document.querySelectorAll('.nav[data-nav]').forEach((nav, ni)=>{
+    const sfx='_n'+ni; // уникальный суффикс id градиентов на каждую навигацию
+    nav.innerHTML = items.map(it=>
+      `<button class="ni" onclick="switchTab('${it.tab}',this)"><span class="ni-ic">${navIconSVG(it.tab, sfx)}</span>${it.label}</button>`
+    ).join('');
+  });
 }
 
 function switchTab(tab, btn){
