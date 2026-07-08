@@ -216,6 +216,7 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
    касания вокруг него большая (прозрачные отступы сверху/снизу). */
 .sheet-grabber{position:relative;display:block;height:44px;margin:-12px auto 4px;cursor:grab;touch-action:none;width:100%;}
 .sheet-grabber::before{content:"";position:absolute;top:18px;left:50%;transform:translateX(-50%);width:40px;height:5px;border-radius:3px;background:var(--text3);opacity:.5;}
+.sheet-swipe-zone{touch-action:none;cursor:grab;}
 .set-chip b{color:var(--text);font-weight:600;}
 .set-chip:hover{border-color:var(--border2);}
 .set-chip.sel{border-color:var(--accent);background:rgba(124,111,255,.12);}
@@ -355,8 +356,12 @@ html.light-theme .prog-bar{background:#d8d5e8;}
 .uz-sub{font-size:12px;color:var(--text2);}
 
 /* ══ GALLERY SCREEN ══ */
-.gal-card{margin:0 18px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:16px;cursor:pointer;transition:border-color .2s;}
+.gal-card{margin:0 18px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:16px;cursor:pointer;transition:border-color .2s;contain:content;}
 .gal-card:hover{border-color:var(--border2);}
+/* Тяжёлые превью (canvas/svg) выносим на отдельный GPU-слой, чтобы при прокрутке
+   «Собора» и «Пути» они не перерисовывались каждый кадр (прокрутка была тяжелее). */
+.gal-card canvas,.gal-card svg{transform:translateZ(0);backface-visibility:hidden;}
+#stats-body svg{transform:translateZ(0);backface-visibility:hidden;}
 .gal-card-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:11px;}
 .gal-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;}
 .gal-mini{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;margin-bottom:11px;}
@@ -522,18 +527,19 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <div id="act-list-wrap" style="display:flex;flex-direction:column;gap:8px;"></div>
     <button class="btn btn-ghost" id="add-action-btn" onclick="addActionField(true)" style="margin-top:0;font-size:13px;padding:10px;">+ Добавить действие</button>
 
-    <!-- Подсказки действий для выбранной сферы -->
-    <div id="act-suggest-wrap" style="display:none;flex:0 0 auto;min-height:0;flex-direction:column;overflow:hidden;margin-top:2px;">
+    <!-- Подсказки действий для выбранной сферы.
+         Блок гибкий (flex:1) — поглощает свободное место между «+ Добавить» и
+         кнопкой «Дальше». Кнопка всегда пришпилена внизу, а число рядов чипов
+         подстраивается под оставшееся место (меньше действий → больше рядов). -->
+    <div id="act-suggest-wrap" style="display:none;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden;margin-top:2px;">
       <div id="act-suggest-label" style="font-size:12px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-shrink:0;">
         <span style="color:var(--accent2);">✦</span> Идеи — нажми, чтобы добавить · листай вбок ↔
       </div>
-      <div id="act-suggest-viewport" style="position:relative;flex:0 0 auto;min-height:46px;">
+      <div id="act-suggest-viewport" style="position:relative;flex:1 1 auto;min-height:46px;overflow:hidden;">
         <div id="act-suggest-chips" class="sugg-carousel"></div>
         <div class="sugg-fade" aria-hidden="true"></div>
       </div>
     </div>
-
-    <div class="ob-spacer" style="flex:1 1 auto;min-height:8px;"></div>
 
     <div id="ob2-hint" style="display:none;font-size:13px;color:var(--rose);text-align:center;flex-shrink:0;line-height:1.45;padding:8px 10px;margin-top:6px;background:rgba(232,122,160,.1);border:1px solid rgba(232,122,160,.3);border-radius:10px;">Добавь хотя бы одно действие — из подсказок выше или своё ✦</div>
     <button class="btn btn-primary" onclick="nextOb()" style="margin-top:10px;flex-shrink:0;">Дальше →</button>
@@ -772,10 +778,10 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
   <div id="set-reminder-sheet" style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;">
     <div class="sheet-grabber" data-close="closeReminderModal"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-      <div style="font-size:16px;font-weight:600;">Напоминания от Мастера</div>
+      <div class="sheet-swipe-zone" style="font-size:16px;font-weight:600;flex:1;">Напоминания от Мастера</div>
       <div class="toggle on" id="set-rem-toggle" onclick="toggleReminderSetting()"><div class="toggle-knob"></div></div>
     </div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Мастер напомнит закрасить осколок в выбранное время.</div>
+    <div class="sheet-swipe-zone" style="font-size:13px;color:var(--text2);margin-bottom:16px;">Мастер напомнит закрасить осколок в выбранное время.</div>
     <div id="set-rem-time-row" style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
       <span style="font-size:14px;color:var(--text2);">Время:</span>
       <input type="time" id="set-rem-time" value="21:00" onchange="onReminderSettingTime(this.value)"
@@ -789,8 +795,8 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 <div id="set-memoprompt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeMemoPromptModal()">
   <div id="set-memoprompt-sheet" style="background:var(--bg2);border-radius:24px 24px 0 0;padding:20px;padding-bottom:calc(20px + var(--pad-bottom));width:100%;max-width:420px;">
     <div class="sheet-grabber" data-close="closeMemoPromptModal"></div>
-    <div style="font-size:16px;font-weight:600;margin-bottom:6px;">Форма впечатления</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;">Когда предлагать оставить впечатление к закрашенному осколку. Впечатление всегда можно добавить позже — просто нажми на открытый осколок.</div>
+    <div class="sheet-swipe-zone" style="font-size:16px;font-weight:600;margin-bottom:6px;">Форма впечатления</div>
+    <div class="sheet-swipe-zone" style="font-size:13px;color:var(--text2);margin-bottom:16px;">Когда предлагать оставить впечатление к закрашенному осколку. Впечатление всегда можно добавить позже — просто нажми на открытый осколок.</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
       <div class="set-chip" data-val="each" onclick="setMemoPrompt('each')"><b>После каждого осколка</b> — предлагать всегда</div>
       <div class="set-chip" data-val="first" onclick="setMemoPrompt('first')"><b>Только для первого за день</b> — не отвлекать дальше</div>
@@ -1559,7 +1565,7 @@ function addMemoIndicators(svg){
   if(!svg||!app.shardMemos) return;
   const polys=getShardPolygons(vitrazh_W,vitrazh_H);
   polys.forEach((pts,i)=>{
-    if(!app.shards[i]||!app.shardMemos[i]) return;
+    if(!(app.shards[i]||(app.shardProgress&&app.shardProgress[i]>0))||!app.shardMemos[i]) return;
     const m=app.shardMemos[i];
     const type=memoGemType(m);
     if(!type) return;
@@ -2198,6 +2204,8 @@ function buildVitrazhSVG(revealed, W, H, preview=false, idPrefix=''){
       // Клик работает и для закрытого (открыть осколок), и для открытого
       // (показать/добавить заметку) — tapShard сам различает эти случаи.
       hit.addEventListener('click',e=>{ e.stopPropagation(); tapShard(i,e); });
+      // Долгое нажатие — оставить комментарий к осколку (даже частично закрашенному).
+      attachLongPress(hit, ()=>openShardComment(i));
       g.appendChild(hit);
     }
 
@@ -2788,10 +2796,19 @@ function attachMaskHitZones(wrap, preset){
       tapShard(idx, {clientX:e.clientX, clientY:e.clientY});
     }
   };
+  // Долгое нажатие по canvas — комментарий к осколку под пальцем (даже частичному).
+  attachLongPress(cv, (px,py)=>{
+    if(px==null||py==null) return;
+    const rect=cv.getBoundingClientRect();
+    const nx=(px-rect.left)/rect.width;
+    const ny=(py-rect.top)/rect.height;
+    const sid=maskShardAt(nx,ny);
+    if(sid>=1) openShardComment(sid-1);
+  });
   // Камни-инкрустации для осколков с заметками
   Object.keys(cents).forEach(k=>{
     const i=parseInt(k,10)-1;
-    if(!app.shards[i]) return;
+    if(!(app.shards[i]||(app.shardProgress&&app.shardProgress[i]>0))) return;
     const type=memoGemType(app.shardMemos[i]);
     if(!type) return;
     const c=cents[k];
@@ -2814,7 +2831,7 @@ function refreshMaskDots(wrap, preset){
   const cents=preset.centroids||{};
   Object.keys(cents).forEach(k=>{
     const i=parseInt(k,10)-1;
-    if(!app.shards[i]) return;
+    if(!(app.shards[i]||(app.shardProgress&&app.shardProgress[i]>0))) return;
     const type=memoGemType(app.shardMemos[i]);
     if(!type) return;
     const c=cents[k];
@@ -2825,7 +2842,7 @@ function addMemoIndicators(svg){
   if(!svg||!app.shardMemos) return;
   const polys=getShardPolygons(vitrazh_W,vitrazh_H);
   polys.forEach((pts,i)=>{
-    if(!app.shards[i]||!app.shardMemos[i]) return;
+    if(!(app.shards[i]||(app.shardProgress&&app.shardProgress[i]>0))||!app.shardMemos[i]) return;
     const m=app.shardMemos[i];
     const type=memoGemType(m);
     if(!type) return;
@@ -3074,6 +3091,13 @@ function applyMark(idx, e, fromTap){
   // Сильная вибрация при полном открытии осколка (если не отключена в настройках)
   if(shardJustOpened){ vibrate('heavy'); }
 
+  // Разовая вспышка-свечение над только что открытым осколком
+  if(shardJustOpened){
+    const gp=shardScreenCenter(idx);
+    if(gp) spawnShardGlow(gp.x, gp.y);
+    else if(e) spawnShardGlow(e.clientX, e.clientY);
+  }
+
   if(shardJustOpened && !isFinalShard){
     setMasterMsg(pick(MASTER_SHARD_OPENED));
     if(document.getElementById('v-stk')) document.getElementById('v-stk').textContent=app.activeDays.length;
@@ -3169,7 +3193,7 @@ function buildActionsList(){
 // Универсальный обработчик долгого нажатия (мышь + тач). Не мешает обычному клику.
 function attachLongPress(el, cb){
   let timer=null, longFired=false, sx=0, sy=0;
-  const start=(x,y)=>{ longFired=false; sx=x; sy=y; timer=setTimeout(()=>{ longFired=true; if(navigator.vibrate)navigator.vibrate(15); cb(); }, 550); };
+  const start=(x,y)=>{ longFired=false; sx=x; sy=y; timer=setTimeout(()=>{ longFired=true; if(navigator.vibrate)navigator.vibrate(15); cb(sx,sy); }, 550); };
   const cancel=()=>{ if(timer){ clearTimeout(timer); timer=null; } };
   el.addEventListener('touchstart', e=>{ if(e.touches[0]) start(e.touches[0].clientX,e.touches[0].clientY); }, {passive:true});
   el.addEventListener('touchmove', e=>{ if(e.touches[0] && (Math.abs(e.touches[0].clientX-sx)>10||Math.abs(e.touches[0].clientY-sy)>10)) cancel(); }, {passive:true});
@@ -3248,38 +3272,53 @@ function closeEditAction(){
 })();
 
 // Универсальный свайп-вниз для листов настроек (Лимит, Напоминания, Впечатления).
-// Любой грабер с классом .sheet-grabber и атрибутом data-close="имяФункции" получает жест.
+// Жест получают: грабер (.sheet-grabber) и заголовочные зоны (.sheet-swipe-zone),
+// чтобы смахивание начинало срабатывать прямо с заголовков форм.
+// Функция закрытия берётся из data-close (на грабере или на самой зоне).
 (function initSheetSwipes(){
+  function bindSwipe(handle, sheet, closeFn){
+    if(handle._swipeBound) return;
+    handle._swipeBound=true;
+    let startY=0, curY=0, dragging=false;
+    handle.addEventListener('touchstart', e=>{
+      if(e.touches[0]){ startY=curY=e.touches[0].clientY; dragging=true; sheet.style.transition='none'; }
+    }, {passive:true});
+    handle.addEventListener('touchmove', e=>{
+      if(!dragging || !e.touches[0]) return;
+      curY=e.touches[0].clientY;
+      sheet.style.transform='translateY('+Math.max(0,curY-startY)+'px)';
+    }, {passive:true});
+    handle.addEventListener('touchend', ()=>{
+      if(!dragging) return;
+      dragging=false; sheet.style.transition='transform .2s ease';
+      if(Math.max(0,curY-startY)>80){ closeFn(); }
+      else { sheet.style.transform='translateY(0)'; }
+      setTimeout(()=>{ sheet.style.transform=''; }, 250);
+    });
+    handle.addEventListener('mousedown', e=>{ startY=curY=e.clientY; dragging=true; sheet.style.transition='none';
+      const mm=ev=>{ if(!dragging)return; curY=ev.clientY; sheet.style.transform='translateY('+Math.max(0,curY-startY)+'px)'; };
+      const mu=()=>{ dragging=false; sheet.style.transition='transform .2s ease';
+        if(Math.max(0,curY-startY)>80){ closeFn(); } else sheet.style.transform='translateY(0)';
+        setTimeout(()=>{ sheet.style.transform=''; }, 250);
+        document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
+      document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu);
+    });
+  }
   function attachAll(){
+    // Граберы
     document.querySelectorAll('.sheet-grabber').forEach(grabber=>{
-      if(grabber._swipeBound) return;
-      grabber._swipeBound=true;
       const sheet=grabber.parentElement;
       const closeFn=()=>{ const fn=window[grabber.dataset.close]; if(typeof fn==='function') fn(); };
-      let startY=0, curY=0, dragging=false;
-      grabber.addEventListener('touchstart', e=>{
-        if(e.touches[0]){ startY=curY=e.touches[0].clientY; dragging=true; sheet.style.transition='none'; }
-      }, {passive:true});
-      grabber.addEventListener('touchmove', e=>{
-        if(!dragging || !e.touches[0]) return;
-        curY=e.touches[0].clientY;
-        sheet.style.transform='translateY('+Math.max(0,curY-startY)+'px)';
-      }, {passive:true});
-      grabber.addEventListener('touchend', ()=>{
-        if(!dragging) return;
-        dragging=false; sheet.style.transition='transform .2s ease';
-        if(Math.max(0,curY-startY)>80){ closeFn(); }
-        else { sheet.style.transform='translateY(0)'; }
-        setTimeout(()=>{ sheet.style.transform=''; }, 250);
-      });
-      grabber.addEventListener('mousedown', e=>{ startY=curY=e.clientY; dragging=true; sheet.style.transition='none';
-        const mm=ev=>{ if(!dragging)return; curY=ev.clientY; sheet.style.transform='translateY('+Math.max(0,curY-startY)+'px)'; };
-        const mu=()=>{ dragging=false; sheet.style.transition='transform .2s ease';
-          if(Math.max(0,curY-startY)>80){ closeFn(); } else sheet.style.transform='translateY(0)';
-          setTimeout(()=>{ sheet.style.transform=''; }, 250);
-          document.removeEventListener('mousemove',mm); document.removeEventListener('mouseup',mu); };
-        document.addEventListener('mousemove',mm); document.addEventListener('mouseup',mu);
-      });
+      bindSwipe(grabber, sheet, closeFn);
+    });
+    // Заголовочные зоны свайпа (заголовки форм)
+    document.querySelectorAll('.sheet-swipe-zone').forEach(zone=>{
+      const sheet=zone.closest('[id$="-sheet"]') || zone.parentElement;
+      // Имя функции закрытия — из самой зоны или из грабера в этом же листе
+      let closeName=zone.dataset.close;
+      if(!closeName){ const gb=sheet && sheet.querySelector('.sheet-grabber'); closeName=gb&&gb.dataset.close; }
+      const closeFn=()=>{ const fn=window[closeName]; if(typeof fn==='function') fn(); };
+      bindSwipe(zone, sheet, closeFn);
     });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', attachAll);
@@ -3930,6 +3969,50 @@ function spawnFlash(x,y){
   document.body.appendChild(f); setTimeout(()=>f.remove(),600);
 }
 
+// Возвращает экранные координаты центра осколка idx (для вспышки-свечения).
+// Работает и для маск-пресетов (по centroids), и для процедурных (по полигонам).
+function shardScreenCenter(idx){
+  const wrap=document.getElementById('vg-wrap');
+  if(!wrap) return null;
+  const r=wrap.getBoundingClientRect();
+  const preset=currentPreset();
+  if(preset && preset.mask && preset.centroids){
+    const c=preset.centroids[String(idx+1)];
+    if(c) return { x:r.left + c[0]*r.width, y:r.top + c[1]*r.height };
+  }
+  try{
+    const polys=getShardPolygons(vitrazh_W, vitrazh_H);
+    const p=polys && polys[idx];
+    if(p && p.length){
+      let sx=0, sy=0; p.forEach(pt=>{ sx+=pt[0]; sy+=pt[1]; });
+      const cx=sx/p.length, cy=sy/p.length;
+      return { x:r.left + (cx/vitrazh_W)*r.width, y:r.top + (cy/vitrazh_H)*r.height };
+    }
+  }catch(e){}
+  return { x:r.left + r.width/2, y:r.top + r.height/2 };
+}
+
+// Разовая мягкая вспышка-свечение в момент ПОЛНОГО открытия осколка.
+// Отдельный CSS-слой поверх (radial-gradient), не трогает canvas/SVG-рендер,
+// значит не грузит прокрутку и легко откатывается. Играет один раз и исчезает.
+function spawnShardGlow(x,y){
+  if(!document.getElementById('shard-glow-kf')){
+    const s=document.createElement('style');
+    s.id='shard-glow-kf';
+    s.textContent='@keyframes shardGlowAnim{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}25%{opacity:.9}100%{transform:translate(-50%,-50%) scale(1.9);opacity:0}}'
+      +'.shard-glow-el{position:fixed;z-index:1500;pointer-events:none;width:150px;height:150px;border-radius:50%;'
+      +'background:radial-gradient(circle,rgba(230,225,255,.95) 0%,rgba(167,139,250,.55) 35%,rgba(124,111,255,.18) 60%,transparent 75%);'
+      +'mix-blend-mode:screen;will-change:transform,opacity;}';
+    document.head.appendChild(s);
+  }
+  const g=document.createElement('div');
+  g.className='shard-glow-el';
+  g.style.left=x+'px'; g.style.top=y+'px';
+  g.style.animation='shardGlowAnim .8s ease-out forwards';
+  document.body.appendChild(g);
+  setTimeout(()=>g.remove(), 850);
+}
+
 function spawnParticles(x,y){
   const cols=['#38d9c0','#7c6fff','#a78bfa','#60b8e8','#f0c060','#e87090'];
   for(let i=0;i<12;i++){
@@ -4264,48 +4347,41 @@ function renderSuggestChips(){
   cont.innerHTML='';
   const used = currentActionValues();
 
-  // Когда полей действий много (6+), места мало — прячем подпись «Идеи…»,
-  // чтобы освободить место хотя бы под один ряд чипов.
+  // При 4+ действиях прячем подпись «Идеи…», освобождая место под ещё один ряд чипов.
   const actionCount = document.querySelectorAll('#act-list-wrap .action-inp-row').length;
   const label = document.getElementById('act-suggest-label');
-  if(label) label.style.display = actionCount >= 6 ? 'none' : 'flex';
+  if(label) label.style.display = actionCount >= 4 ? 'none' : 'flex';
 
-  // Логика рядов подсказок:
-  // • Мало действий (0-1) — заполняем чипами почти всё свободное место (много рядов),
-  //   чтобы не было большого разрыва между чипами и кнопкой «Дальше» (кнопка внизу).
-  // • Чем больше действий добавлено — тем меньше рядов, и чипы становятся
-  //   прокручиваемыми по горизонтали.
-  // • При 6-7 действиях — ровно 1 ряд, который помещается целиком и не обрезается.
-  // Высоту вьюпорта задаём ТОЧНО кратной высоте ряда — тогда ряды не режутся.
+  // Блок чипов гибкий (flex:1) и сам занимает всё свободное место между кнопкой
+  // «+ Добавить» и «Дальше». Значит число рядов определяем по фактической высоте
+  // вьюпорта: чем меньше действий — тем выше вьюпорт и больше рядов; чем больше
+  // действий — тем ниже вьюпорт и меньше рядов. Кнопка «Дальше» при этом всегда
+  // остаётся внизу и не съезжает.
   const ROW_H = 46; // высота ряда чипа + отступ (px)
-  let rowCount;
-  const step = document.getElementById('ob2');
-  const labelEl = document.getElementById('act-suggest-label');
-  const addBtn = document.getElementById('add-action-btn');
-  // Измеряем свободное место от низа кнопки «+ Добавить действие» (стабильный
-  // ориентир, не зависит от высоты самих чипов) до низа шага, резервируя место
-  // под подпись «Идеи», кнопку «Дальше» и точки (~150px с подписью, ~120 без).
-  let availRows = 0;
-  if(step && addBtn){
-    const stepRect = step.getBoundingClientRect();
-    const addRect = addBtn.getBoundingClientRect();
-    const reserve = (labelEl && labelEl.style.display!=='none' && actionCount<6) ? 150 : 120;
-    const avail = (stepRect.bottom - addRect.bottom) - reserve;
-    availRows = avail > 0 ? Math.floor(avail / ROW_H) : 0;
+  const vp = document.getElementById('act-suggest-viewport');
+  let rowCount = 3;
+  if(vp){
+    // Сбрасываем возможную явную высоту от старой логики — высоту задаёт flex
+    vp.style.height='';
+    const availH = vp.clientHeight; // фактическое свободное место под чипы
+    if(availH >= ROW_H){
+      rowCount = Math.round(availH / ROW_H);
+    } else {
+      // Вьюпорт ещё не разложен (напр. первый вызов) — оцениваем по экрану шага
+      const step = document.getElementById('ob2');
+      const addBtn = document.getElementById('add-action-btn');
+      if(step && addBtn){
+        const avail = (step.getBoundingClientRect().bottom - addBtn.getBoundingClientRect().bottom) - 120;
+        rowCount = avail > 0 ? Math.round(avail / ROW_H) : 3;
+      }
+    }
   }
-  if(actionCount >= 6){
-    rowCount = 1; // всегда 1 ряд при 6-7 действиях (гарантированно помещается)
-  } else {
-    // Заполняем чипами всё доступное место (чтобы не было разрыва до кнопки).
-    // Чем больше действий — тем меньше места остаётся и тем меньше рядов.
-    rowCount = availRows > 0 ? availRows : 3;
-    rowCount = Math.max(1, Math.min(7, rowCount));
-  }
+  rowCount = Math.max(1, Math.min(7, rowCount));
   rowCount = Math.max(1, Math.min(rowCount, sugg.length));
 
-  // Точная высота вьюпорта = целое число рядов (без обрезанных рядов)
-  const vp = document.getElementById('act-suggest-viewport');
-  if(vp){ vp.style.height = (rowCount*ROW_H) + 'px'; vp.style.minHeight = ROW_H + 'px'; }
+  // Распределяем ряды по всей высоте вьюпорта, чтобы не было пустого места снизу
+  // между последним рядом чипов и кнопкой «Дальше». При одном ряде — прижимаем вверх.
+  cont.style.justifyContent = rowCount>1 ? 'space-between' : 'flex-start';
 
   // Создаём ряды
   const rows=[];
@@ -4365,6 +4441,19 @@ function addSuggestedAction(text){
 }
 
 /* ══ MEMO MODAL ══ */
+// Комментарий к осколку по долгому нажатию — работает даже для частично
+// закрашенного (и вовсе не начатого) осколка. Комментарий привязан к ОСКОЛКУ.
+// Если у осколка ещё нет даты — фиксируем текущую (момент первой заметки).
+function openShardComment(idx){
+  if(idx==null || idx<0 || idx>=TOTAL) return;
+  if(!Array.isArray(app.shardDates)) app.shardDates=[];
+  if(!app.shardDates[idx]){
+    const now=new Date();
+    app.shardDates[idx]=now.toLocaleDateString('ru')+' '+now.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+  }
+  openMemoModal(idx);
+}
+
 function openMemoModal(idx){
   // Подстраховка: если осталась активная запись от прошлой заметки — глушим её
   if(_memoRecording && app.memoRecorder && app.memoRecorder.state!=='inactive'){
@@ -5157,8 +5246,19 @@ function updateGallery(){
       });
       list.appendChild(card);
     }
-    // Остальные незавершённые витражи
+    // Остальные незавершённые витражи.
+    // Защита от задвоения: исключаем текущий витраж (по id) и любые дубли по id,
+    // а также id, которые уже есть среди завершённых. Так один и тот же витраж
+    // не появится одновременно со статусами «ТЕКУЩИЙ» и «В РАБОТЕ».
+    const seen=new Set();
+    if(currentDone && app.activeId) seen.add(app.activeId);
+    const completedIds=new Set(app.completed.map(c=>c.id).filter(Boolean));
     app.activeVitrazhi.forEach(v=>{
+      if(v.id){
+        if(seen.has(v.id)) return;       // уже показан (текущий или дубль)
+        if(completedIds.has(v.id)) return; // уже завершён
+        seen.add(v.id);
+      }
       const vdone=v.shards.filter(Boolean).length;
       const card2=createGalleryCard({
         ...v,
@@ -6322,6 +6422,18 @@ function applyProgress(data){
   app.vTotal=data.vTotal||30;
   app.completed=data.completed||[];
   app.activeVitrazhi=data.activeVitrazhi||[];
+  // Разовая чистка возможного задвоения из старых сохранений: убираем из списка
+  // «в работе» текущий витраж (совпадение по id) и любые дубли по id.
+  {
+    const seenIds=new Set();
+    if(app.activeId) seenIds.add(app.activeId);
+    app.activeVitrazhi=app.activeVitrazhi.filter(v=>{
+      if(!v || !v.id) return true;
+      if(seenIds.has(v.id)) return false;
+      seenIds.add(v.id);
+      return true;
+    });
+  }
   if(data.settings){
     settings.shardCount=data.settings.shardCount||30;
     settings.dailyLimit=data.settings.dailyLimit||0;
