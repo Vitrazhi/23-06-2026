@@ -2653,61 +2653,55 @@ function paintMaskCanvas(cv, revealed, partial){
   const DR = light ? 200 : 30, DG = light ? 198 : 33, DB = light ? 214 : 48;
   const levelById=new Float32Array(16);
   for(const k in partMap){ const sid=(+k)+1; if(sid>=1&&sid<=15) levelById[sid]=Math.max(0,Math.min(1,partMap[k])); }
-  // Цвет свинцовой линии
-  const LR = light ? 152 : 8, LG = light ? 150 : 9, LB = light ? 170 : 16;
+  // Цвет свинца — ТЁМНЫЙ в обеих темах (в светлой раньше был светлый → линии «белели»)
+  const LR = light ? 70 : 8, LG = light ? 68 : 9, LB = light ? 86 : 16;
   const npx=mw*mh;
-  // Определяем «золотую» линию: тёплый яркий пиксель (R заметно больше B).
+  // «Линия» в самом изображении: тёплая золотистая жила ИЛИ почти чёрный контур базы
   const isGold=(r,g,b)=> (r>120 && r>b+35 && g>b+10 && r>=g-10);
-  // Есть ли рядом (в пределах 1px) ОТКРЫТЫЙ осколок — тогда золотую линию сохраняем,
-  // чтобы контур открытого осколка был цельным (не «съеденным» соседним тёмным).
-  const bordersOpen=(x,y)=>{
-    for(let dy=-1;dy<=1;dy++){
-      for(let dx=-1;dx<=1;dx++){
-        if(!dx&&!dy) continue;
-        const nx=x+dx, ny=y+dy;
-        if(nx<0||ny<0||nx>=mw||ny>=mh) continue;
-        const ns=idd[(ny*mw+nx)*4];
-        if(ns>=1 && revealed[ns-1]) return true;
-      }
-    }
-    return false;
-  };
-  // 1) Затемняем закрытые/частичные осколки (сохраняя золотые линии у открытых)
+  const isDark=(r,g,b)=> (r<70 && g<70 && b<75);
+  // Карта «рядом с открытым осколком» (радиус 2) — считаем один раз (дилатация 4-связностью).
+  // У открытого осколка контур базы сохраняем ЦЕЛИКОМ, чтобы линия шла сплошной,
+  // а не разрезалась пополам затемнением соседнего закрытого осколка.
+  const openPix=new Uint8Array(npx);
+  for(let p=0;p<npx;p++){ const s=idd[p*4]; if(s>=1 && revealed && revealed[s-1]) openPix[p]=1; }
+  let beside=openPix;
+  for(let it=0; it<2; it++){
+    const nb=new Uint8Array(npx);
+    for(let y=0;y<mh;y++){ for(let x=0;x<mw;x++){ const p=y*mw+x;
+      let v=beside[p];
+      if(!v){ if(x>0&&beside[p-1])v=1; else if(x<mw-1&&beside[p+1])v=1; else if(y>0&&beside[p-mw])v=1; else if(y<mh-1&&beside[p+mw])v=1; }
+      nb[p]=v;
+    } }
+    beside=nb;
+  }
+  // 1) Затемняем закрытые/частичные осколки; контур/жилу возле открытых сохраняем.
   for(let y=0;y<mh;y++){
     for(let x=0;x<mw;x++){
-      const p=y*mw+x;
-      const sid=idd[p*4];
-      if(sid>=1 && revealed[sid-1]) continue; // открытый осколок — как есть
-      const oi=p*4;
-      // Золотую линию, граничащую с ОТКРЫТЫМ осколком, не затемняем —
-      // это сохраняет цельный золотой контур проявленного осколка.
-      if(isGold(od[oi],od[oi+1],od[oi+2]) && bordersOpen(x,y)) continue;
-      const lv = sid>=1 ? levelById[sid] : 0;
-      if(lv>0){
-        const t=lv;
-        od[oi]   = od[oi]  *t + DR*(1-t);
-        od[oi+1] = od[oi+1]*t + DG*(1-t);
-        od[oi+2] = od[oi+2]*t + DB*(1-t);
-      } else {
-        od[oi]=DR; od[oi+1]=DG; od[oi+2]=DB;
-      }
+      const p=y*mw+x, oi=p*4;
+      const sid=idd[oi];
+      if(sid>=1 && revealed && revealed[sid-1]) continue; // открытый осколок — как есть
+      const r=od[oi], g=od[oi+1], b=od[oi+2];
+      // Рядом с открытым: контур базы (id 0) и линии-жилы не трогаем → цельная линия.
+      if(beside[p] && (sid<1 || isGold(r,g,b) || isDark(r,g,b))) continue;
+      if(sid<1){ od[oi]=LR; od[oi+1]=LG; od[oi+2]=LB; continue; } // свинец между закрытыми
+      const lv=levelById[sid];
+      if(lv>0){ const t=lv;
+        od[oi]  = r*t+DR*(1-t);
+        od[oi+1]= g*t+DG*(1-t);
+        od[oi+2]= b*t+DB*(1-t);
+      } else { od[oi]=DR; od[oi+1]=DG; od[oi+2]=DB; }
     }
   }
-  // 2) Свинцовые линии рисуем ТОЛЬКО между двумя закрытыми осколками.
-  //    На границе, где хотя бы один осколок ОТКРЫТ, ничего не трогаем — там
-  //    видна родная золотистая линия из самого изображения (она ровная и цельная).
-  //    Раньше мы рисовали линию, если закрыт хотя бы один сосед — из-за этого
-  //    поверх золотой линии открытого осколка ложилась наша тёмная, и граница
-  //    выглядела «рваной»/двойной. Теперь линия открытого осколка остаётся чистой.
-  const isClosed=(sid)=>{ if(!revealed) return true; if(sid<1) return true; return !revealed[sid-1]; };
+  // 2) Свинец там, где два ЗАКРЫТЫХ осколка соприкасаются напрямую (без контура базы).
+  //    Границы с открытым осколком не трогаем — там уже цельная линия из базы.
+  const isClosed=(sid)=>{ if(sid<1) return true; return !(revealed&&revealed[sid-1]); };
   for(let y=0;y<mh;y++){
     for(let x=0;x<mw;x++){
-      const i=y*mw+x;
-      const c=idd[i*4];
+      const i=y*mw+x; const c=idd[i*4];
+      if(c<1) continue;
       let edge=false;
-      // Линия только если ОБА соседних осколка закрыты (тёмное поле ↔ тёмное поле)
-      if(x>0){ const l=idd[(i-1)*4]; if(c!==l && isClosed(c) && isClosed(l)) edge=true; }
-      if(!edge && y>0){ const u=idd[(i-mw)*4]; if(c!==u && isClosed(c) && isClosed(u)) edge=true; }
+      if(x>0){ const l=idd[(i-1)*4]; if(l>=1 && c!==l && isClosed(c) && isClosed(l)) edge=true; }
+      if(!edge && y>0){ const u=idd[(i-mw)*4]; if(u>=1 && c!==u && isClosed(c) && isClosed(u)) edge=true; }
       if(edge){ const o=i*4; od[o]=LR; od[o+1]=LG; od[o+2]=LB; }
     }
   }
