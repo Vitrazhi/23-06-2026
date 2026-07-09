@@ -228,7 +228,7 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 .suggest-chip.used{opacity:.35;pointer-events:none;}
 .suggest-chip .plus{color:var(--accent2);font-weight:600;}
 /* Горизонтальная карусель подсказок: 2 ряда, листается влево-вправо */
-.sugg-carousel{display:flex;flex-direction:column;gap:8px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0 6px;scroll-snap-type:x proximity;position:absolute;inset:0;}
+.sugg-carousel{display:flex;flex-direction:column;gap:6px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0 6px;scroll-snap-type:x proximity;position:absolute;inset:0;}
 .sugg-carousel::-webkit-scrollbar{display:none;}
 .sugg-row{display:flex;gap:7px;width:max-content;flex-shrink:0;}
 /* Мягкое затухание справа — намекает, что подсказки можно листать дальше */
@@ -952,12 +952,12 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
 <div id="celebrate-modal" style="display:none;position:fixed;inset:0;z-index:2350;align-items:center;justify-content:center;padding:24px;overflow:hidden;background:#04060f;">
   <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 38%, rgba(124,111,255,.35), rgba(124,111,255,.05) 55%, transparent 75%);"></div>
   <div id="celebrate-rays" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
-  <div id="celebrate-card" style="position:relative;text-align:center;max-width:360px;width:100%;">
-    <div id="celebrate-emblem" style="font-size:72px;line-height:1;margin-bottom:18px;filter:drop-shadow(0 0 24px rgba(124,111,255,.8));">🪞</div>
-    <div style="font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);margin-bottom:10px;font-weight:600;">Витраж собран</div>
-    <div id="celebrate-title" style="font-size:26px;font-weight:700;color:#fff;margin-bottom:14px;line-height:1.25;">Твой образ проявлен ✦</div>
-    <div id="celebrate-text" style="font-size:15px;color:rgba(255,255,255,.86);line-height:1.65;margin-bottom:12px;">Каждый осколок здесь — это твой день, твоё усилие, твой выбор не сдаваться. Ты собрал этот образ сам, шаг за шагом. Это не просто картинка — это завершённая хроника твоей трансформации, и она принадлежит тебе. Мы искренне гордимся тобой ✨</div>
-    <div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.55;margin-bottom:24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 14px;">✦ Твой витраж навсегда останется в разделе <b style="color:rgba(255,255,255,.85)">«Собор»</b> — там живут все образы, которые ты проявил. Возвращайся к ним, когда захочешь вспомнить свой путь.</div>
+  <div id="celebrate-card" style="position:relative;text-align:center;max-width:360px;width:100%;transform:translateY(-14px);">
+    <div id="celebrate-emblem" style="font-size:72px;line-height:1;margin-bottom:22px;filter:drop-shadow(0 0 24px rgba(124,111,255,.8));">🪞</div>
+    <div style="font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);margin-bottom:12px;font-weight:600;">Витраж собран</div>
+    <div id="celebrate-title" style="font-size:26px;font-weight:700;color:#fff;margin-bottom:18px;line-height:1.25;">Твой образ проявлен ✦</div>
+    <div id="celebrate-text" style="font-size:15px;color:rgba(255,255,255,.86);line-height:1.65;margin-bottom:18px;">Каждый осколок здесь — это твой день, твоё усилие, твой выбор не сдаваться. Ты собрал этот образ сам, шаг за шагом. Это не просто картинка — это завершённая хроника твоей трансформации, и она принадлежит тебе.<br>Мы искренне гордимся тобой ✨</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.55;margin-bottom:24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 14px;">✦ Твой витраж навсегда останется в разделе <b style="color:rgba(255,255,255,.85)">«Собор»</b> — там живут все образы, которые ты проявил. Возвращайся к ним, когда захочешь вспомнить свой путь</div>
     <button class="btn btn-primary" id="celebrate-share-btn" style="margin-bottom:10px;">✦ Поделиться витражом</button>
     <button class="btn btn-ghost" id="celebrate-continue-btn" style="font-size:14px;padding:12px;color:rgba(255,255,255,.75);">Дальше →</button>
   </div>
@@ -2805,25 +2805,27 @@ function attachMaskHitZones(wrap, preset){
   // Клик по canvas: определяем осколок по позиции через id-map
   const cv=wrap.querySelector('canvas');
   if(!cv) return;
+  // Захватываем карту ИМЕННО этого витража в замыкание. Глобальный _maskAssets
+  // может быть перезаписан рендером другого витража — тогда тап уходил бы в чужой
+  // осколок. Здесь используем зафиксированную карту, привязанную к этому canvas.
+  const _idd=(_maskAssets&&_maskAssets.idData)?_maskAssets.idData.data:null;
+  const _mw=(_maskAssets&&_maskAssets.w)||0, _mh=(_maskAssets&&_maskAssets.h)||0;
+  cv._hitIdd=_idd; cv._hitMW=_mw; cv._hitMH=_mh;
+  const hitAt=(clientX,clientY)=>{
+    const rect=cv.getBoundingClientRect();
+    const nx=(clientX-rect.left)/rect.width;
+    const ny=(clientY-rect.top)/rect.height;
+    return maskShardAtData(cv._hitIdd, cv._hitMW, cv._hitMH, nx, ny);
+  };
   cv.style.cursor='pointer';
   cv.onclick=(e)=>{
-    const rect=cv.getBoundingClientRect();
-    const nx=(e.clientX-rect.left)/rect.width;
-    const ny=(e.clientY-rect.top)/rect.height;
-    const sid=maskShardAt(nx,ny);
-    if(sid>=1){
-      const idx=sid-1;
-      // координаты для эффекта
-      tapShard(idx, {clientX:e.clientX, clientY:e.clientY});
-    }
+    const sid=hitAt(e.clientX,e.clientY);
+    if(sid>=1) tapShard(sid-1, {clientX:e.clientX, clientY:e.clientY});
   };
   // Долгое нажатие по canvas — комментарий к осколку под пальцем (даже частичному).
   attachLongPress(cv, (px,py)=>{
     if(px==null||py==null) return;
-    const rect=cv.getBoundingClientRect();
-    const nx=(px-rect.left)/rect.width;
-    const ny=(py-rect.top)/rect.height;
-    const sid=maskShardAt(nx,ny);
+    const sid=hitAt(px,py);
     if(sid>=1) openShardComment(sid-1);
   });
   // Камни-инкрустации для осколков с заметками
@@ -2837,16 +2839,16 @@ function attachMaskHitZones(wrap, preset){
   });
 }
 
-// Определяет id осколка по нормализованным координатам через id-map
-function maskShardAt(nx,ny){
-  if(!_maskAssets.idData) return -1;
-  const mw=_maskAssets.w, mh=_maskAssets.h, idd=_maskAssets.idData.data;
+// Определяет id осколка по координатам, используя КОНКРЕТНУЮ карту (idd/mw/mh).
+// Раньше hit-test читал глобальный _maskAssets, который перезаписывается рендером
+// другого витража (превью в «Соборе»/второй витраж) → тап уходил в чужой осколок.
+function maskShardAtData(idd, mw, mh, nx, ny){
+  if(!idd) return -1;
   const x=Math.max(0,Math.min(mw-1,(nx*mw)|0));
   const y=Math.max(0,Math.min(mh-1,(ny*mh)|0));
   const sid=idd[(y*mw+x)*4];
   if(sid>=1) return sid;
-  // Палец попал на свинцовую линию (id 0) — берём ближайший реальный осколок,
-  // чтобы тап по границе не промахивался.
+  // Палец попал на свинцовую линию (id 0) — берём ближайший реальный осколок.
   for(let R=1;R<=6;R++){
     for(let dy=-R;dy<=R;dy++){ const yy=y+dy; if(yy<0||yy>=mh) continue;
       for(let dx=-R;dx<=R;dx++){ if(Math.abs(dx)!==R && Math.abs(dy)!==R) continue;
@@ -2855,6 +2857,11 @@ function maskShardAt(nx,ny){
       } }
   }
   return sid;
+}
+// Глобальный дефолт (для мест, где карта заведомо актуальна)
+function maskShardAt(nx,ny){
+  if(!_maskAssets.idData) return -1;
+  return maskShardAtData(_maskAssets.idData.data, _maskAssets.w, _maskAssets.h, nx, ny);
 }
 
 // Обновляет камни-инкрустации заметок (без перерисовки canvas → без мерцания)
@@ -4406,7 +4413,7 @@ function renderSuggestChips(){
   // вьюпорта: чем меньше действий — тем выше вьюпорт и больше рядов; чем больше
   // действий — тем ниже вьюпорт и меньше рядов. Кнопка «Дальше» при этом всегда
   // остаётся внизу и не съезжает.
-  const ROW_H = 46; // высота ряда чипа + отступ (px)
+  const ROW_H = 48; // высота ряда чипа + отступ (px), с запасом от обрезания
   const vp = document.getElementById('act-suggest-viewport');
   let rowCount = 3;
   if(vp){
@@ -4430,7 +4437,9 @@ function renderSuggestChips(){
 
   // Распределяем ряды по всей высоте вьюпорта, чтобы не было пустого места снизу
   // между последним рядом чипов и кнопкой «Дальше». При одном ряде — прижимаем вверх.
-  cont.style.justifyContent = rowCount>1 ? 'space-between' : 'flex-start';
+  // Ряды прижимаем к верху с ровным небольшим интервалом — без «растягивания»
+  // (space-between давал большие пустоты между рядами), лишнее место остаётся снизу.
+  cont.style.justifyContent = 'flex-start';
 
   // Создаём ряды
   const rows=[];
@@ -5884,21 +5893,30 @@ function _copyText(text){
 function saveVitrazhImage(v){
   toast('Готовлю изображение…');
   renderVitrazhToCanvas(v).then(cv=>{
-    if(!cv || !cv.toBlob){ toast('Не удалось подготовить изображение'); return; }
-    cv.toBlob((blob)=>{
-      if(!blob){ toast('Не удалось сохранить'); return; }
-      const file=new File([blob],'vitrazh.png',{type:'image/png'});
-      // Мобильные: системное окно с опцией «Сохранить изображение»
-      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
-        navigator.share({files:[file]}).then(()=>hideToast()).catch((err)=>{
-          if(err && err.name==='AbortError'){ hideToast(); }
-          else _downloadBlob(blob, v);
-        });
-      } else {
-        _downloadBlob(blob, v);
-      }
-    }, 'image/png');
-  }).catch(()=>toast('Не удалось подготовить изображение'));
+    hideToast();
+    let url=null;
+    try{ if(cv && cv.toDataURL) url=cv.toDataURL('image/png'); }catch(e){ url=null; }
+    if(!url){ toast('Не удалось подготовить изображение'); return; }
+    // В Telegram-webview navigator.share(файлы) и <a download> ненадёжны (плашка зависала,
+    // картинка не скачивалась). Показываем готовое изображение в оверлее: долгим нажатием
+    // «Сохранить изображение» — это работает во всех webview, включая Telegram.
+    showImageSaveOverlay(url, v);
+  }).catch(()=>{ hideToast(); toast('Не удалось подготовить изображение'); });
+}
+// Полноэкранный оверлей с готовой картинкой витража для сохранения
+function showImageSaveOverlay(url, v){
+  const old=document.getElementById('img-save-overlay'); if(old) old.remove();
+  const name=((v&&(v.name||v.sphereName))||'образ').replace(/\s+/g,'_');
+  const ov=document.createElement('div'); ov.id='img-save-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(6,6,14,.95);z-index:4000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:15px;';
+  ov.innerHTML=
+    '<div style="color:#fff;font-size:15px;text-align:center;max-width:320px;line-height:1.45;">Удерживайте картинку и выберите «Сохранить изображение»</div>'+
+    '<img src="'+url+'" alt="витраж" style="max-width:86vw;max-height:62vh;border-radius:10px;box-shadow:0 12px 44px rgba(0,0,0,.6);" />'+
+    '<a href="'+url+'" download="vitrazh-'+name+'.png" style="color:#0b0b12;background:#e8c86a;padding:11px 24px;border-radius:12px;font-size:14px;text-decoration:none;font-weight:600;">Скачать</a>'+
+    '<button id="img-save-close" style="color:#fff;background:rgba(255,255,255,.12);border:none;padding:10px 24px;border-radius:12px;font-size:14px;cursor:pointer;">Закрыть</button>';
+  ov.querySelector('#img-save-close').onclick=()=>ov.remove();
+  ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
 }
 function _downloadBlob(blob, v){
   try{
@@ -6547,7 +6565,7 @@ function bootWithProgress(){
   try{ refreshPremiumUI(); }catch(e){}
   // ── БЫСТРЫЙ ПУТЬ: мгновенно восстанавливаем из localStorage (без ожидания облака) ──
   const local = loadFromLocal();
-  const localHasProgress = local && (local.started || (local.completed&&local.completed.length) || (local.shards&&local.shards.some(Boolean)));
+  const localHasProgress = local && (local.started || local.sphere || (local.completed&&local.completed.length) || (local.shards&&local.shards.some(Boolean)) || (local.shardProgress&&local.shardProgress.some(v=>v>0)) || (local.activeVitrazhi&&local.activeVitrazhi.length));
   if(localHasProgress){
     try{
       applyProgress(local);
@@ -6561,7 +6579,7 @@ function bootWithProgress(){
 
   // ── ФОНОВАЯ СВЕРКА С ОБЛАКОМ ──
   loadProgress().then((data)=>{
-    const cloudHasProgress = data && (data.started || (data.completed&&data.completed.length) || (data.shards&&data.shards.some(Boolean)));
+    const cloudHasProgress = data && (data.started || data.sphere || (data.completed&&data.completed.length) || (data.shards&&data.shards.some(Boolean)) || (data.shardProgress&&data.shardProgress.some(v=>v>0)) || (data.activeVitrazhi&&data.activeVitrazhi.length));
     if(cloudHasProgress){
       const score = p => (p.completed?p.completed.length:0)*1000 + (p.shards?p.shards.filter(Boolean).length:0) + (p.activeVitrazhi?p.activeVitrazhi.length:0)*100;
       const cloudScore = score(data);
