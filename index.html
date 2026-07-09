@@ -222,13 +222,13 @@ body.tg-mode .ob-step{padding-bottom:calc(28px + var(--pad-bottom));}
 .set-chip.sel{border-color:var(--accent);background:rgba(124,111,255,.12);}
 .time-chip:hover{border-color:var(--accent);color:var(--text);}
 .time-chip.sel{background:var(--accent);border-color:var(--accent);color:#fff;}
-.suggest-chip{background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.3);border-radius:20px;padding:8px 13px;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;}
+.suggest-chip{background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.3);border-radius:20px;padding:7px 13px;font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;}
 .suggest-chip:hover{background:rgba(124,111,255,.2);border-color:var(--accent);}
 .suggest-chip:active{transform:scale(.95);}
 .suggest-chip.used{opacity:.35;pointer-events:none;}
 .suggest-chip .plus{color:var(--accent2);font-weight:600;}
 /* Горизонтальная карусель подсказок: 2 ряда, листается влево-вправо */
-.sugg-carousel{display:flex;flex-direction:column;gap:6px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0 6px;scroll-snap-type:x proximity;position:absolute;inset:0;}
+.sugg-carousel{display:flex;flex-direction:column;gap:5px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0 6px;scroll-snap-type:x proximity;position:absolute;inset:0;}
 .sugg-carousel::-webkit-scrollbar{display:none;}
 .sugg-row{display:flex;gap:7px;width:max-content;flex-shrink:0;}
 /* Мягкое затухание справа — намекает, что подсказки можно листать дальше */
@@ -536,7 +536,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div id="act-suggest-label" style="font-size:12px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-shrink:0;">
         <span style="color:var(--accent2);">✦</span> Идеи — нажми, чтобы добавить · листай вбок ↔
       </div>
-      <div id="act-suggest-viewport" style="position:relative;flex:1 1 auto;min-height:46px;overflow:hidden;">
+      <div id="act-suggest-viewport" style="position:relative;flex:1 1 auto;min-height:0;overflow:hidden;">
         <div id="act-suggest-chips" class="sugg-carousel"></div>
         <div class="sugg-fade" aria-hidden="true"></div>
       </div>
@@ -654,7 +654,8 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
         <div class="toast" id="main-toast">+10 ✦</div>
 
         <div class="vcard-hdr">
-          <div><div class="vcard-name" id="v-name">Витраж Сна</div><div class="vcard-sub" id="v-sub">Открыто 0 из 30</div></div>
+          <div><div style="display:flex;align-items:center;gap:7px;min-width:0;"><div class="vcard-name" id="v-name" onclick="openRenameVitrazh()" style="cursor:pointer;" title="Переименовать витраж">Витраж Сна</div><span onclick="openRenameVitrazh()" style="cursor:pointer;font-size:13px;opacity:.55;flex:none;" title="Переименовать витраж">✎</span></div>
+          <div class="vcard-sub" id="v-sub">Открыто 0 из 30</div></div>
           <div class="streak" onclick="devTapDayReset()">⚡ <span id="v-stk">0</span> дн</div>
         </div>
         <div class="vg-wrap" id="vg-wrap"></div>
@@ -2285,6 +2286,40 @@ function updateMainEmptyState(){
   return empty;
 }
 
+// Переименование текущего витража прямо в процессе работы
+function openRenameVitrazh(){
+  if(!app.sphere) return; // нет активного витража
+  const old=document.getElementById('rename-overlay'); if(old) old.remove();
+  const cur=app.vitrazhName||'';
+  const ov=document.createElement('div'); ov.id='rename-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(6,6,14,.9);z-index:4200;display:flex;align-items:center;justify-content:center;padding:24px;';
+  ov.innerHTML=
+    '<div style="background:#141527;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:20px;width:100%;max-width:340px;box-shadow:0 18px 50px rgba(0,0,0,.5);">'+
+      '<div style="color:#fff;font-size:16px;font-weight:600;margin-bottom:6px;">Название витража</div>'+
+      '<div style="color:rgba(255,255,255,.55);font-size:12px;margin-bottom:14px;">Можно оставить пустым — тогда название будет по сфере</div>'+
+      '<input id="rename-input" type="text" maxlength="40" placeholder="Витраж '+(app.sphereName||'')+'" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:11px 12px;color:#fff;font-size:15px;font-family:inherit;outline:none;" />'+
+      '<div style="display:flex;gap:10px;margin-top:16px;">'+
+        '<button id="rename-cancel" style="flex:1;background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;cursor:pointer;font-family:inherit;">Отмена</button>'+
+        '<button id="rename-save" style="flex:1;background:#7c6fff;color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">Сохранить</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  const inp=ov.querySelector('#rename-input'); inp.value=cur;
+  setTimeout(()=>{ try{ inp.focus(); inp.select(); }catch(_){} },50);
+  const close=()=>ov.remove();
+  const save=()=>{
+    app.vitrazhName=(inp.value||'').trim();
+    const el=document.getElementById('v-name');
+    if(el) el.textContent=app.vitrazhName||('Витраж '+app.sphereName);
+    try{ if(typeof vibrate==='function') vibrate('light'); }catch(_){}
+    try{ saveProgress(); }catch(_){}
+    close();
+  };
+  ov.querySelector('#rename-cancel').onclick=close;
+  ov.querySelector('#rename-save').onclick=save;
+  ov.addEventListener('click',e=>{ if(e.target===ov) close(); });
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); save(); } });
+}
 function initMainScreen(){
   // Если нет активного витража — показываем пустое состояние с кнопкой создания
   if(updateMainEmptyState()) return;
@@ -2337,6 +2372,56 @@ const _EMBEDDED_IDMAPS = {
 };
 
 let _maskAssets = { key:null, base:null, idData:null, w:0, h:0 };
+// Для каждого осколка находит точку, ГАРАНТИРОВАННО лежащую внутри и максимально
+// удалённую от его границ («полюс недоступности»). Раньше камень заметки ставился
+// по среднему центру, который у вогнутых осколков попадал на соседний осколок.
+// Возвращает { id: [nx, ny] } в нормализованных координатах.
+function computeShardCenters(idData, W, H){
+  const d=idData.data;
+  const idAt=(x,y)=>d[(y*W+x)*4];
+  const INF=1e9;
+  const dist=new Float32Array(W*H);
+  // seed = граница осколка (пиксель, у которого 4-сосед иного id или id=0/край)
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      const i=y*W+x, sid=d[i*4];
+      if(sid<1){ dist[i]=0; continue; }
+      let edge=false;
+      if(x===0||y===0||x===W-1||y===H-1) edge=true;
+      else if(idAt(x-1,y)!==sid||idAt(x+1,y)!==sid||idAt(x,y-1)!==sid||idAt(x,y+1)!==sid) edge=true;
+      dist[i]=edge?0:INF;
+    }
+  }
+  // Чемфер-DT: два прохода (диагонали для точности)
+  const D=1, DD=1.41421356;
+  for(let y=0;y<H;y++){ for(let x=0;x<W;x++){ const i=y*W+x; if(dist[i]===0) continue; let v=dist[i];
+    if(x>0) v=Math.min(v,dist[i-1]+D);
+    if(y>0) v=Math.min(v,dist[i-W]+D);
+    if(x>0&&y>0) v=Math.min(v,dist[i-W-1]+DD);
+    if(x<W-1&&y>0) v=Math.min(v,dist[i-W+1]+DD);
+    dist[i]=v; } }
+  for(let y=H-1;y>=0;y--){ for(let x=W-1;x>=0;x--){ const i=y*W+x; if(dist[i]===0) continue; let v=dist[i];
+    if(x<W-1) v=Math.min(v,dist[i+1]+D);
+    if(y<H-1) v=Math.min(v,dist[i+W]+D);
+    if(x<W-1&&y<H-1) v=Math.min(v,dist[i+W+1]+DD);
+    if(x>0&&y<H-1) v=Math.min(v,dist[i+W-1]+DD);
+    dist[i]=v; } }
+  // на осколок — пиксель с максимальной глубиной
+  const best={};
+  for(let y=0;y<H;y++){ for(let x=0;x<W;x++){ const i=y*W+x, sid=d[i*4]; if(sid<1) continue;
+    const dv=dist[i]; const b=best[sid];
+    if(!b||dv>b.d){ best[sid]={d:dv,x,y}; } } }
+  const centers={};
+  for(const k in best){ centers[k]=[ best[k].x/W, best[k].y/H ]; }
+  return centers;
+}
+// Точка для камня-заметки осколка i (0-based): глубокий центр из карты, иначе центроид пресета
+function shardGemPoint(i, preset){
+  const c=_maskAssets&&_maskAssets.centers&&_maskAssets.centers[i+1];
+  if(c) return c;
+  const pc=preset&&preset.centroids&&preset.centroids[String(i+1)];
+  return pc||[0.5,0.5];
+}
 function loadMaskAssets(preset, cb){
   const key = preset.img+'|'+preset.map;
   if(_maskAssets.key===key && _maskAssets.base && _maskAssets.idData){ cb(); return; }
@@ -2355,6 +2440,7 @@ function loadMaskAssets(preset, cb){
       octx.drawImage(idmap,0,0);
       const id=octx.getImageData(0,0,oc.width,oc.height);
       _maskAssets={ key, base, idData:id, w:oc.width, h:oc.height };
+      try{ _maskAssets.centers = computeShardCenters(id, oc.width, oc.height); }catch(_){ _maskAssets.centers=null; }
       cb();
     }catch(e){
       // Не удалось прочитать карту — сообщаем об ошибке (сработает запасной вариант)
@@ -2834,7 +2920,7 @@ function attachMaskHitZones(wrap, preset){
     if(!(app.shards[i]||(app.shardProgress&&app.shardProgress[i]>0))) return;
     const type=memoGemType(app.shardMemos[i]);
     if(!type) return;
-    const c=cents[k];
+    const c=shardGemPoint(i, preset);
     wrap.appendChild(buildGemInlay(type, c[0]*100, c[1]*100, i));
   });
 }
@@ -2848,15 +2934,21 @@ function maskShardAtData(idd, mw, mh, nx, ny){
   const y=Math.max(0,Math.min(mh-1,(ny*mh)|0));
   const sid=idd[(y*mw+x)*4];
   if(sid>=1) return sid;
-  // Палец попал на свинцовую линию (id 0) — берём ближайший реальный осколок.
-  for(let R=1;R<=6;R++){
-    for(let dy=-R;dy<=R;dy++){ const yy=y+dy; if(yy<0||yy>=mh) continue;
-      for(let dx=-R;dx<=R;dx++){ if(Math.abs(dx)!==R && Math.abs(dy)!==R) continue;
-        const xx=x+dx; if(xx<0||xx>=mw) continue;
-        const s=idd[(yy*mw+xx)*4]; if(s>=1) return s;
-      } }
-  }
-  return sid;
+  // Палец попал на свинцовую линию (id 0). Раньше брался ПЕРВЫЙ осколок по порядку
+  // сканирования (сверху-слева) → у границы двух осколков заметка уходила к верхнему
+  // соседу. Теперь голосуем по окрестности с весом 1/расстояние: берём осколок,
+  // которого реально больше под пальцем. Так заметка попадает в тот осколок, над
+  // которым палец, и не уезжает к соседу.
+  const R=10; const score={};
+  for(let dy=-R;dy<=R;dy++){ const yy=y+dy; if(yy<0||yy>=mh) continue;
+    for(let dx=-R;dx<=R;dx++){ const xx=x+dx; if(xx<0||xx>=mw) continue;
+      const s=idd[(yy*mw+xx)*4]; if(s<1) continue;
+      const d2=dx*dx+dy*dy; if(d2>R*R) continue;
+      score[s]=(score[s]||0)+1/(1+Math.sqrt(d2));
+    } }
+  let bestId=sid, bestV=0;
+  for(const k in score){ if(score[k]>bestV){ bestV=score[k]; bestId=+k; } }
+  return bestId;
 }
 // Глобальный дефолт (для мест, где карта заведомо актуальна)
 function maskShardAt(nx,ny){
@@ -2873,7 +2965,7 @@ function refreshMaskDots(wrap, preset){
     if(!(app.shards[i]||(app.shardProgress&&app.shardProgress[i]>0))) return;
     const type=memoGemType(app.shardMemos[i]);
     if(!type) return;
-    const c=cents[k];
+    const c=shardGemPoint(i, preset);
     wrap.appendChild(buildGemInlay(type, c[0]*100, c[1]*100, i));
   });
 }
@@ -4413,15 +4505,22 @@ function renderSuggestChips(){
   // вьюпорта: чем меньше действий — тем выше вьюпорт и больше рядов; чем больше
   // действий — тем ниже вьюпорт и меньше рядов. Кнопка «Дальше» при этом всегда
   // остаётся внизу и не съезжает.
-  const ROW_H = 48; // высота ряда чипа + отступ (px), с запасом от обрезания
+  const ROW_H = 46; // высота ряда чипа + отступ (px)
+  const MIN_FIT = 40; // минимум высоты под один ряд без обрезания снизу
   const vp = document.getElementById('act-suggest-viewport');
   let rowCount = 3;
   if(vp){
     // Сбрасываем возможную явную высоту от старой логики — высоту задаёт flex
     vp.style.height='';
     const availH = vp.clientHeight; // фактическое свободное место под чипы
+    // Если места не хватает даже на один ряд — прячем блок целиком, чтобы ряд не
+    // обрезался снизу чёрным фоном (так бывает при 6 действиях, когда список
+    // действий ужимает область подсказок).
+    if(availH>0 && availH < MIN_FIT){ wrap.style.display='none'; return; }
     if(availH >= ROW_H){
       rowCount = Math.floor(availH / ROW_H); // floor: не выделяем ряд, который не влезет => нет обрезания
+    } else if(availH >= MIN_FIT){
+      rowCount = 1; // места ровно на один ряд
     } else {
       // Вьюпорт ещё не разложен (напр. первый вызов) — оцениваем по экрану шага
       const step = document.getElementById('ob2');
@@ -5737,7 +5836,7 @@ function showFullscreenVitrazh(v){
         if(!v.shards[i]||!v.shardMemos||!v.shardMemos[i]) return;
         const m=v.shardMemos[i]; if(!m.text&&!m.photo&&!m.audioUrl) return;
         const type=memoGemType(m); if(!type) return;
-        const c=cents[k];
+        const c=shardGemPoint(i, preset);
         const gem=document.createElement('div');
         gem.className='gem-inlay';
         gem.style.left=`calc(18px + ${c[0]}*(100% - 36px))`;
@@ -5910,13 +6009,34 @@ function showImageSaveOverlay(url, v){
   const ov=document.createElement('div'); ov.id='img-save-overlay';
   ov.style.cssText='position:fixed;inset:0;background:rgba(6,6,14,.95);z-index:4000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:15px;';
   ov.innerHTML=
-    '<div style="color:#fff;font-size:15px;text-align:center;max-width:320px;line-height:1.45;">Удерживайте картинку и выберите «Сохранить изображение»</div>'+
-    '<img src="'+url+'" alt="витраж" style="max-width:86vw;max-height:62vh;border-radius:10px;box-shadow:0 12px 44px rgba(0,0,0,.6);" />'+
-    '<a href="'+url+'" download="vitrazh-'+name+'.png" style="color:#0b0b12;background:#e8c86a;padding:11px 24px;border-radius:12px;font-size:14px;text-decoration:none;font-weight:600;">Скачать</a>'+
-    '<button id="img-save-close" style="color:#fff;background:rgba(255,255,255,.12);border:none;padding:10px 24px;border-radius:12px;font-size:14px;cursor:pointer;">Закрыть</button>';
+    '<div style="color:#fff;font-size:15px;text-align:center;max-width:320px;line-height:1.45;">Удерживайте картинку и выберите «Сохранить изображение» — или воспользуйтесь кнопками ниже</div>'+
+    '<img src="'+url+'" alt="витраж" style="max-width:86vw;max-height:56vh;border-radius:10px;box-shadow:0 12px 44px rgba(0,0,0,.6);" />'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">'+
+      '<a href="'+url+'" download="vitrazh-'+name+'.png" style="color:#0b0b12;background:#e8c86a;padding:11px 22px;border-radius:12px;font-size:14px;text-decoration:none;font-weight:600;">⬇ Скачать</a>'+
+      '<button id="img-save-share" style="color:#fff;background:rgba(124,111,255,.9);border:none;padding:11px 22px;border-radius:12px;font-size:14px;cursor:pointer;font-weight:600;font-family:inherit;">✦ Поделиться</button>'+
+    '</div>'+
+    '<button id="img-save-close" style="color:#fff;background:rgba(255,255,255,.12);border:none;padding:10px 24px;border-radius:12px;font-size:14px;cursor:pointer;font-family:inherit;">Закрыть</button>';
+  const shareBtn=ov.querySelector('#img-save-share');
+  if(shareBtn) shareBtn.onclick=()=>shareImageFromUrl(url, v);
   ov.querySelector('#img-save-close').onclick=()=>ov.remove();
   ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
+}
+// Поделиться картинкой витража: сперва системный share с файлом (мобильные/Telegram),
+// иначе — запасной вариант (ссылка/текст).
+function shareImageFromUrl(url, v){
+  const nm=(v&&(v.name||v.sphereName))||'образ';
+  const text='Мой витраж «'+nm+'» ✦ собран в Витражисте';
+  const fallback=()=>{ try{ if(typeof shareCompletedVitrazh==='function'){ shareCompletedVitrazh(v); return; } }catch(_){}
+    _copyText(text); toast('Текст скопирован'); };
+  try{
+    fetch(url).then(r=>r.blob()).then(blob=>{
+      const file=new File([blob],'vitrazh.png',{type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+        navigator.share({files:[file], text}).catch(err=>{ if(err&&err.name==='AbortError') return; fallback(); });
+      } else { fallback(); }
+    }).catch(()=>fallback());
+  }catch(e){ fallback(); }
 }
 function _downloadBlob(blob, v){
   try{
@@ -6380,10 +6500,17 @@ function saveToCloud(json){
     const CHUNK = 3800; // запас под лимит 4096
     const chunks = [];
     for(let i=0;i<json.length;i+=CHUNK){ chunks.push(json.slice(i,i+CHUNK)); }
-    // Не больше ~250 чанков (≈950КБ) — больше в CloudStorage не имеет смысла
     if(chunks.length > 250){ return; } // слишком большой прогресс для облака — остаётся localStorage
-    tg.CloudStorage.setItem(STORAGE_KEY+'_n', String(chunks.length), ()=>{});
+    // Сначала пишем сами чанки, ТОЛЬКО потом маркеры (кол-во + длина). Так маркеры
+    // указывают лишь на уже записанные данные. Раньше при обновлении/частичной записи
+    // старые и новые чанки могли смешаться → «франкенштейн» (сфера от одного витража,
+    // память от другого). Маркер длины на чтении ловит любую такую рассинхронизацию.
     chunks.forEach((c,i)=>{ tg.CloudStorage.setItem(STORAGE_KEY+'_'+i, c, ()=>{}); });
+    // Чистим возможные устаревшие чанки сверх нового количества (best-effort)
+    for(let i=chunks.length;i<chunks.length+12;i++){ try{ tg.CloudStorage.removeItem(STORAGE_KEY+'_'+i, ()=>{}); }catch(_){}
+    }
+    tg.CloudStorage.setItem(STORAGE_KEY+'_len', String(json.length), ()=>{});
+    tg.CloudStorage.setItem(STORAGE_KEY+'_n', String(chunks.length), ()=>{});
   }catch(e){ /* облако недоступно — localStorage остаётся */ }
 }
 
@@ -6399,10 +6526,16 @@ function loadProgress(){
         if(!err && n>0){
           const keys = [];
           for(let i=0;i<n;i++) keys.push(STORAGE_KEY+'_'+i);
+          keys.push(STORAGE_KEY+'_len');
           tg.CloudStorage.getItems(keys, (err2, values)=>{
             if(!err2 && values){
               let json='';
               for(let i=0;i<n;i++){ json += (values[STORAGE_KEY+'_'+i]||''); }
+              // Проверка целостности: длина склеенного JSON должна совпасть с сохранённой.
+              // Если нет — облачные чанки рассинхронизированы (смешаны старые/новые) →
+              // не доверяем облаку, берём localStorage. Это исключает подмену сферы/памяти.
+              const expected = parseInt(values[STORAGE_KEY+'_len']||'0',10);
+              if(expected>0 && json.length!==expected){ resolve(loadFromLocal()); return; }
               const parsed = tryParse(json);
               if(parsed){ resolve(parsed); return; }
             }
