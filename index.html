@@ -745,6 +745,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div class="menu-item" onclick="openMemoPromptSettings()">✍️<span id="menu-memoprompt-text">Впечатления: после каждого</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleTheme()">🎨<span id="menu-theme-text">Тема: тёмная</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleVibration()">📳<span id="menu-vibration-text">Вибрация: включена</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" onclick="toggleSound()">🔊<span id="menu-sound-text">Звук: включён</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="shareVitrazh()">📤<span>Поделиться витражом</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="openSupport()">💬<span>Написать в поддержку</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="resetApp()">🔄<span>Начать заново</span><span class="mi-arrow">›</span></div>
@@ -1817,6 +1818,7 @@ const settings = {
   theme: 'dark',        // 'dark' или 'light'
   memoPrompt: 'each',   // 'each' = после каждого осколка, 'first' = только первый за день, 'never' = никогда
   vibration: true,      // вибрация при открытии осколка
+  sound: true,          // звук стекла при полном открытии осколка
 };
 
 // Вибрация телефона (если поддерживается и не отключена пользователем).
@@ -1824,6 +1826,47 @@ const settings = {
 // ВАЖНО: на Android Telegram impactOccurred часто не срабатывает, а
 // notificationOccurred работает надёжно — поэтому для 'heavy' используем его.
 // Вибрацию нужно вызывать СИНХРОННО в обработчике жеста пользователя.
+// ── ЗВУК СТЕКЛА ПРИ ПОЛНОМ ОТКРЫТИИ ОСКОЛКА ──
+// Короткий щелчок (обрезан из исходника). Проигрывается через Web Audio API
+// (низкая задержка, корректно при частых открытиях). Уважает настройку settings.sound.
+// Вибрация — отдельно и не затрагивается.
+const GLASS_SOUND_SRC = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAASAAAVSAAqKioqKj4+Pj4+Pk1NTU1NWVlZWVlZZWVlZWVxcXFxcXF7e3t7e4WFhYWFhY+Pj4+PmZmZmZmZpaWlpaWluLi4uLjKysrKysrW1tbW1uXl5eXl5fHx8fHx+/v7+/v7//////8AAAAATGF2YzYwLjMxAAAAAAAAAAAAAAAAJAZmAAAAAAAAFUg1JCu6AAAAAAD/+8DEAAAEEAEptAAAA+ZBab8y8kASCiojBEwIAROfgnDFQPvy4Pn/wTP/y59OD7///8oc4YmJmKh5dFdWVCkbUaiBSESZmFCAC+oY44wYjQCiwHGn0YAgELSvSECCoubo6gxXnOTYmYoxCHwuZphwBwnEsC0iDM6hLmly8iyryPQgvAcYdZLzjzBjk5IUeJoGSSoXCLpzYDLc8P7Ny0ZUNaVLtLMi5mTmm5QRI9+uFeYcKGsoeoGJEaUJL48JQaV9tTxH9t7f5Z/Cj0vd4nEIZTLLYgI0Tecd/7REJhKNzevIScWWLIStSMjHOrFuj+PTc0S6giPKemKeBNNAZ5ZYTW2u1IxS5qx8saIQhNM7IpC2KhWRKMjL//////////////umqa///////////8eHqVyYw1gicySzAAhAAAAQFAgcNG0EwEwqAoGvmZGBRGQjU4GEMlcDjJ7hBTyBQJPJuL6FsXpWiXzVRTWWFFCiJZ1mxDQySLbNoOiRJur8giqMV38EIgykPGxZ/XSEnyAtYOD1SjxbdGtVotSQ1IdNkWpQz6plZIm/vO0shvxza5EiIQ8du2XvQrRFeGAqSMOG6Uf7hdmYp9R0m9XeslDmJJwnlt9YFSJXlEAqxvHX/ZmtuAZopljo1p9wBSWZOuyLZlZKRAGfgJRXCXv7RYTMua060H1O5fv8bjtOw8KfrQm0aCweRxFynsfylgCKsPoXej7qLxjrs0cOQ1jKpbZoZu3UnKkWyq3rtb6P/////////////////+//7P/u04xVhQSsELzgIkCLubKvKqh2TFf1cr+tMfaHK7lScHem2k1fwUZbr7ZM/bnGw2LsdM3Dm/P9be/6qnK051OthIMzc8YW2obyy+dF3HNzUzTn98s1Lceo8bI9/w7uHcz/81u5q7p8ba90xf1t5O3uZCv6j6r8xcqJlAaoBJmIODnCAgyAF0UmUxw5xmIkhP/7kMTWACNF02f5nJIB3Cutv7CwAL08HjOj6QF0+S2MMEPHqLmlTzYqmxzLnGwFSciqccqQjpd/7a75UNmmBSbHig30IKTJMXIBwWymN4m6/+/i/6Xni7i4GEMhIiGAqpmZ4taOqzMngae8kRkaFxUzjWJIqdJYi3av+u6YEcQApxAGCHOTnanFBEUHiFEg7adDcn2VLfdy1nO0zkS7DVPe/V1PWfqWTDN08dA8EhstdWySdJ1TU+32MiDZrR+JpDE4sc0mDW84WDxkAu6+Ofjqz63Vv39HCSmESMEUmcznUUZVFwkmSZZQ5RK8O4hLLB3kKMrG66mXBGkAK9/hEO6l6kqrdAKvFMUHIAVwwKMUbm0ktprsphy/XieH/pMieWcndN9v0dBcDTHN7SpZtTP754ZuMDcMjAe3G5qaHzA/Bim1A2tz5d1fTv/2v/UBKRnFCgVCbyIi12jDTw2RQvsraRld1mXb7su6ABQATezMQjhBe+HlJryHws1IkJpQK6Esk79ya2/spoedqXLPdYpBvkfZ/rR3EkD0Ws6ZqTEXO//7cMTTAA+ZE1/nrRUB7SIsPYWWrF/H7WblkQ+ukFwJOAgkfMtEh8y4uuDRoHUP1FlFmsscRNFAytjnRteChErAwY+HmEXLO+fZ/OXuyOyalQL4ClwDhASFYAygQR5BaDJFwD0eQ34BClWkKrmPc0mXd2/WfkM1zpmnrrfrNrGzLJ+wzRoj5nfxZv8zHbEghQ4mYnNH/UUtamff/tfz7+S/xt+Pj/t/KB0qws6FOFQGg2Wq32poUq7ttvIlACgAl/ZAicwNRdVCHmqJnqMlqWNsOeBdUNO5R09J23HN8wtfugHEU0xNT81UwbgkhOmPvc5v/X1Vy00JLXvHWatc5GlrVdzb//3oqJoy15iIPBdiiGjVEnxw4dQvYHn0JSofPvFRIVJFXvo+vtpV3qW9iZEAkQntwWwlAA//+2DE6QAORP1f7CxVYcoVKv2GppQLUDoFG7CeISDfGIxOQuSpNY00SLi2JVv+JM7xUBPSrUyyiaLvMgZ+nP/3/MJ1TDSAeAFxHceQOY6ggFhHa66+/v9/Puff6X8wgIaBQESqaSnaqdWpTnlphNpOuw6ekcqNXspr59ycy4y7mCArkS35Kl2R4zkIMUCwKfSpmENouVuLxRqNyOW3KSJX/3dw/65dWF9vbNabm9uisTzt6Bu0KjFv/xM+8KxQcA9BzN8ciC0m9Or/fz0T6zWv1Da1FwzHTE2aKkBAElbbFkm33uIGytNy/cjKmocDLFLeEeh1KDq2i8DJVypqJWx94GVPTL7/+2DE7oANaQFd54TaIcwh6v2FnqSqwvYblkbhvcttRG/+NYsErb1/d/3usc8JSyAJn7im0tv2w7zzLSepUWCEWF6T6SVLaaUpbTWZXvPehJZemWlGVWe70qiy19v34saOiY9Vq7OnLmHIC8y5uFyCVIIJFAoRnIzoayy1SppzQ3Bb2cfqKSC3jXi/6uY/rFMds0fR/sW/Zu0sDSWBIRJEHXHbYhHatyqQyoDIBOOJNG1IwUrWe9u1Xu+b2+0oh0YG5hM1lWqXOWtziRblx5W11Ky7q7qEAtpO7hhLOmbEpHoSRQaedfbmrDwTH3aY6/kpk+Usgi3yvnU/80EMvM6idqp3cWD/+2DE9wAOkTFV56B1YbCfav2GIpQsLDdPu7+/urEQzhBzzXLcp7iJa/+m1f2+io6HQ4s8NiPndhpgkebnAkxAzdmap5pAErF24kqJgkF9VxUUBLilrJmvs048vIdo5h5YpJ5Z36t/eNwcNar+9vYzZ+7Z2GZSVxyvrqOC1fn3KOKO7KORp/4gXHLnnH/8PNOVc+5nzLjx5NhI0MkPsQxMXdJRQ1VV2snbqIQDbFduA4gRoBgai3CaMwOsSKx9EvejBexku3QHqliUtJfGMhzpVqup2tybFTQoc5kS3tHaUqoc72FOLE1TNOJuJdGXS9bMizvlr8qPsDuYkXL7/UuPnGISmrP/+1DE/oANmS9X7CxYobEf6r2GCpUucuJdQKse/4LaASCYgHQVbYAzpANtnkEnseNDIcmVxiqCtstcn9wbLmdpnx937CoMje8+xNlSnszohlXIAAxtXfCHEoS7I9Zec6HOZQn5qvSIZJ2YY4MeSiZkGiaiEW5BFTnLycuZlQblf+4Q4AnB1HqQgu5YA8hJicEzJYZkqHO1lWNawp8Y1qN/gGVRZnYqbSRcHGqcdVuddOhVSpgGFCdnqAuWIpV/UwynBV51orvXJkSq6NzbClNT//tQxO+AC/D7VewgtKGSn+p9hg6U8gqrczcuphQFlf/4C/AZQCQL0CHpQA+ztG8khHyeNb1C4rkwYb594tF+KiTuLq/JKlBwbhYXRXUIqUK/j/Ef3ABLn9p+YMEzEhodOrXLuigt3L25ltc3CedERYtvPWEKquQYipXKucuZdgTkd23PQAjPoNWKk8hJh5BwJItTdLcY0qtjJiDCTkS13sT/Zqu481Lvb4zHrBJCjENMn/TLM1IzMAlYAHPy8sqUOQ4Zz7eiqtyEH+WWyUzPuf/7UMTqgAvI91PnoFRhjh/qfPWKlPRnsYlNgpP2zTqu1IqpT861CO7YnLyrjKdQjdm13c9Dsh+mGX6ERBka1E7WI12QOQkGuOWP00rGUQTFLeEq/+ZLBYCxkQbbvToNJBoKEWWtRf2rjjpyWmbR6QLyfKV9KR0DgOhXU1qPqOrIxO26oR1oErVvrvf6Emehn6MtEdtCsz7jxggFmpRsXam6y5eHYwZceseGoEgBZG4EJDjD9DIEITphxxvl6q5Rj8aUk0tW2FDHlYEYwUVesmr/+1DE5wALWMdV55RVIYYf6rzzjow85TJVmTU1VPnXbtaVNrtt+dT6txse+4fV25dRE2o7TLh8P0rm6Xrqajh+2kd5+G81NysgIoPh/0AgcYCYPvqcc1Eg+sXe1zGKrMLusrNq8dqFoZqjlbjZSIIABZoGBACRNSnFBwhMGKJBEIwYMxQI0J4gDBcUi0PHBAMh8IIrpWgW3BQ3nL0voONnw46MLQl0uk/6xZQg4k/MwMrey5hrJk+Dahc24Ejd8zhZPF34fw2mb+L3JdI4evyG//tgxOYADVEBVeeYdKHaK+q9hAqkW4xR/LMviCclnkCxOClzYSOphlEKJKwFPafbkFqw/0w/kVdlf9jDmdSx96vfhbgOo0hpmLaNYZY/z3Ul5hrOWxR5cVSc1fpL1in7qnaf+bts7fuGFhFcGkpjC88CyG5NRqWQ9QS9/pfDks5b3nrDmeereakzkZNFHNy1Tt/+t8r2868KYWLVdKnjcFS+kp/3Scy7r88P//////////////+/UpLH///////////////+scby3+3cy3dqAQAAm7jxWwoT14svVjYGSBUgyRmLdlh3Zfq7ASqpaaJrHV3NOmrL3sJBZ9N5sdZKVuXd3XM7//uQxO2AD2kBUfT1gCSNwi1/NYRA2tuqh2/phiyqeO11oVRqCAbTTZqLeUpOifVtvXwdNnQy5a1RxVbTUmljzqPKNLbe76q21umLc/eedb1CkQJcRiIIIWg4J4JyW0lHllTsndRuWrMcu3uJY7etjg7oRXzkK7GogAagEuEbFiB9ErAriKjDGyuDAJ9CURhrLi1vWWmvEeetGbNfeXGnz7GMMx+iGBDgUROh1sqdeR3u9y3zn5+/utaQlWqR62XLI/RTeh7atKYmtY0CSl314i7ZsPuwrUKP81+d0xnz4e0fPmqFrLS7e5kZoMHb2JbO959I1t/xfa0+vBjxYa+szyKZDzXgqImDMYrpXR7BfgVJ14EloEiRIlXl8drNmiXu/s67hUgBAbPSRQFlrpAKIdAcKgDXa5KXz/RRvXIaTJpYgQR5r7fw2Hta1h6//88SwpFY6VX3Tv1X4g2+/2FQFzzWdLFnDlZMMrpf42n2NqtLq2m7mv4Gm0zSHAsEw6q7Wr24//////mZWGB00aZJsNYcuIAdB8WuTR4iWnmTPd/9//uAxOQAUzWNbf2FgAKxsWt495r51XUNCAAWOmg+AeAmgDEDXAqOYmRDW0UvK7RulQo1O5QrXZuf6VOzMVqO/v5LRSNjQlmZ/r+fqIPe7mmCDGwnrw2qc2ZD4RTrL/++OaNDwqZ3Ts/meisdhweGh2KOzuxqO3//41jEQQMUrF4DDwRLglp/7ujb/8ytinYyAAARl0BDkgS1SD7yqokxHKWaj40qOtAkD9Rl/YcmeZ0937/Mvjnd633LmV7uX4VH0SnaI1RubT6PfdXMtZ4WednabuWruGb9jxlFrFFVkEzjhQwAsIAjjHOefD7GSuqFtF1xzHH900HQtXsYTxf/bP/3//r98yqjrHllrJpy0oeDy4XFHkU7p2a2Lm5hjAR7BlDQUaTIDVMF4vY9aASD2oOiw+5UciN4jrmLEhqiL64V81vbe6Yra25HzEFNCPddw2zFvnWPjNMxrfNocR8LCbx8tEfE744cykgpACD/+2DE7QAP7Wtl7C0PQd6rrPz1lj2ztMbDUmuIH9XtPUxfH3tMmK0jzFEW2mNLW7rn/5j7/iZlU1YwseXET4scFiaZ2LEweMP2YcYRTe7dy6h2REAFR9Cp7S+6TIwV3Bwiv1LI8z2PRRblHM5vrOZSe5HrmL9wnt6/73E8b2rDakkMmVhN1DXF/rePu2P9x56ZxeZqPcpb6vajy14rEwx4s2Pi1fX4r+4lbkX9L79IyY8LghYVC8s6/PyI+rtt+Vqk6wMgYWI2ZzqWK5AyMr1chV+9mZt1LSiS7/h0kxhZMwhLJiocljUaZr/JNJ7r9br2otKkkcMxFYZ3N9uDDUm7Yz9Y+aP/+3DE6YCRyWtX7CDe4jGtKn2HofwUqlcEcW6SBum//7Z9cwotr6zEvNeou6QaWa0tH3vLIp5r7tXO8X/+amQxqf+2VD2ClmEmJNsYxn//WlHZtSIGFMciZHSq7O7dyplaBHr8IwDkBmWgvQ6R1BJA1R4meLiXEXEcLKrTlFSQCmnWSbNrWTXaG//2VAglpsPSrv90+qauk9PdxZKAiQPT6Jq1smpgiTadtrNvidF73f///VglFsFJBbLr6uNOy313nYoYPtHSzQS0xNRPI14AEioIs/gqq7kUc5xIkxpgCefRtyRg3DN+UtQFjK3Y1HUKJUrS4UBe7KgIOxxWTEFNRTMuMTAwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpM//tgxO4AEI1rU+w8ceHjKao9h4o4QU1FMy4xMDCqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//tQxOcADYTHS+ehbujWkmc8kwi4qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqv/7EMTWA8AAAf4AAAAgAAA0gAAABKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq';
+let _glassCtx=null, _glassBuf=null, _glassReady=false, _glassInit=false;
+function initGlassAudio(){
+  if(_glassInit) return; _glassInit=true;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC) return;
+    _glassCtx=new AC();
+    const b64=GLASS_SOUND_SRC.split(',')[1];
+    const bin=atob(b64), len=bin.length, bytes=new Uint8Array(len);
+    for(let i=0;i<len;i++) bytes[i]=bin.charCodeAt(i);
+    _glassCtx.decodeAudioData(bytes.buffer, function(buf){ _glassBuf=buf; _glassReady=true; }, function(){ _glassReady=false; });
+  }catch(e){}
+}
+// Разблокировка аудио первым жестом пользователя (iOS/Telegram требуют resume в жесте)
+function unlockGlassAudio(){
+  if(!_glassCtx) initGlassAudio();
+  try{ if(_glassCtx && _glassCtx.state==='suspended') _glassCtx.resume(); }catch(e){}
+}
+// Проигрывание звука стекла (если включён в настройках)
+function playGlassSound(){
+  if(!settings.sound) return;
+  if(!_glassCtx) initGlassAudio();
+  try{
+    if(_glassCtx && _glassCtx.state==='suspended') _glassCtx.resume();
+    if(!_glassReady || !_glassBuf || !_glassCtx) return;
+    const src=_glassCtx.createBufferSource(); src.buffer=_glassBuf;
+    const g=_glassCtx.createGain(); g.gain.value=0.9;
+    src.connect(g); g.connect(_glassCtx.destination);
+    src.start(0);
+  }catch(e){}
+}
+// Ловим первый жест, чтобы разблокировать звук заранее
+['pointerdown','touchstart','click'].forEach(function(ev){
+  document.addEventListener(ev, unlockGlassAudio, {once:true, passive:true});
+});
+
 function vibrate(level){
   if(!settings.vibration) return;
   var done=false;
@@ -3235,6 +3278,8 @@ function applyMark(idx, e, fromTap){
   showToast('main-toast');
   // Сильная вибрация при полном открытии осколка (если не отключена в настройках)
   if(shardJustOpened){ vibrate('heavy'); }
+  // Звук стекла при полном открытии осколка (отдельная настройка, вибрацию не трогает)
+  if(shardJustOpened){ playGlassSound(); }
 
   // Разовая вспышка-свечение над только что открытым осколком
   if(shardJustOpened){
@@ -4203,6 +4248,13 @@ function toggleVibration(){
   if(settings.vibration) vibrate('light'); // короткий отклик-подтверждение
   if(typeof saveProgress==='function') saveProgress();
 }
+// Переключатель звука стекла (при полном открытии осколка). Вибрацию не трогает.
+function toggleSound(){
+  settings.sound = !settings.sound;
+  refreshSettingsLabels();
+  if(settings.sound){ unlockGlassAudio(); playGlassSound(); } // проба звука при включении
+  if(typeof saveProgress==='function') saveProgress();
+}
 
 /* ══ ОБНОВЛЕНИЕ ПОДПИСЕЙ В НАСТРОЙКАХ ══ */
 function refreshSettingsLabels(){
@@ -4218,6 +4270,8 @@ function refreshSettingsLabels(){
   if(themeText) themeText.textContent = settings.theme==='light' ? 'Тема: светлая' : 'Тема: тёмная';
   const vibText=document.getElementById('menu-vibration-text');
   if(vibText) vibText.textContent = settings.vibration ? 'Вибрация: включена' : 'Вибрация: выключена';
+  const sndText=document.getElementById('menu-sound-text');
+  if(sndText) sndText.textContent = settings.sound ? 'Звук: включён' : 'Звук: выключен';
   const mpText=document.getElementById('menu-memoprompt-text');
   if(mpText){
     const mp=settings.memoPrompt||'each';
@@ -6418,7 +6472,7 @@ function serializeProgress(){
     isPremium: !!app.isPremium,
     completed:(app.completed||[]).map(lightVitrazh),
     activeVitrazhi:(app.activeVitrazhi||[]).map(lightVitrazh),
-    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt, vibration:settings.vibration},
+    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt, vibration:settings.vibration, sound:settings.sound},
     started: !document.getElementById('app-screen').classList.contains('hidden')
   };
 }
@@ -6647,6 +6701,7 @@ function applyProgress(data){
     settings.theme=data.settings.theme||'dark';
     settings.memoPrompt=data.settings.memoPrompt||'each';
     settings.vibration=data.settings.vibration!==false; // по умолчанию включена
+    settings.sound=data.settings.sound!==false; // звук по умолчанию включён
     applyTheme(settings.theme);
   }
   TOTAL = data.TOTAL || data.vTotal || 30;
