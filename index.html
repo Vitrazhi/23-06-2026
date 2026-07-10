@@ -4558,6 +4558,7 @@ function initActFields(){
   }
   updateAddBtn();
   renderSuggestChips();
+  try{ enableChipDragScroll(); }catch(_){}
   // Экран мог только что показаться — высота ещё не устаканилась. Перерисуем
   // подсказки после отрисовки кадра, чтобы верно посчитать число рядов под доступное место.
   requestAnimationFrame(()=>renderSuggestChips());
@@ -4575,6 +4576,40 @@ function currentActionValues(){
   return Array.from(document.querySelectorAll('.dyn-act-input'))
     .map(i => i.value.trim().toLowerCase())
     .filter(Boolean);
+}
+// Горизонтальная прокрутка чипов на компьютере: перетаскиванием мыши и колесом.
+// На смартфоне и так работает свайп; здесь добавляем поддержку мыши/трекпада.
+function enableChipDragScroll(){
+  const el=document.getElementById('act-suggest-chips');
+  if(!el || el._dragScroll) return; el._dragScroll=true;
+  el.style.cursor='grab';
+  let down=false, startX=0, startScroll=0, moved=false;
+  el.addEventListener('pointerdown',(e)=>{
+    if(e.pointerType==='touch') return; // тач обрабатывается нативным свайпом
+    down=true; moved=false; startX=e.clientX; startScroll=el.scrollLeft;
+    try{ el.setPointerCapture(e.pointerId); }catch(_){}
+    el.style.cursor='grabbing';
+  });
+  el.addEventListener('pointermove',(e)=>{
+    if(!down) return;
+    const dx=e.clientX-startX;
+    if(Math.abs(dx)>3) moved=true;
+    el.scrollLeft=startScroll-dx;
+  });
+  const end=(e)=>{ if(!down) return; down=false; el.style.cursor='grab';
+    try{ el.releasePointerCapture(e.pointerId); }catch(_){}
+  };
+  el.addEventListener('pointerup',end);
+  el.addEventListener('pointercancel',end);
+  el.addEventListener('pointerleave',end);
+  // Если это было перетаскивание — не срабатываем как клик по чипу
+  el.addEventListener('click',(e)=>{ if(moved){ e.stopPropagation(); e.preventDefault(); moved=false; } }, true);
+  // Колесо мыши → горизонтальная прокрутка (вертикальное движение колеса тоже листает вбок)
+  el.addEventListener('wheel',(e)=>{
+    if(el.scrollWidth<=el.clientWidth) return;
+    const d = Math.abs(e.deltaX)>Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if(d!==0){ el.scrollLeft += d; e.preventDefault(); }
+  }, {passive:false});
 }
 function renderSuggestChips(){
   const wrap = document.getElementById('act-suggest-wrap');
@@ -6086,10 +6121,29 @@ function saveVitrazhImage(v){
     let url=null;
     try{ if(cv && cv.toDataURL) url=cv.toDataURL('image/png'); }catch(e){ url=null; }
     if(!url){ toast('Не удалось подготовить изображение'); return; }
-    // В Telegram-webview navigator.share(файлы) и <a download> ненадёжны (плашка зависала,
-    // картинка не скачивалась). Показываем готовое изображение в оверлее: долгим нажатием
-    // «Сохранить изображение» — это работает во всех webview, включая Telegram.
-    showImageSaveOverlay(url, v);
+    // Основной путь сохранения на телефоне (в т.ч. Telegram) — СИСТЕМНОЕ окно
+    // «Поделиться» с файлом: там есть «Сохранить изображение» / «В Фото». Это
+    // работает надёжнее, чем длинное нажатие или <a download>, которые Telegram-webview
+    // часто блокирует. Если системный обмен файлами недоступен (десктоп/старый webview)
+    // — показываем оверлей с кнопкой «Скачать» и сохранением по долгому нажатию.
+    if(cv.toBlob){
+      cv.toBlob((blob)=>{
+        try{
+          if(blob && navigator.canShare && navigator.share){
+            const file=new File([blob],'vitrazh.png',{type:'image/png'});
+            if(navigator.canShare({files:[file]})){
+              navigator.share({files:[file]}).catch(err=>{
+                if(!(err && err.name==='AbortError')) showImageSaveOverlay(url, v);
+              });
+              return;
+            }
+          }
+        }catch(e){}
+        showImageSaveOverlay(url, v);
+      }, 'image/png');
+    } else {
+      showImageSaveOverlay(url, v);
+    }
   }).catch(()=>{ hideToast(); toast('Не удалось подготовить изображение'); });
 }
 // Полноэкранный оверлей с готовой картинкой витража для сохранения
@@ -6784,6 +6838,77 @@ function revealOnboarding(){
   dismissSplash();
   _bootComplete = true; // новый пользователь — сохранение можно включить
 }
+// ── СЛИЯНИЕ ДАННЫХ МЕЖДУ УСТРОЙСТВАМИ (один аккаунт Telegram) ──
+// Раньше облако ПОЛНОСТЬЮ заменяло локальные данные, если его «счёт» был выше —
+// из-за этого витражи, созданные на другом устройстве, стирали текущие. Теперь
+// объединяем: добавляем из облака витражи, которых нет локально (по стабильному id
+// и completedAt), ничего локального не удаляя. Затем объединение сохраняется обратно
+// в облако, чтобы оба устройства сошлись к одинаковому набору.
+function stripMediaPlaceholders(v){
+  // Медиа (фото/аудио заметок) в облако не переносятся. У пришедшего из облака
+  // витража оставляем ТЕКСТ заметок, а медиа-заглушки обнуляем, чтобы не подхватить
+  // чужие медиа по позиционному индексу локального медиа-хранилища.
+  const nv=Object.assign({}, v);
+  if(Array.isArray(nv.shardMemos)){
+    nv.shardMemos=nv.shardMemos.map(m=>{
+      if(!m) return null;
+      return { text:m.text||'', date:m.date||null,
+               photo: (m.photo==='__MEDIA__')?null:(m.photo||null),
+               audioUrl: (m.audioUrl==='__MEDIA__')?null:(m.audioUrl||null) };
+    });
+  }
+  if(nv.customImage==='__MEDIA__') nv.customImage=null;
+  if(nv.insightPhoto==='__MEDIA__') nv.insightPhoto=null;
+  if(nv.insightAudio==='__MEDIA__') nv.insightAudio=null;
+  return nv;
+}
+function cloudCurrentAsVitrazh(cloud){
+  if(!cloud || !cloud.sphere) return null;
+  return {
+    id: cloud.activeId || ('cloud_'+(cloud.sphere||'')+'_'+(cloud.vitrazhName||'')),
+    name: cloud.vitrazhName || ('Витраж '+(cloud.sphereName||'')),
+    sphere:cloud.sphere, sphereName:cloud.sphereName, sphereEmoji:cloud.sphereEmoji, sphereColor:cloud.sphereColor,
+    actions:cloud.actions||[], shards:cloud.shards||[], shardColors:cloud.shardColors||[],
+    shardMemos:cloud.shardMemos||[], shardDates:cloud.shardDates||[],
+    shardProgress:cloud.shardProgress||[], activeShardIdx:cloud.activeShardIdx,
+    markLog:cloud.markLog||[], todayDone:cloud.todayDone||[], shardsToday:cloud.shardsToday||0,
+    dayClosed:cloud.dayClosed, dayDate:cloud.dayDate,
+    streak:cloud.streak||0, light:cloud.light||0, totalDone:cloud.totalDone||0,
+    activeDays:cloud.activeDays||[], shardActionIdx:cloud.shardActionIdx||{},
+    customImage:cloud.customImage, customMap:cloud.customMap, customCentroids:cloud.customCentroids, customRatio:cloud.customRatio,
+    isCustomGlass:cloud.isCustomGlass, isPresetImage:cloud.isPresetImage,
+    vTotal:cloud.vTotal||cloud.TOTAL||30
+  };
+}
+function mergeCloudIntoLocal(cloud){
+  if(!cloud) return;
+  app.activeVitrazhi = app.activeVitrazhi||[];
+  app.completed = app.completed||[];
+  // id незавершённых, которые уже есть локально (текущий + активные)
+  const activeIds=new Set();
+  if(app.activeId) activeIds.add(app.activeId);
+  app.activeVitrazhi.forEach(v=>{ if(v&&v.id) activeIds.add(v.id); });
+  const compKeys=new Set(app.completed.map(c=>c&&c.completedAt).filter(Boolean));
+  // незавершённые из облака: его «текущий» + его активные
+  const cloudActive=[];
+  const cc=cloudCurrentAsVitrazh(cloud); if(cc) cloudActive.push(cc);
+  (cloud.activeVitrazhi||[]).forEach(v=>{ if(v) cloudActive.push(v); });
+  cloudActive.forEach(v=>{
+    if(v && v.id && !activeIds.has(v.id)){
+      app.activeVitrazhi.push(stripMediaPlaceholders(v));
+      activeIds.add(v.id);
+    }
+  });
+  // завершённые из облака, которых нет локально
+  (cloud.completed||[]).forEach(c=>{
+    if(c && c.completedAt && !compKeys.has(c.completedAt)){
+      app.completed.push(stripMediaPlaceholders(c));
+      compKeys.add(c.completedAt);
+    }
+  });
+  // Премиум — если хоть где-то активен
+  if(cloud.isPremium) app.isPremium=true;
+}
 function bootWithProgress(){
   try{ buildNavs(); }catch(e){}
   try{ refreshPremiumUI(); }catch(e){}
@@ -6805,10 +6930,8 @@ function bootWithProgress(){
   loadProgress().then((data)=>{
     const cloudHasProgress = data && (data.started || data.sphere || (data.completed&&data.completed.length) || (data.shards&&data.shards.some(Boolean)) || (data.shardProgress&&data.shardProgress.some(v=>v>0)) || (data.activeVitrazhi&&data.activeVitrazhi.length));
     if(cloudHasProgress){
-      const score = p => (p.completed?p.completed.length:0)*1000 + (p.shards?p.shards.filter(Boolean).length:0) + (p.activeVitrazhi?p.activeVitrazhi.length:0)*100;
-      const cloudScore = score(data);
-      const localScore = local ? score(local) : -1;
-      if(!localHasProgress || cloudScore>localScore){
+      if(!localHasProgress){
+        // Локально пусто — берём облако целиком
         try{
           applyProgress(data);
           _restoredSilently = true;
@@ -6816,9 +6939,21 @@ function bootWithProgress(){
           document.getElementById('app-screen').classList.remove('hidden');
           initMainScreen();
         }catch(e){ console.warn('cloud restore failed', e); }
+      } else {
+        // Есть и локальные, и облачные данные — СЛИВАЕМ (не заменяем!), чтобы не
+        // потерять витражи ни одного устройства одного аккаунта.
+        try{
+          mergeCloudIntoLocal(data);
+          if(!app.sphere && typeof updateMainEmptyState==='function') updateMainEmptyState();
+          if(typeof updateGallery==='function') updateGallery();
+          if(typeof updateUI==='function') updateUI();
+        }catch(e){ console.warn('cloud merge failed', e); }
       }
       dismissSplash();
       _bootComplete = true;
+      // Сохраняем объединённый результат — чтобы облако (и второе устройство) получили
+      // полный набор витражей обоих устройств.
+      try{ saveProgress(); }catch(e){}
     } else if(!localHasProgress){
       // Нигде нет прогресса — показываем онбординг
       revealOnboarding();
