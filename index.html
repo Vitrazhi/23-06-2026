@@ -1241,6 +1241,13 @@ function selSphere(el,id,emoji,name,color){
     const wrap=document.getElementById('act-list-wrap');
     if(wrap) wrap.innerHTML='';
   }
+  // Предзагрузка картинок пресетов выбранной сферы — чтобы при создании витраж
+  // отрисовался быстрее (изображение уже в кэше браузера). Безопасный прогрев кэша:
+  // просто создаём Image со src, на логику не влияет.
+  try{
+    const pg=(typeof PRESET_GEOMETRY!=='undefined') ? PRESET_GEOMETRY[id] : null;
+    if(pg){ Object.keys(pg).forEach(k=>{ const p=pg[k]; if(p && p.img){ const im=new Image(); im.src=p.img; } }); }
+  }catch(_){}
 }
 
 function handleImageUpload(e){
@@ -2317,7 +2324,16 @@ let vitrazh_W=0, vitrazh_H=0;
 
 // Показывает пустое состояние на вкладке «Витраж», если нет активного витража.
 // Возвращает true, если показано пустое состояние (витража нет).
+let _promotingVitrazh=false;
 function updateMainEmptyState(){
+  // Если текущего витража нет, но в очереди есть незавершённые — подхватываем первый.
+  // Иначе показывался экран «нет витражей», хотя витражи в работе есть (баг после
+  // завершения одного из нескольких витражей).
+  if(!app.sphere && !_promotingVitrazh && app.activeVitrazhi && app.activeVitrazhi.length){
+    _promotingVitrazh=true;
+    try{ loadVitrazh(app.activeVitrazhi[0]); }catch(_){}
+    _promotingVitrazh=false;
+  }
   const empty = !app.sphere; // нет выбранной сферы = нет текущего витража
   const emptyEl=document.getElementById('main-empty');
   const contentEl=document.getElementById('main-content');
@@ -2465,6 +2481,25 @@ function shardGemPoint(i, preset){
   const pc=preset&&preset.centroids&&preset.centroids[String(i+1)];
   return pc||[0.5,0.5];
 }
+// Отложенный расчёт центров осколков — вне критического пути загрузки витража.
+// Отрисовка витража не ждёт его; центры нужны только для камней-заметок.
+function scheduleShardCenters(id, w, h){
+  const run=function(){
+    try{
+      if(!(_maskAssets && _maskAssets.idData===id && !_maskAssets.centers)) return;
+      _maskAssets.centers=computeShardCenters(id, w, h);
+      // Если текущий витраж открыт и на нём есть заметки — переставим камни на
+      // уточнённые центры (без перерисовки canvas, без мерцания).
+      const hasMemo = Array.isArray(app.shardMemos) && app.shardMemos.some(m=>m && (m.text||m.photo||m.audioUrl));
+      if(hasMemo && typeof refreshMaskDots==='function' && typeof currentPreset==='function'){
+        const p=currentPreset(); const wrap=document.getElementById('vg-wrap');
+        if(p && p.mask && wrap && wrap.querySelector('canvas')) refreshMaskDots(wrap, p);
+      }
+    }catch(_){}
+  };
+  if(window.requestIdleCallback) requestIdleCallback(run, {timeout:1500});
+  else setTimeout(run, 50);
+}
 function loadMaskAssets(preset, cb){
   const key = preset.img+'|'+preset.map;
   if(_maskAssets.key===key && _maskAssets.base && _maskAssets.idData){ cb(); return; }
@@ -2482,9 +2517,9 @@ function loadMaskAssets(preset, cb){
       const octx=oc.getContext('2d',{willReadFrequently:true});
       octx.drawImage(idmap,0,0);
       const id=octx.getImageData(0,0,oc.width,oc.height);
-      _maskAssets={ key, base, idData:id, w:oc.width, h:oc.height };
-      try{ _maskAssets.centers = computeShardCenters(id, oc.width, oc.height); }catch(_){ _maskAssets.centers=null; }
-      cb();
+      _maskAssets={ key, base, idData:id, w:oc.width, h:oc.height, centers:null };
+      cb(); // сразу показываем витраж — тяжёлый расчёт центров не блокирует отрисовку
+      scheduleShardCenters(id, oc.width, oc.height);
     }catch(e){
       // Не удалось прочитать карту — сообщаем об ошибке (сработает запасной вариант)
       failed=true; cb(true);
@@ -4457,6 +4492,10 @@ function addActionField(focusNew){
   inp.addEventListener('input', ()=>{
     const hint=document.getElementById('ob2-hint');
     if(hint && inp.value.trim()) hint.style.display='none';
+    // Число рядов чипов = 7 − заполненные действия. Перерисовываем при смене
+    // «пусто ↔ заполнено», чтобы ряды убывали/возвращались вместе с действиями.
+    const nowFilled = !!inp.value.trim();
+    if(inp._wasFilled !== nowFilled){ inp._wasFilled = nowFilled; renderSuggestChips(); }
   });
   // Когда поле получает фокус (открывается клавиатура) — подкручиваем его в зону видимости,
   // чтобы пользователь видел, что печатает (иначе клавиатура перекрывает поле).
@@ -4559,33 +4598,17 @@ function renderSuggestChips(){
   // вьюпорта: чем меньше действий — тем выше вьюпорт и больше рядов; чем больше
   // действий — тем ниже вьюпорт и меньше рядов. Кнопка «Дальше» при этом всегда
   // остаётся внизу и не съезжает.
-  const ROW_H = 46; // высота ряда чипа + отступ (px)
-  const MIN_FIT = 40; // минимум высоты под один ряд без обрезания снизу
+  // По ТЗ: рядов чипов = 7 − число ЗАПОЛНЕННЫХ действий.
+  //  • при открытии (поле пустое, 0 действий) → 7 рядов;
+  //  • каждое добавленное действие (чип или ручной ввод) убирает 1 ряд;
+  //  • при 6 действиях остаётся 1 ряд (виден, помещается), при 7 — скрываем.
+  // Выбор чипа заполняет первое пустое поле, поэтому считаем именно заполненные
+  // поля, а не строки (иначе первый чип не уменьшал бы число рядов).
+  const filled = Array.from(document.querySelectorAll('.dyn-act-input'))
+    .filter(i=>i.value.trim()).length;
+  if(filled >= 7){ wrap.style.display='none'; return; }
   const vp = document.getElementById('act-suggest-viewport');
-  let rowCount = 3;
-  if(vp){
-    // Сбрасываем возможную явную высоту от старой логики — высоту задаёт flex
-    vp.style.height='';
-    const availH = vp.clientHeight; // фактическое свободное место под чипы
-    // Если места не хватает даже на один ряд — прячем блок целиком, чтобы ряд не
-    // обрезался снизу чёрным фоном (так бывает при 6 действиях, когда список
-    // действий ужимает область подсказок).
-    if(availH>0 && availH < MIN_FIT){ wrap.style.display='none'; return; }
-    if(availH >= ROW_H){
-      rowCount = Math.floor(availH / ROW_H); // floor: не выделяем ряд, который не влезет => нет обрезания
-    } else if(availH >= MIN_FIT){
-      rowCount = 1; // места ровно на один ряд
-    } else {
-      // Вьюпорт ещё не разложен (напр. первый вызов) — оцениваем по экрану шага
-      const step = document.getElementById('ob2');
-      const addBtn = document.getElementById('add-action-btn');
-      if(step && addBtn){
-        const avail = (step.getBoundingClientRect().bottom - addBtn.getBoundingClientRect().bottom) - 120;
-        rowCount = avail > 0 ? Math.floor(avail / ROW_H) : 3;
-      }
-    }
-  }
-  rowCount = Math.max(1, Math.min(7, rowCount));
+  let rowCount = 7 - filled;
   rowCount = Math.max(1, Math.min(rowCount, sugg.length));
 
   // Распределяем ряды по всей высоте вьюпорта, чтобы не было пустого места снизу
@@ -4614,6 +4637,19 @@ function renderSuggestChips(){
     chip.onclick=()=>addSuggestedAction(text);
     rows[idx % rowCount].appendChild(chip);
   });
+  // Высота блока подсказок — ровно под число рядов, чтобы ничего не обрезалось снизу.
+  // Задаём явную высоту (не flex), поэтому больше нет зависимости от «устаканивания»
+  // верстки: 7 рядов при открытии видны полностью, 1 ряд при 6 действиях — тоже.
+  if(vp){
+    const firstRow = cont.querySelector('.sugg-row');
+    let rh = firstRow ? Math.round(firstRow.getBoundingClientRect().height) : 0;
+    if(!rh) rh = 34; // запас, если верстка ещё не разложилась
+    const GAP=5, PAD=10;
+    const h = rowCount*rh + (rowCount-1)*GAP + PAD;
+    wrap.style.flex='none';
+    vp.style.flex='none';
+    vp.style.height = h+'px';
+  }
   cont.scrollLeft=0; // всегда начинаем с начала списка
 }
 // Делает первую букву заглавной (для названий из подсказок)
