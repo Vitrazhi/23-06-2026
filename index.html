@@ -6122,57 +6122,79 @@ function _copyText(text){
   else alert(text);
 }
 
-// «В галерею» — сохранить картинку витража. На мобильных лучший способ —
-// то же системное окно «Поделиться» с картинкой (там есть «Сохранить изображение»).
-// На десктопе — обычное скачивание файла.
+// Готовый к сохранению файл витража (предрендерится при открытии готового витража),
+// чтобы navigator.share можно было вызвать СИНХРОННО внутри жеста кнопки — иначе
+// Telegram/Android отклоняют share, вызванный после асинхронного рендера.
+let _saveReady = null;
+function prepareSaveImage(v){
+  _saveReady = null;
+  try{
+    renderVitrazhToCanvas(v).then(cv=>{
+      if(!cv || !cv.toBlob) return;
+      let url=null; try{ url=cv.toDataURL('image/png'); }catch(e){ url=null; }
+      cv.toBlob(blob=>{
+        if(blob){
+          let file=null; try{ file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
+          _saveReady = { v:v, blob:blob, url:url, file:file };
+        }
+      }, 'image/png');
+    }).catch(()=>{});
+  }catch(e){}
+}
+// «В галерею» — сохранить картинку витража в фотогалерею телефона.
 function saveVitrazhImage(v){
+  // Если картинка уже готова (предрендер) — делимся СРАЗУ, внутри жеста → системное
+  // окно «Сохранить изображение»/«В Фото». Это единственный надёжный путь в webview.
+  if(_saveReady && _saveReady.file && navigator.share){
+    try{
+      navigator.share({files:[_saveReady.file]}).catch(err=>{
+        if(err && err.name==='AbortError') return;
+        showImageSaveOverlay(_saveReady.url, v, _saveReady.blob);
+      });
+      return;
+    }catch(e){ showImageSaveOverlay(_saveReady.url, v, _saveReady.blob); return; }
+  }
+  // Иначе рендерим и показываем оверлей (там сохранение работает по кнопке-жесту).
   toast('Готовлю изображение…');
   renderVitrazhToCanvas(v).then(cv=>{
     hideToast();
-    let url=null;
-    try{ if(cv && cv.toDataURL) url=cv.toDataURL('image/png'); }catch(e){ url=null; }
+    let url=null; try{ if(cv && cv.toDataURL) url=cv.toDataURL('image/png'); }catch(e){ url=null; }
     if(!url){ toast('Не удалось подготовить изображение'); return; }
-    // Основной путь сохранения на телефоне (в т.ч. Telegram) — СИСТЕМНОЕ окно
-    // «Поделиться» с файлом: там есть «Сохранить изображение» / «В Фото». Это
-    // работает надёжнее, чем длинное нажатие или <a download>, которые Telegram-webview
-    // часто блокирует. Если системный обмен файлами недоступен (десктоп/старый webview)
-    // — показываем оверлей с кнопкой «Скачать» и сохранением по долгому нажатию.
-    if(cv.toBlob){
-      cv.toBlob((blob)=>{
-        try{
-          if(blob && navigator.canShare && navigator.share){
-            const file=new File([blob],'vitrazh.png',{type:'image/png'});
-            if(navigator.canShare({files:[file]})){
-              navigator.share({files:[file]}).catch(err=>{
-                if(!(err && err.name==='AbortError')) showImageSaveOverlay(url, v);
-              });
-              return;
-            }
-          }
-        }catch(e){}
-        showImageSaveOverlay(url, v);
-      }, 'image/png');
-    } else {
-      showImageSaveOverlay(url, v);
-    }
+    if(cv.toBlob){ cv.toBlob(blob=>showImageSaveOverlay(url, v, blob), 'image/png'); }
+    else showImageSaveOverlay(url, v, null);
   }).catch(()=>{ hideToast(); toast('Не удалось подготовить изображение'); });
 }
 // Полноэкранный оверлей с готовой картинкой витража для сохранения
-function showImageSaveOverlay(url, v){
+function showImageSaveOverlay(url, v, blob){
   const old=document.getElementById('img-save-overlay'); if(old) old.remove();
   const name=((v&&(v.name||v.sphereName))||'образ').replace(/\s+/g,'_');
   const ov=document.createElement('div'); ov.id='img-save-overlay';
   ov.style.cssText='position:fixed;inset:0;background:rgba(6,6,14,.95);z-index:4000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:15px;';
+  const canShare = !!(navigator.share);
   ov.innerHTML=
-    '<div style="color:#fff;font-size:15px;text-align:center;max-width:320px;line-height:1.45;">Удерживайте картинку и выберите «Сохранить изображение» — или воспользуйтесь кнопками ниже</div>'+
-    '<img src="'+url+'" alt="витраж" style="max-width:86vw;max-height:56vh;border-radius:10px;box-shadow:0 12px 44px rgba(0,0,0,.6);-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto;pointer-events:auto;" />'+
+    '<div style="color:#fff;font-size:15px;text-align:center;max-width:330px;line-height:1.45;">'+(canShare?'Нажмите «Сохранить в галерею» — откроется окно, где выберите «Сохранить изображение» / «В Фото». Или удерживайте картинку.':'Удерживайте картинку и выберите «Сохранить изображение», либо нажмите «Скачать».')+'</div>'+
+    '<img src="'+url+'" alt="витраж" style="max-width:86vw;max-height:54vh;border-radius:10px;box-shadow:0 12px 44px rgba(0,0,0,.6);-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto;pointer-events:auto;" />'+
     '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">'+
-      '<a href="'+url+'" download="vitrazh-'+name+'.png" style="color:#0b0b12;background:#e8c86a;padding:11px 22px;border-radius:12px;font-size:14px;text-decoration:none;font-weight:600;">⬇ Скачать</a>'+
-      '<button id="img-save-share" style="color:#fff;background:rgba(124,111,255,.9);border:none;padding:11px 22px;border-radius:12px;font-size:14px;cursor:pointer;font-weight:600;font-family:inherit;">✦ Поделиться</button>'+
+      (canShare?'<button id="img-save-share" style="color:#0b0b12;background:#e8c86a;padding:12px 24px;border-radius:12px;font-size:15px;cursor:pointer;font-weight:700;font-family:inherit;">💾 Сохранить в галерею</button>':'')+
+      '<a href="'+url+'" download="vitrazh-'+name+'.png" style="color:#fff;background:rgba(255,255,255,.14);padding:12px 22px;border-radius:12px;font-size:14px;text-decoration:none;font-weight:600;">⬇ Скачать</a>'+
     '</div>'+
-    '<button id="img-save-close" style="color:#fff;background:rgba(255,255,255,.12);border:none;padding:10px 24px;border-radius:12px;font-size:14px;cursor:pointer;font-family:inherit;">Закрыть</button>';
+    '<button id="img-save-close" style="color:#fff;background:rgba(255,255,255,.10);border:none;padding:10px 24px;border-radius:12px;font-size:14px;cursor:pointer;font-family:inherit;">Закрыть</button>';
   const shareBtn=ov.querySelector('#img-save-share');
-  if(shareBtn) shareBtn.onclick=()=>shareImageFromUrl(url, v);
+  if(shareBtn) shareBtn.onclick=()=>{
+    // СИНХРОННО в жесте: делимся заранее готовым файлом (без fetch/await)
+    let file=null;
+    try{ if(blob) file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
+    if(navigator.share && file){
+      try{
+        navigator.share({files:[file]}).catch(err=>{
+          if(err && err.name==='AbortError') return;
+          toast('Не получилось — удерживайте картинку, чтобы сохранить');
+        });
+        return;
+      }catch(e){}
+    }
+    if(blob) _downloadBlob(blob, v); else toast('Удерживайте картинку, чтобы сохранить');
+  };
   ov.querySelector('#img-save-close').onclick=()=>ov.remove();
   ov.addEventListener('click',e=>{ if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
@@ -6283,6 +6305,9 @@ function appendFullscreenExtras(v, overlay){
   const saveBtn=actions.querySelector('#fs-save-btn');
   if(shareBtn) shareBtn.onclick=()=>shareCompletedVitrazh(v);
   if(saveBtn) saveBtn.onclick=()=>saveVitrazhImage(v);
+  // Заранее готовим картинку к сохранению — чтобы «В галерею» вызвал системное
+  // окно сохранения СИНХРОННО (внутри жеста), иначе Telegram/Android его отклоняют.
+  try{ prepareSaveImage(v); }catch(e){}
 
   // Insight — сворачиваемый блок с фото/аудио и кнопкой редактирования
   const insBlock = buildInsightBlock(v, {compact:false, showEdit:true});
