@@ -1075,7 +1075,8 @@ const app = {
   shardProgress: [],  // сколько отметок (действий) вложено в каждый осколок
   activeShardIdx: -1, // осколок, набираемый отметками из списка действий (случайный)
   streak: 0, light: 0, totalDone: 0,
-  activeDays: [], // уникальные календарные дни активности (строки 'ГГГГ-ММ-ДД') для счётчика «дней»
+  activeDays: [], // уникальные календарные дни активности (строки 'ГГГГ-ММ-ДД') текущего витража
+  allActiveDays: [], // ГЛОБАЛЬНЫЕ дни активности по всем витражам — для серии (streak), не сбрасывается при смене витража
   customImage: null,
   customMap: null,          // карта осколков (data-URL) для витража из своего фото
   customCentroids: null,    // центроиды осколков пользовательского витража
@@ -3117,12 +3118,24 @@ function computeStreak(days){
   while(set.has(key(d))){ n++; d.setDate(d.getDate()-1); }
   return n;
 }
+// Глобальный набор дней активности по ВСЕМ витражам (текущий + активные + завершённые).
+// Серия (streak) считается по нему, поэтому не сбрасывается при переключении витражей.
+// Для существующих пользователей набор восстанавливается из дат всех их витражей.
+function allActiveDaysSet(){
+  const s=new Set(Array.isArray(app.allActiveDays)?app.allActiveDays:[]);
+  (app.activeDays||[]).forEach(d=>s.add(d));
+  (app.activeVitrazhi||[]).forEach(v=>(v&&v.activeDays||[]).forEach(d=>s.add(d)));
+  (app.completed||[]).forEach(v=>(v&&v.activeDays||[]).forEach(d=>s.add(d)));
+  return s;
+}
 // Отмечает сегодняшний день как активный (для счётчика «дней с активностью»)
 function registerActiveDay(){
   if(!Array.isArray(app.activeDays)) app.activeDays=[];
+  if(!Array.isArray(app.allActiveDays)) app.allActiveDays=[];
   const k=todayKey();
   if(!app.activeDays.includes(k)) app.activeDays.push(k);
-  app.streak=computeStreak(app.activeDays); // держим серию актуальной
+  if(!app.allActiveDays.includes(k)) app.allActiveDays.push(k);
+  app.streak=computeStreak(allActiveDaysSet()); // серия по всем витражам
 }
 
 // ── ОТМЕНА ПОСЛЕДНЕГО ОТКРЫТОГО ОСКОЛКА ──
@@ -3351,7 +3364,7 @@ function applyMark(idx, e, fromTap){
 
   if(shardJustOpened && !isFinalShard){
     setMasterMsg(pick(MASTER_SHARD_OPENED));
-    if(document.getElementById('v-stk')) document.getElementById('v-stk').textContent=app.activeDays.length;
+    if(document.getElementById('v-stk')) document.getElementById('v-stk').textContent=computeStreak(allActiveDaysSet());
   } else if(!shardJustOpened && app.dayClosed){
     setMasterMsg('Отметки на сегодня вложены. Возвращайся завтра — путь строится по дню за раз');
   }
@@ -3708,7 +3721,7 @@ function computeStats(){
   if(app.sphere) activeAll.push({shards:app.shards});
   activeAll.forEach(v=>{ totalShards += (v.shards||[]).filter(Boolean).length; });
   // Серия дней (streak) и всего активных дней — считаем серию из фактических дат
-  const streak = computeStreak(app.activeDays);
+  const streak = computeStreak(allActiveDaysSet());
   app.streak = streak;
   const activeDays = Array.isArray(app.activeDays)?app.activeDays.length:0;
   // Заметки (сколько осколков с комментариями)
@@ -4613,14 +4626,16 @@ function enableChipDragScroll(){
   el.addEventListener('pointerdown',(e)=>{
     if(e.pointerType==='touch') return; // тач обрабатывается нативным свайпом
     down=true; moved=false; startX=e.clientX; startScroll=el.scrollLeft;
-    try{ el.setPointerCapture(e.pointerId); }catch(_){}
-    el.style.cursor='grabbing';
+    // НЕ захватываем указатель сразу — иначе обычный клик по чипу не доходит до него
   });
   el.addEventListener('pointermove',(e)=>{
     if(!down) return;
     const dx=e.clientX-startX;
-    if(Math.abs(dx)>3) moved=true;
-    el.scrollLeft=startScroll-dx;
+    if(Math.abs(dx)>3){
+      if(!moved){ try{ el.setPointerCapture(e.pointerId); }catch(_){} el.style.cursor='grabbing'; }
+      moved=true;
+      el.scrollLeft=startScroll-dx;
+    }
   });
   const end=(e)=>{ if(!down) return; down=false; el.style.cursor='grab';
     try{ el.releasePointerCapture(e.pointerId); }catch(_){}
@@ -5983,6 +5998,7 @@ function showFullscreenVitrazh(v){
       const cv=buildVitrazhMaskCanvas(v.shards, W, H, preset, false);
       cv.style.cssText='width:100%;display:block;border-radius:12px;cursor:pointer;';
       svgWrap.innerHTML=''; svgWrap.appendChild(cv);
+      try{ prepareSaveImageFromCanvas(cv, v); }catch(_){} // мгновенное сохранение — из готового canvas
       // Тап по открытому осколку с заметкой — прокрутка к его комментарию в списке ниже
       cv.onclick=(e)=>{
         const rect=cv.getBoundingClientRect();
@@ -6114,26 +6130,23 @@ function renderVitrazhToCanvas(v){
 function shareCompletedVitrazh(v){
   const sphereName=v.name||v.sphereName||'витраж';
   const text=`Мой витраж «${sphereName}» собран целиком! ✦ Собери свой в приложении Витражист: ${APP_BOT_URL}`;
-  toast('Готовлю изображение…');
-  renderVitrazhToCanvas(v).then(cv=>{
-    if(!cv || !cv.toBlob){ _shareFallback(text); return; }
-    cv.toBlob((blob)=>{
-      if(!blob){ _shareFallback(text); return; }
-      const file=new File([blob],'vitrazh.png',{type:'image/png'});
-      // Системное окно «Поделиться» с картинкой — даёт чаты, соцсети, сторис
-      if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
-        navigator.share({files:[file], text}).then(()=>{
-          hideToast();
-        }).catch((err)=>{
-          // Пользователь отменил — просто закрываем тост; иначе запасной путь
-          if(err && err.name==='AbortError'){ hideToast(); }
-          else _shareFallback(text);
-        });
-      } else {
-        _shareFallback(text);
-      }
-    }, 'image/png');
-  }).catch(()=>_shareFallback(text));
+  const tg=window.Telegram&&window.Telegram.WebApp;
+  // В Telegram открываем окно «Поделиться» со ссылкой на приложение СРАЗУ, внутри жеста —
+  // тогда приложение надёжно сворачивается и даёт выбрать чат. Раньше перед этим шёл
+  // асинхронный рендер картинки, из-за чего жест терялся и окно иногда не открывалось.
+  // Картинку Telegram через ссылку всё равно не примет — её сохраняют кнопкой «В галерею».
+  if(tg && tg.openTelegramLink){
+    try{
+      tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(APP_BOT_URL)+'&text='+encodeURIComponent(text));
+      return;
+    }catch(e){}
+  }
+  // Вне Telegram — системное «Поделиться» с картинкой, если она уже готова (предрендер), в жесте
+  if(_saveReady && _saveReady.file && navigator.share){
+    try{ navigator.share({files:[_saveReady.file], text}).catch(()=>{}); return; }catch(e){}
+  }
+  if(navigator.share){ try{ navigator.share({text, url:APP_BOT_URL}).catch(()=>_copyText(text)); return; }catch(e){} }
+  _copyText(text);
 }
 // Запасной вариант: поделиться текстом (если картинку отдать нельзя)
 function _shareFallback(text){
@@ -6154,24 +6167,35 @@ function _copyText(text){
 // чтобы navigator.share можно было вызвать СИНХРОННО внутри жеста кнопки — иначе
 // Telegram/Android отклоняют share, вызванный после асинхронного рендера.
 let _saveReady = null;
-function prepareSaveImage(v){
-  _saveReady = null;
+// Готовит файл для сохранения из УЖЕ отрисованного canvas (без повторного рендера).
+function prepareSaveImageFromCanvas(cv, v){
   try{
-    renderVitrazhToCanvas(v).then(cv=>{
-      if(!cv || !cv.toBlob) return;
-      let url=null; try{ url=cv.toDataURL('image/png'); }catch(e){ url=null; }
-      cv.toBlob(blob=>{
-        if(blob){
-          let file=null; try{ file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
-          _saveReady = { v:v, blob:blob, url:url, file:file };
-        }
-      }, 'image/png');
-    }).catch(()=>{});
+    if(!cv || !cv.toBlob) return;
+    let url=null; try{ url=cv.toDataURL('image/png'); }catch(e){ url=null; }
+    cv.toBlob(blob=>{
+      if(blob){ let file=null; try{ file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
+        _saveReady = { v:v, blob:blob, url:url, file:file }; }
+    }, 'image/png');
   }catch(e){}
 }
-// «В галерею» — сохранить картинку витража в фотогалерею телефона.
-// Нативное скачивание через Telegram (Bot API 8.0+). Работает там, где navigator.share
-// недоступен (частый случай на Android-Telegram). Возвращает true, если попытка запущена.
+function prepareSaveImage(v){
+  _saveReady = null;
+  // Быстрый путь: берём уже отрисованный на экране canvas (без повторного рендера).
+  const scr = document.querySelector('#vitrazh-overlay canvas');
+  if(scr && scr.toBlob){ prepareSaveImageFromCanvas(scr, v); return; }
+  try{ renderVitrazhToCanvas(v).then(cv=>prepareSaveImageFromCanvas(cv, v)).catch(()=>{}); }catch(e){}
+}
+// Мгновенный отклик на нажатие «В галерею»: спиннер, чтобы было видно, что идёт подготовка.
+function showSavePreparing(){
+  const old=document.getElementById('save-preparing'); if(old) return old;
+  const d=document.createElement('div'); d.id='save-preparing';
+  d.style.cssText='position:fixed;inset:0;z-index:4100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(6,6,14,.55);';
+  d.innerHTML='<div style="width:38px;height:38px;border:3px solid rgba(255,255,255,.25);border-top-color:#e8c86a;border-radius:50%;animation:spin .8s linear infinite;"></div><div style="color:#fff;font-size:14px;">Готовлю изображение…</div>';
+  if(!document.getElementById('spin-kf')){ const st=document.createElement('style'); st.id='spin-kf'; st.textContent='@keyframes spin{to{transform:rotate(360deg)}}'; document.head.appendChild(st); }
+  document.body.appendChild(d); return d;
+}
+function hideSavePreparing(){ const d=document.getElementById('save-preparing'); if(d) d.remove(); }
+// Нативное скачивание через Telegram (Bot API 8.0+). Возвращает true, если попытка запущена.
 function tgDownloadFile(url){
   try{
     const tg = window.Telegram && window.Telegram.WebApp;
@@ -6182,7 +6206,9 @@ function tgDownloadFile(url){
   }catch(e){ return false; }
 }
 function saveVitrazhImage(v){
+  showSavePreparing(); // мгновенный отклик — видно, что нажатие принято
   const go = (blob, url, file)=>{
+    hideSavePreparing();
     // 1) Системное окно «Поделиться» с файлом (iOS + часть Android) — синхронно, в жесте
     if(file && navigator.share){
       try{
@@ -6193,18 +6219,28 @@ function saveVitrazhImage(v){
         return;
       }catch(e){}
     }
-    // 2) share недоступен → оверлей-хаб (кнопка «Сохранить в Telegram», скачать, долгое нажатие)
+    // 2) share недоступен → оверлей-хаб (Telegram-скачивание, скачать файл, долгое нажатие)
     showImageSaveOverlay(url, v, blob);
   };
+  // A) Уже готово (предрендер из canvas) — мгновенно, файл готов → share в жесте
   if(_saveReady && _saveReady.url){ go(_saveReady.blob, _saveReady.url, _saveReady.file); return; }
-  toast('Готовлю изображение…');
+  // B) Берём готовый canvas прямо с экрана — быстро, без повторного рендера
+  const scr = document.querySelector('#vitrazh-overlay canvas');
+  if(scr && scr.toDataURL){
+    let url=null; try{ url=scr.toDataURL('image/png'); }catch(e){ url=null; }
+    if(url){
+      if(scr.toBlob){ scr.toBlob(blob=>{ let file=null; try{ if(blob) file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){} go(blob, url, file); }, 'image/png'); }
+      else go(null, url, null);
+      return;
+    }
+  }
+  // C) Медленный путь (нет canvas) — рендерим, спиннер уже показан
   renderVitrazhToCanvas(v).then(cv=>{
-    hideToast();
     let url=null; try{ if(cv && cv.toDataURL) url=cv.toDataURL('image/png'); }catch(e){ url=null; }
-    if(!url){ toast('Не удалось подготовить изображение'); return; }
-    if(cv.toBlob){ cv.toBlob(blob=>{ let file=null; try{ file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){} go(blob, url, file); }, 'image/png'); }
+    if(!url){ hideSavePreparing(); toast('Не удалось подготовить изображение'); return; }
+    if(cv.toBlob){ cv.toBlob(blob=>{ let file=null; try{ if(blob) file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){} go(blob, url, file); }, 'image/png'); }
     else go(null, url, null);
-  }).catch(()=>{ hideToast(); toast('Не удалось подготовить изображение'); });
+  }).catch(()=>{ hideSavePreparing(); toast('Не удалось подготовить изображение'); });
 }
 // Полноэкранный оверлей с готовой картинкой витража для сохранения
 function showImageSaveOverlay(url, v, blob){
@@ -6640,6 +6676,7 @@ function serializeProgress(){
     completed:(app.completed||[]).map(lightVitrazh),
     activeVitrazhi:(app.activeVitrazhi||[]).map(lightVitrazh),
     deletedIds:(app.deletedIds||[]),
+    allActiveDays:(app.allActiveDays||[]),
     settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt, vibration:settings.vibration, sound:settings.sound},
     started: !document.getElementById('app-screen').classList.contains('hidden')
   };
@@ -6850,6 +6887,10 @@ function applyProgress(data){
   app.completed=data.completed||[];
   app.activeVitrazhi=data.activeVitrazhi||[];
   app.deletedIds=Array.isArray(data.deletedIds)?data.deletedIds.slice():[];
+  app.allActiveDays=Array.isArray(data.allActiveDays)?data.allActiveDays.slice():[];
+  // Миграция серии для существующих пользователей: если глобальных дней ещё нет —
+  // собираем их из дат всех витражей, чтобы серия не обнулилась.
+  if(!app.allActiveDays.length){ app.allActiveDays=[...allActiveDaysSet()]; }
   // Применяем надгробия: убираем удалённые витражи (по id / completedAt)
   if(app.deletedIds.length){
     const dead=new Set(app.deletedIds);
@@ -6972,6 +7013,9 @@ function mergeCloudIntoLocal(cloud){
   app.deletedIds = app.deletedIds||[];
   // ОБЪЕДИНЯЕМ надгробия обоих устройств — удаление, сделанное где угодно, действует везде.
   (cloud.deletedIds||[]).forEach(id=>{ if(id && app.deletedIds.indexOf(id)<0) app.deletedIds.push(id); });
+  // Объединяем глобальные дни активности (серия учитывает активность на всех устройствах)
+  app.allActiveDays = app.allActiveDays||[];
+  (cloud.allActiveDays||[]).forEach(d=>{ if(d && app.allActiveDays.indexOf(d)<0) app.allActiveDays.push(d); });
   const dead=new Set(app.deletedIds);
   // Убираем локально то, что удалено на другом устройстве
   app.activeVitrazhi = app.activeVitrazhi.filter(v=>!(v&&dead.has(v.id)));
