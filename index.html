@@ -599,6 +599,21 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       </div>
     </div>
 
+    <!-- Обещание себе -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:3px;">✍️ Обещание себе <span style="font-weight:400;color:var(--text2);">— по желанию</span></div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Запиши, как пройдёшь этот путь и почему не бросишь. В трудный момент сможешь к нему вернуться.</div>
+      <textarea id="ob-promise-text" maxlength="600" rows="3" placeholder="Например: Я иду до конца, даже когда трудно. Этот путь — мой выбор…" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-size:14px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box;resize:vertical;"></textarea>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+        <button type="button" id="ob-promise-audio-btn" onclick="togglePromiseAudio()" style="background:rgba(124,111,255,.14);color:var(--accent2);border:none;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">🎤 Записать голосом</button>
+        <span id="ob-promise-audio-status" style="font-size:12px;color:var(--text2);display:none;"></span>
+      </div>
+      <div id="ob-promise-audio-wrap" style="display:none;margin-top:10px;align-items:center;gap:8px;">
+        <audio id="ob-promise-audio" controls style="flex:1;height:36px;"></audio>
+        <button type="button" onclick="deletePromiseAudio()" title="Удалить запись" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;">🗑</button>
+      </div>
+    </div>
+
     <button class="btn btn-primary" onclick="nextObAndStart()">Открыть витраж ✦</button>
     <div class="ob-dots"><div class="ob-dot"></div><div class="ob-dot"></div><div class="ob-dot on"></div></div>
   </div>
@@ -650,6 +665,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
         <div class="m-av">🧙🏼‍♂️</div>
         <div><div class="m-name">МАСТЕР-ВИТРАЖИСТ</div><div class="m-msg" id="master-msg">Добро пожаловать в мастерскую. Отметь выполненное действие в списке ниже — и осколок начнёт проявляться</div></div>
       </div>
+      <button id="promise-btn" onclick="openPromiseModal()" style="display:none;align-items:center;justify-content:center;gap:6px;margin:0 auto 12px;background:rgba(124,111,255,.12);color:var(--accent2);border:1px solid rgba(124,111,255,.3);border-radius:20px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">✍️ Моё обещание</button>
       <div class="vcard" id="main-vcard">
         <div class="toast" id="main-toast">+10 ✦</div>
 
@@ -1083,6 +1099,7 @@ const app = {
   customRatio: null,        // пропорции пользовательского витража
   isCustomGlass: false,     // это витраж из своего фото (Voronoi glass)
   isPresetImage: false, // true когда customImage — предустановленный витраж
+  promise: null,            // обещание себе: { text, audio } — записывается при создании витража
   completed: [], // {name, sphere, emoji, shards, shardColors, shardMemos, shardDates, insight, completedAt}
   activeVitrazhi: [], // другие незавершённые витражи (снимки), кроме текущего отображаемого
   activeId: null, // id текущего витража (для обновления при переключении)
@@ -1225,6 +1242,7 @@ function nextObAndStart(){
   const nameInp=document.getElementById('ob-vitrazh-name');
   const custom=nameInp ? nameInp.value.trim() : '';
   app.vitrazhName = custom || ('Витраж '+app.sphereName);
+  try{ capturePromiseFromForm(); }catch(e){} // сохраняем обещание себе в витраж
   // Screen 3 (settings) → directly launch app
   applyShardCountToGrid(settings.shardCount);
   startApp();
@@ -1699,6 +1717,7 @@ function snapshotCurrentVitrazh(){
     customRatio:app.customRatio||null,
     isCustomGlass:app.isCustomGlass||false,
     isPresetImage:app.isPresetImage,
+    promise:app.promise||null,
     streak:app.streak, light:app.light, totalDone:app.totalDone,
     shardsToday:app.shardsToday,
     dayClosed:app.dayClosed,
@@ -1740,6 +1759,7 @@ function loadVitrazh(snap){
   app.customCentroids=snap.customCentroids||null;
   app.customRatio=snap.customRatio||null;
   app.isCustomGlass=snap.isCustomGlass||false;
+  app.promise=snap.promise||null;
   app.streak=snap.streak||0; app.light=snap.light||0; app.totalDone=snap.totalDone||0;
   app.shardsToday=snap.shardsToday||0;
   app.todayDone=new Set(snap.todayDone||[]);
@@ -1819,6 +1839,12 @@ function startNewVitrazh(){
   // Очищаем поле названия витража
   const nameInp=document.getElementById('ob-vitrazh-name');
   if(nameInp){ nameInp.value=''; nameInp.placeholder='Витраж Сна'; }
+  // Сбрасываем форму обещания
+  _obPromiseAudio=null;
+  const pt=document.getElementById('ob-promise-text'); if(pt) pt.value='';
+  const pw=document.getElementById('ob-promise-audio-wrap'); if(pw) pw.style.display='none';
+  const pau=document.getElementById('ob-promise-audio'); if(pau) pau.src='';
+  const pb=document.getElementById('ob-promise-audio-btn'); if(pb) pb.textContent='🎤 Записать голосом';
   // ВАЖНО: снимаем анти-флэш классы, иначе #ob-screen остаётся скрытым
   // (has-saved-progress прячет его через display:none, ob-ready нужен для opacity)
   document.documentElement.classList.remove('has-saved-progress');
@@ -2233,7 +2259,10 @@ function buildVitrazhSVG(revealed, W, H, preview=false, idPrefix=''){
     fill.id=`${idPrefix}sf${i}`;
     fill.setAttribute('d',ptsD(pts));
     fill.setAttribute('fill', isRevealed ? color : closedShardColor());
-    fill.setAttribute('stroke', isRevealed ? '#0a0a14' : closedShardStroke());
+    // Для загруженного пользователем фото (и пресет-изображений) линии-«свинец» —
+    // золотые, чтобы больше походило на настоящий витраж.
+    const _goldLead = (app.isCustomGlass || app.isPresetImage);
+    fill.setAttribute('stroke', _goldLead ? '#c9a24a' : (isRevealed ? '#0a0a14' : closedShardStroke()));
     fill.setAttribute('stroke-width', isRevealed?'2.6':'1.6');
     fill.setAttribute('stroke-linejoin','round');
     fill.style.transition='fill .4s ease,stroke .4s ease';
@@ -2255,7 +2284,7 @@ function buildVitrazhSVG(revealed, W, H, preview=false, idPrefix=''){
       const led=document.createElementNS(NS,'path');
       led.setAttribute('d',ptsD(pts));
       led.setAttribute('fill','none');
-      led.setAttribute('stroke','#0a0a14');
+      led.setAttribute('stroke','#c9a24a');
       led.setAttribute('stroke-width','2.4');
       led.setAttribute('stroke-linejoin','round');
       g.appendChild(led);
@@ -2404,6 +2433,7 @@ function initMainScreen(){
   if(updateMainEmptyState()) return;
   if(typeof hideUndo==='function') hideUndo();
   document.getElementById('v-name').textContent=app.vitrazhName||('Витраж '+app.sphereName);
+  try{ updatePromiseBtn(); }catch(e){}
   // Снимаем возможные «завершённые» состояния прошлого витража (свечение/баннер),
   // если текущий витраж ещё не собран — иначе на свежем витраже могло остаться
   // ложное поздравление с завершением.
@@ -5290,6 +5320,75 @@ function finalizeMemoAudio(){
     }
   });
 }
+// ── ОБЕЩАНИЕ СЕБЕ ──
+let _obPromiseAudio=null;      // временно записанное аудио обещания (base64) на этапе создания
+let _promiseRecording=false, _promiseRecorder=null;
+function togglePromiseAudio(){
+  if(_promiseRecording){ if(_promiseRecorder && _promiseRecorder.state!=='inactive'){ try{_promiseRecorder.stop();}catch(e){} } return; }
+  getMicStream().then(stream=>{
+    _promiseRecording=true;
+    const btn=document.getElementById('ob-promise-audio-btn'); if(btn) btn.textContent='⏹ Остановить';
+    const st=document.getElementById('ob-promise-audio-status'); if(st){ st.style.display='inline'; st.textContent='● Идёт запись…'; }
+    const chunks=[]; const rec=new MediaRecorder(stream); _promiseRecorder=rec;
+    rec.ondataavailable=e=>{ if(e.data&&e.data.size>0) chunks.push(e.data); };
+    rec.onstop=()=>{
+      const blob=new Blob(chunks,{type:'audio/webm'});
+      const fr=new FileReader();
+      fr.onload=()=>{
+        _obPromiseAudio=fr.result;
+        const wrap=document.getElementById('ob-promise-audio-wrap');
+        const au=document.getElementById('ob-promise-audio');
+        if(au) au.src=_obPromiseAudio;
+        if(wrap) wrap.style.display='flex';
+      };
+      fr.readAsDataURL(blob);
+      try{ stream.getTracks().forEach(t=>t.stop()); }catch(_){}
+      _promiseRecording=false; _promiseRecorder=null;
+      const b=document.getElementById('ob-promise-audio-btn'); if(b) b.textContent='🎤 Перезаписать';
+      const s=document.getElementById('ob-promise-audio-status'); if(s) s.style.display='none';
+    };
+    rec.start();
+  }).catch(()=>{ toast('Нет доступа к микрофону'); _promiseRecording=false; });
+}
+function deletePromiseAudio(){
+  _obPromiseAudio=null;
+  const wrap=document.getElementById('ob-promise-audio-wrap'); if(wrap) wrap.style.display='none';
+  const au=document.getElementById('ob-promise-audio'); if(au) au.src='';
+  const b=document.getElementById('ob-promise-audio-btn'); if(b) b.textContent='🎤 Записать голосом';
+}
+// Считывает обещание из формы создания в текущий витраж
+function capturePromiseFromForm(){
+  const ta=document.getElementById('ob-promise-text');
+  const text=ta?ta.value.trim():'';
+  if(text || _obPromiseAudio){ app.promise={ text:text, audio:_obPromiseAudio||null }; }
+  else app.promise=null;
+  _obPromiseAudio=null;
+}
+// Показывает обещание (текст + голос) — «в трудный момент»
+function openPromiseModal(){
+  const p=app.promise;
+  if(!p || (!p.text && !p.audio)){ toast('Обещание не записано'); return; }
+  const old=document.getElementById('promise-modal'); if(old) old.remove();
+  const m=document.createElement('div'); m.id='promise-modal';
+  m.style.cssText='position:fixed;inset:0;z-index:3500;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(6,6,14,.9);';
+  m.innerHTML=
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:22px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);">'+
+      '<div style="font-size:17px;font-weight:700;margin-bottom:4px;">✍️ Твоё обещание</div>'+
+      '<div style="font-size:12px;color:var(--text2);margin-bottom:14px;">Ты дал его себе в начале пути. Вспомни, ради чего идёшь.</div>'+
+      (p.text?('<div style="font-size:15px;line-height:1.5;white-space:pre-wrap;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:'+(p.audio?'12px':'16px')+';">'+p.text.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</div>'):'')+
+      (p.audio?('<audio controls src="'+p.audio+'" style="width:100%;height:40px;margin-bottom:16px;"></audio>'):'')+
+      '<button onclick="document.getElementById(\'promise-modal\').remove()" style="width:100%;background:var(--accent);color:#0b0b12;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Продолжаю путь ✦</button>'+
+    '</div>';
+  m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
+  document.body.appendChild(m);
+}
+// Показывает/прячет кнопку «Моё обещание» на главном экране в зависимости от наличия обещания
+function updatePromiseBtn(){
+  const b=document.getElementById('promise-btn');
+  if(!b) return;
+  const has=app.promise && (app.promise.text || app.promise.audio);
+  b.style.display = has ? 'inline-flex' : 'none';
+}
 function saveMemo(){
   // Если редактируем заметку завершённого витража — сохраняем в его запись
   if(_archiveTarget){
@@ -6640,6 +6739,7 @@ function serializeProgress(){
       customRatio: v.isCustomGlass ? (v.customRatio||null) : null,
       isCustomGlass: v.isCustomGlass||false,
       isPresetImage:v.isPresetImage||false,
+      promise: v.promise ? {text:(v.promise.text||''), audio:(v.promise.audio&&v.promise.audio!=='__MEDIA__'?'__MEDIA__':(v.promise.audio||null))} : null,
       streak:v.streak||0, light:v.light||0, totalDone:v.totalDone||0,
       shardsToday:v.shardsToday||0, todayDone:v.todayDone||[],
       vTotal:v.vTotal||30, total:v.total||v.vTotal||30,
@@ -6677,6 +6777,7 @@ function serializeProgress(){
     activeVitrazhi:(app.activeVitrazhi||[]).map(lightVitrazh),
     deletedIds:(app.deletedIds||[]),
     allActiveDays:(app.allActiveDays||[]),
+    promise: app.promise ? {text:(app.promise.text||''), audio:(app.promise.audio&&app.promise.audio!=='__MEDIA__'?'__MEDIA__':(app.promise.audio||null))} : null,
     settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt, vibration:settings.vibration, sound:settings.sound},
     started: !document.getElementById('app-screen').classList.contains('hidden')
   };
@@ -6696,15 +6797,18 @@ function serializeMedia(){
   }
   collectMemoMedia(app.shardMemos, 'cur');
   if(app.customImage && !app.isPresetImage){ media['cur_img']=app.customImage; }
+  if(app.promise && app.promise.audio && app.promise.audio!=='__MEDIA__'){ media['cur_prm']=app.promise.audio; }
   (app.completed||[]).forEach((v,vi)=>{
     collectMemoMedia(v.shardMemos, 'c'+vi);
     if(v.customImage && !v.isPresetImage){ media['c'+vi+'_img']=v.customImage; }
+    if(v.promise && v.promise.audio && v.promise.audio!=='__MEDIA__'){ media['c'+vi+'_prm']=v.promise.audio; }
     if(v.insightPhoto){ media['c'+vi+'_ip']=v.insightPhoto; }
     if(v.insightAudio){ media['c'+vi+'_ia']=v.insightAudio; }
   });
   (app.activeVitrazhi||[]).forEach((v,vi)=>{
     collectMemoMedia(v.shardMemos, 'a'+vi);
     if(v.customImage && !v.isPresetImage){ media['a'+vi+'_img']=v.customImage; }
+    if(v.promise && v.promise.audio && v.promise.audio!=='__MEDIA__'){ media['a'+vi+'_prm']=v.promise.audio; }
   });
   return media;
 }
@@ -6833,16 +6937,19 @@ function rehydrateMedia(data, media){
     });
   }
   if(data.customImage==='__MEDIA__') data.customImage = media['cur_img']||null;
+  if(data.promise && data.promise.audio==='__MEDIA__') data.promise.audio = media['cur_prm']||null;
   data.shardMemos = fixMemos(data.shardMemos, 'cur');
   (data.completed||[]).forEach((v,vi)=>{
     v.shardMemos = fixMemos(v.shardMemos, 'c'+vi);
     if(v.customImage==='__MEDIA__') v.customImage = media['c'+vi+'_img']||null;
+    if(v.promise && v.promise.audio==='__MEDIA__') v.promise.audio = media['c'+vi+'_prm']||null;
     if(v.insightPhoto==='__MEDIA__') v.insightPhoto = media['c'+vi+'_ip']||null;
     if(v.insightAudio==='__MEDIA__') v.insightAudio = media['c'+vi+'_ia']||null;
   });
   (data.activeVitrazhi||[]).forEach((v,vi)=>{
     v.shardMemos = fixMemos(v.shardMemos, 'a'+vi);
     if(v.customImage==='__MEDIA__') v.customImage = media['a'+vi+'_img']||null;
+    if(v.promise && v.promise.audio==='__MEDIA__') v.promise.audio = media['a'+vi+'_prm']||null;
   });
   return data;
 }
@@ -6867,6 +6974,7 @@ function applyProgress(data){
   app.activeDays=Array.isArray(data.activeDays)?data.activeDays:[];
   app.shardActionIdx=data.shardActionIdx||{};
   app.customImage=data.customImage||null; app.isPresetImage=data.isPresetImage||false;
+  app.promise=data.promise||null;
   app.customMap=data.customMap||null;
   app.customCentroids=data.customCentroids||null;
   app.customRatio=data.customRatio||null;
