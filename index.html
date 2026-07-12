@@ -1278,10 +1278,14 @@ function handleImageUpload(e){
   document.getElementById('uz-sub').textContent=file.name+' ('+Math.round(file.size/1024)+' KB)';
   const reader=new FileReader();
   reader.onload=ev=>{
-    app.customImage=ev.target.result;
-    document.getElementById('uz-icon').textContent='⏳';
-    document.getElementById('uz-title').textContent='Декодирую изображение...';
-    loadCustomImagePixels(ev.target.result);
+    document.getElementById('uz-icon').textContent='🎨';
+    document.getElementById('uz-title').textContent='Превращаю фото в витраж...';
+    stylizePhoto(ev.target.result).then(styled=>{
+      app.customImage=styled;
+      document.getElementById('uz-icon').textContent='⏳';
+      document.getElementById('uz-title').textContent='Декодирую изображение...';
+      loadCustomImagePixels(styled);
+    });
   };
   reader.onerror=()=>{
     document.getElementById('uz-icon').textContent='❌';
@@ -1295,6 +1299,72 @@ function handleImageUpload(e){
    квантуем в витражную палитру. Всё вычисляется ПОСЛЕ того как vitrazh_W/H известны. */
 let __imgCanvas=null, __imgCtx=null, __imgReady=false;
 
+// ── КЛИЕНТСКАЯ СТИЛИЗАЦИЯ ФОТО «ПОД ВИТРАЖ» ──
+// Превращает обычное фото в художественно-«мультяшный» вид: сглаживание, повышение
+// насыщенности/контраста, постеризация (плоские витражные области краски) и тёмные
+// контуры по границам объектов. Всё на клиенте, без сервера. Возвращает data-URL.
+function _c255(v){ return v<0?0:(v>255?255:v); }
+function _blur3(d,w,h){
+  const t=new Uint8ClampedArray(d.length);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const o=(y*w+x)*4;
+    for(let c=0;c<3;c++){
+      let s=0,n=0;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+        const yy=y+dy,xx=x+dx; if(yy<0||yy>=h||xx<0||xx>=w) continue;
+        s+=d[(yy*w+xx)*4+c]; n++;
+      }
+      t[o+c]=s/n;
+    }
+    t[o+3]=255;
+  }
+  d.set(t);
+}
+function stylizePhoto(srcUrl, opts){
+  opts=opts||{};
+  const levels=opts.levels||6, sat=opts.sat||1.42, con=opts.con||1.14, edge=opts.edge!==false, edgeTh=opts.edgeTh||105;
+  return new Promise((resolve)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const maxD=900; let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+        const sc=Math.min(1, maxD/Math.max(w,h)); w=Math.max(1,Math.round(w*sc)); h=Math.max(1,Math.round(h*sc));
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        const ctx=cv.getContext('2d',{willReadFrequently:true});
+        ctx.drawImage(img,0,0,w,h);
+        const id=ctx.getImageData(0,0,w,h); const d=id.data;
+        // яркостная карта для контуров — по исходнику, до сглаживания
+        const gray=new Uint8ClampedArray(w*h);
+        for(let i=0,p=0;i<d.length;i+=4,p++) gray[p]=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)|0;
+        // 1) лёгкое сглаживание (уводит от фотореализма)
+        _blur3(d,w,h); _blur3(d,w,h);
+        // 2) насыщенность + контраст + постеризация (плоская витражная краска)
+        const step=255/(levels-1);
+        for(let i=0;i<d.length;i+=4){
+          let r=d[i],g=d[i+1],b=d[i+2];
+          const lum=r*0.299+g*0.587+b*0.114;
+          r=lum+(r-lum)*sat; g=lum+(g-lum)*sat; b=lum+(b-lum)*sat;
+          r=(r-128)*con+128; g=(g-128)*con+128; b=(b-128)*con+128;
+          r=Math.round(_c255(r)/step)*step; g=Math.round(_c255(g)/step)*step; b=Math.round(_c255(b)/step)*step;
+          d[i]=_c255(r); d[i+1]=_c255(g); d[i+2]=_c255(b);
+        }
+        // 3) тёмные контуры по границам объектов (Sobel) — «рисованный» вид
+        if(edge){
+          for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+            const o=y*w+x;
+            const gx=-gray[o-w-1]-2*gray[o-1]-gray[o+w-1]+gray[o-w+1]+2*gray[o+1]+gray[o+w+1];
+            const gy=-gray[o-w-1]-2*gray[o-w]-gray[o-w+1]+gray[o+w-1]+2*gray[o+w]+gray[o+w+1];
+            if((Math.abs(gx)+Math.abs(gy))>edgeTh){ const p=o*4, k=0.33; d[p]*=k; d[p+1]*=k; d[p+2]*=k; }
+          }
+        }
+        ctx.putImageData(id,0,0);
+        resolve(cv.toDataURL('image/jpeg',0.9));
+      }catch(e){ resolve(srcUrl); }
+    };
+    img.onerror=()=>resolve(srcUrl);
+    img.src=srcUrl;
+  });
+}
 function loadCustomImagePixels(dataUrl){
   __imgReady=false;
   __imgCanvas=null; __imgCtx=null;
@@ -2269,9 +2339,9 @@ function buildVitrazhSVG(revealed, W, H, preview=false, idPrefix=''){
     if(isRevealed) fill.setAttribute('filter',`url(#${idPrefix}gf)`);
     g.appendChild(fill);
 
-    // Для ПРЕСЕТА: на открытом осколке показываем реальный фрагмент картинки,
-    // обрезанный по форме осколка — сохраняем текстуру луны, складок, звёзд.
-    if(isRevealed && app.isPresetImage && app.customImage && !preview){
+    // Для ПРЕСЕТА и для СВОЕГО ФОТО: на открытом осколке показываем фрагмент
+    // (стилизованной) картинки, обрезанный по форме осколка — вместо плоского цвета.
+    if(isRevealed && (app.isPresetImage || app.isCustomGlass) && app.customImage && !preview){
       const im=document.createElementNS(NS,'image');
       im.setAttributeNS('http://www.w3.org/1999/xlink','href',app.customImage);
       im.setAttribute('href',app.customImage);
@@ -2294,8 +2364,8 @@ function buildVitrazhSVG(revealed, W, H, preview=false, idPrefix=''){
     // квантованный цвет (плоская витражная краска), без наложения картинки.
 
     // Блик на открытом осколке — масштабируем под размер осколка.
-    // Для пресет-изображений блик не добавляем, чтобы не перекрывать картинку.
-    if(isRevealed && !(app.isPresetImage && !preview)){
+    // Для картинок (пресет/своё фото) блик не добавляем, чтобы не перекрывать её.
+    if(isRevealed && !((app.isPresetImage || app.isCustomGlass) && !preview)){
       // приблизительный "радиус" осколка для масштабирования блика
       const area=Math.sqrt(polygonArea(pts));
       const shine=document.createElementNS(NS,'ellipse');
