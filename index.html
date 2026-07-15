@@ -4424,6 +4424,16 @@ function applyTheme(theme){
   settings.theme = isLight ? 'light' : 'dark';
   const t=document.getElementById('menu-theme-text');
   if(t) t.textContent = isLight ? 'Тема: светлая' : 'Тема: тёмная';
+  // Цвет системных панелей (в т.ч. полоски навигации Android) — под тему приложения,
+  // иначе снизу остаётся белая полоса.
+  try{
+    const col = isLight ? '#e9e7f3' : '#07080f';
+    let mt=document.querySelector('meta[name="theme-color"]');
+    if(!mt){ mt=document.createElement('meta'); mt.name='theme-color'; document.head.appendChild(mt); }
+    mt.setAttribute('content', col);
+    document.documentElement.style.background = col;
+    document.body.style.background = col;
+  }catch(e){}
   // Telegram header/background под тему
   try{
     const tg=window.Telegram&&window.Telegram.WebApp;
@@ -7416,26 +7426,42 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
   // Инструкция по установке — своя для iPhone и для «слабых» браузеров на Android
   function showInstallHint(){
     const old=document.getElementById('ios-hint'); if(old) old.remove();
-    let title, body;
+    const isYa = /yabrowser/i.test(ua);
+    let title, body, extra='';
     if(isIOS && isSafari){
       title='Установить на iPhone';
       body='1. Нажми кнопку <b>«Поделиться»</b> внизу (квадрат со стрелкой вверх)<br>2. Пролистай вниз → <b>«На экран «Домой»»</b><br>3. Нажми <b>«Добавить»</b><br><br>Иконка появится на домашнем экране, приложение откроется на весь экран.';
     } else if(isIOS){
       title='Открой в Safari';
       body='В этом браузере установка на iPhone недоступна.<br><br>1. Скопируй ссылку<br>2. Открой её в <b>Safari</b><br>3. «Поделиться» → <b>«На экран «Домой»»</b>';
+    } else if(isYa){
+      title='Установить приложение';
+      body='<b>В Яндекс.Браузере:</b><br>1. Меню <b>(⋮ или ≡)</b> внизу справа<br>2. <b>«Добавить на главный экран»</b> (или «Установить приложение»)<br>3. Подтверди<br><br><span style="opacity:.75;">Учти: Яндекс может добавить только ярлык — тогда на иконке будет его значок, а снизу останется полоса браузера. Чтобы этого не было — установи через Chrome.</span>';
     } else {
       title='Лучше установить через Chrome';
       body='Этот браузер добавит только <b>ярлык</b>: снизу останется полоса браузера, а на иконке — его значок.<br><br>Чтобы приложение открывалось <b>на весь экран</b> и иконка была чистой:<br>1. Скопируй ссылку<br>2. Открой её в <b>Chrome</b><br>3. Меню (⋮) → <b>«Установить приложение»</b>';
     }
     const m=document.createElement('div'); m.id='ios-hint';
     m.style.cssText='position:fixed;inset:0;z-index:3600;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(6,6,14,.9);';
-    m.innerHTML='<div style="background:var(--bg2,#12131f);border:1px solid var(--border,#262840);border-radius:20px;padding:22px;max-width:360px;color:var(--text,#fff);">'+
+    m.innerHTML='<div style="background:var(--bg2,#12131f);border:1px solid var(--border,#262840);border-radius:20px;padding:22px;max-width:360px;color:var(--text,#fff);max-height:86vh;overflow-y:auto;">'+
       '<div style="font-size:17px;font-weight:700;margin-bottom:10px;">'+title+'</div>'+
       '<div style="font-size:14px;line-height:1.6;color:var(--text2,#9b9db5);">'+body+'</div>'+
-      '<button id="pwa-copy-link" style="width:100%;margin-top:14px;background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:12px;padding:11px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">🔗 Скопировать ссылку</button>'+
-      '<button onclick="document.getElementById(\'ios-hint\').remove()" style="width:100%;margin-top:8px;background:var(--accent,#7c6fff);color:#fff;border:none;border-radius:12px;padding:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">Понятно</button></div>';
+      (isYa?'<button id="pwa-try-install" style="width:100%;margin-top:14px;background:var(--accent,#7c6fff);color:#fff;border:none;border-radius:12px;padding:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">⬇ Установить здесь (Яндекс)</button>':'')+
+      '<button id="pwa-copy-link" style="width:100%;margin-top:8px;background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:12px;padding:11px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">🔗 Скопировать ссылку</button>'+
+      '<button onclick="document.getElementById(\'ios-hint\').remove()" style="width:100%;margin-top:8px;background:'+(isYa?'rgba(255,255,255,.10)':'var(--accent,#7c6fff)')+';color:#fff;border:none;border-radius:12px;padding:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">Понятно</button></div>';
     m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
     document.body.appendChild(m);
+    // Кнопка «Установить здесь» — пробуем системное окно установки Яндекса
+    const ti=m.querySelector('#pwa-try-install');
+    if(ti) ti.onclick=()=>{
+      if(deferredPrompt){
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; m.remove(); });
+      } else {
+        ti.textContent='Открой меню браузера (⋮) → «Добавить на главный экран»';
+        ti.style.background='rgba(255,255,255,.12)';
+      }
+    };
     const cb=m.querySelector('#pwa-copy-link');
     if(cb) cb.onclick=()=>{
       try{ navigator.clipboard.writeText(location.href); cb.textContent='✓ Ссылка скопирована'; }
