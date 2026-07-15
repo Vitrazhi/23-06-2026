@@ -7382,8 +7382,16 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
   if(inTelegram) return; // внутри Telegram кнопку установки не показываем
 
   // Уже установлено (открыто с домашнего экрана)?
-  const isInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
+                      window.matchMedia('(display-mode: fullscreen)').matches ||
+                      window.navigator.standalone===true;
+  const ua = navigator.userAgent;
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
+  const isSafari = isIOS && !/crios|fxios|yabrowser|opios|edgios/i.test(ua);
+  // Браузеры, которые ставят «ярлык» вместо настоящего приложения:
+  // будет полоса браузера снизу и его значок на иконке. Настоящую установку даёт Chrome.
+  const isWeakInstaller = /yabrowser|firefox|fxios|opr\/|opera|samsungbrowser|miuibrowser|ucbrowser/i.test(ua);
+  const isChromeAndroid = !isIOS && /chrome|chromium/i.test(ua) && !isWeakInstaller;
   let deferredPrompt = null;
 
   function makeBtn(){
@@ -7397,34 +7405,54 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
         deferredPrompt.prompt();
         deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; b.remove(); });
       } else if(isIOS){
-        showIOSInstallHint();
+        showInstallHint();
+      } else {
+        showInstallHint();
       }
     };
     document.body.appendChild(b);
-    // Не мозолим глаза: прячем через 12 секунд
     setTimeout(()=>{ if(b.parentNode) b.style.display='none'; }, 12000);
   }
-  // Подсказка для iPhone — там нет автоматической установки
-  function showIOSInstallHint(){
+  // Инструкция по установке — своя для iPhone и для «слабых» браузеров на Android
+  function showInstallHint(){
     const old=document.getElementById('ios-hint'); if(old) old.remove();
+    let title, body;
+    if(isIOS && isSafari){
+      title='Установить на iPhone';
+      body='1. Нажми кнопку <b>«Поделиться»</b> внизу (квадрат со стрелкой вверх)<br>2. Пролистай вниз → <b>«На экран «Домой»»</b><br>3. Нажми <b>«Добавить»</b><br><br>Иконка появится на домашнем экране, приложение откроется на весь экран.';
+    } else if(isIOS){
+      title='Открой в Safari';
+      body='В этом браузере установка на iPhone недоступна.<br><br>1. Скопируй ссылку<br>2. Открой её в <b>Safari</b><br>3. «Поделиться» → <b>«На экран «Домой»»</b>';
+    } else {
+      title='Лучше установить через Chrome';
+      body='Этот браузер добавит только <b>ярлык</b>: снизу останется полоса браузера, а на иконке — его значок.<br><br>Чтобы приложение открывалось <b>на весь экран</b> и иконка была чистой:<br>1. Скопируй ссылку<br>2. Открой её в <b>Chrome</b><br>3. Меню (⋮) → <b>«Установить приложение»</b>';
+    }
     const m=document.createElement('div'); m.id='ios-hint';
     m.style.cssText='position:fixed;inset:0;z-index:3600;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(6,6,14,.9);';
     m.innerHTML='<div style="background:var(--bg2,#12131f);border:1px solid var(--border,#262840);border-radius:20px;padding:22px;max-width:360px;color:var(--text,#fff);">'+
-      '<div style="font-size:17px;font-weight:700;margin-bottom:10px;">Установить на iPhone</div>'+
-      '<div style="font-size:14px;line-height:1.6;color:var(--text2,#9b9db5);">1. Нажми кнопку <b>«Поделиться»</b> внизу браузера (квадрат со стрелкой вверх)<br>2. Пролистай вниз → <b>«На экран «Домой»»</b><br>3. Нажми <b>«Добавить»</b><br><br>Иконка «Витражист» появится на домашнем экране.</div>'+
-      '<button onclick="document.getElementById(\'ios-hint\').remove()" style="width:100%;margin-top:16px;background:var(--accent,#7c6fff);color:#fff;border:none;border-radius:12px;padding:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">Понятно</button></div>';
+      '<div style="font-size:17px;font-weight:700;margin-bottom:10px;">'+title+'</div>'+
+      '<div style="font-size:14px;line-height:1.6;color:var(--text2,#9b9db5);">'+body+'</div>'+
+      '<button id="pwa-copy-link" style="width:100%;margin-top:14px;background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:12px;padding:11px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">🔗 Скопировать ссылку</button>'+
+      '<button onclick="document.getElementById(\'ios-hint\').remove()" style="width:100%;margin-top:8px;background:var(--accent,#7c6fff);color:#fff;border:none;border-radius:12px;padding:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">Понятно</button></div>';
     m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
     document.body.appendChild(m);
+    const cb=m.querySelector('#pwa-copy-link');
+    if(cb) cb.onclick=()=>{
+      try{ navigator.clipboard.writeText(location.href); cb.textContent='✓ Ссылка скопирована'; }
+      catch(e){ cb.textContent=location.href; }
+    };
   }
-  window.showIOSInstallHint = showIOSInstallHint;
+  window.showIOSInstallHint = showInstallHint;
+  window.showInstallHint = showInstallHint;
 
   // Android/Chrome: браузер сам предложит установку — перехватываем и показываем свою кнопку
   window.addEventListener('beforeinstallprompt',(e)=>{
     e.preventDefault(); deferredPrompt=e;
     if(!isInstalled) makeBtn();
   });
-  // iPhone: своей кнопкой ведём в инструкцию (там нет beforeinstallprompt)
-  if(isIOS && !isInstalled){
+  // iPhone и «слабые» браузеры (Яндекс, Firefox, Opera…): своей кнопкой ведём в инструкцию,
+  // потому что автоматической установки там нет (или она делает лишь ярлык).
+  if((isIOS || isWeakInstaller) && !isInstalled){
     window.addEventListener('load',()=>setTimeout(makeBtn, 2500));
   }
   window.addEventListener('appinstalled',()=>{
