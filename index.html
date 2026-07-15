@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#07080f">
+<!-- PWA: приложение можно установить на телефон и открывать с домашнего экрана -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Витражист">
+<meta name="description" content="Трекер привычек, где твой путь превращается в витраж: каждый день открывает осколок, пока не проявится образ.">
 <title>Витраж — Собери свою новую жизнь</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -7359,6 +7368,70 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
 }
 
 
+/* ══════════════════════════════════════════════
+   PWA: установка на домашний экран и офлайн-работа
+   ══════════════════════════════════════════════ */
+(function initPWA(){
+  const inTelegram = !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
+  // 1) Service worker — офлайн + возможность установки. В Telegram не нужен.
+  if('serviceWorker' in navigator && !inTelegram){
+    window.addEventListener('load',()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+  if(inTelegram) return; // внутри Telegram кнопку установки не показываем
+
+  // Уже установлено (открыто с домашнего экрана)?
+  const isInstalled = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  let deferredPrompt = null;
+
+  function makeBtn(){
+    if(document.getElementById('pwa-install')) return;
+    const b=document.createElement('button');
+    b.id='pwa-install';
+    b.innerHTML='⬇ Установить приложение';
+    b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:2500;background:var(--accent,#7c6fff);color:#fff;border:none;border-radius:22px;padding:11px 20px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;box-shadow:0 8px 26px rgba(124,111,255,.5);';
+    b.onclick=()=>{
+      if(deferredPrompt){
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; b.remove(); });
+      } else if(isIOS){
+        showIOSInstallHint();
+      }
+    };
+    document.body.appendChild(b);
+    // Не мозолим глаза: прячем через 12 секунд
+    setTimeout(()=>{ if(b.parentNode) b.style.display='none'; }, 12000);
+  }
+  // Подсказка для iPhone — там нет автоматической установки
+  function showIOSInstallHint(){
+    const old=document.getElementById('ios-hint'); if(old) old.remove();
+    const m=document.createElement('div'); m.id='ios-hint';
+    m.style.cssText='position:fixed;inset:0;z-index:3600;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(6,6,14,.9);';
+    m.innerHTML='<div style="background:var(--bg2,#12131f);border:1px solid var(--border,#262840);border-radius:20px;padding:22px;max-width:360px;color:var(--text,#fff);">'+
+      '<div style="font-size:17px;font-weight:700;margin-bottom:10px;">Установить на iPhone</div>'+
+      '<div style="font-size:14px;line-height:1.6;color:var(--text2,#9b9db5);">1. Нажми кнопку <b>«Поделиться»</b> внизу браузера (квадрат со стрелкой вверх)<br>2. Пролистай вниз → <b>«На экран «Домой»»</b><br>3. Нажми <b>«Добавить»</b><br><br>Иконка «Витражист» появится на домашнем экране.</div>'+
+      '<button onclick="document.getElementById(\'ios-hint\').remove()" style="width:100%;margin-top:16px;background:var(--accent,#7c6fff);color:#fff;border:none;border-radius:12px;padding:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;">Понятно</button></div>';
+    m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
+    document.body.appendChild(m);
+  }
+  window.showIOSInstallHint = showIOSInstallHint;
+
+  // Android/Chrome: браузер сам предложит установку — перехватываем и показываем свою кнопку
+  window.addEventListener('beforeinstallprompt',(e)=>{
+    e.preventDefault(); deferredPrompt=e;
+    if(!isInstalled) makeBtn();
+  });
+  // iPhone: своей кнопкой ведём в инструкцию (там нет beforeinstallprompt)
+  if(isIOS && !isInstalled){
+    window.addEventListener('load',()=>setTimeout(makeBtn, 2500));
+  }
+  window.addEventListener('appinstalled',()=>{
+    const b=document.getElementById('pwa-install'); if(b) b.remove();
+    try{ toast('Готово — открывай с домашнего экрана ✦'); }catch(e){}
+  });
+})();
 </script>
 </body>
 </html>
