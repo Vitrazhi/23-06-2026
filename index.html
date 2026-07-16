@@ -802,6 +802,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div class="menu-item" onclick="openReminderSettings()">🔔<span id="menu-reminder-text">Напоминания от Мастера</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="openMemoPromptSettings()">✍️<span id="menu-memoprompt-text">Впечатления: после каждого</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleTheme()">🎨<span id="menu-theme-text">Тема: тёмная</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" id="menu-fullscreen" onclick="toggleFullscreen()" style="display:none;">⛶<span id="menu-fullscreen-text">Полный экран</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleVibration()">📳<span id="menu-vibration-text">Вибрация: включена</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleSound()">🔊<span id="menu-sound-text">Звук: включён</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="shareVitrazh()">📤<span>Поделиться витражом</span><span class="mi-arrow">›</span></div>
@@ -1985,6 +1986,7 @@ const settings = {
   memoPrompt: 'each',   // 'each' = после каждого осколка, 'first' = только первый за день, 'never' = никогда
   vibration: true,      // вибрация при открытии осколка
   sound: true,          // звук стекла при полном открытии осколка
+  fullscreen: false,    // полный экран (для устройств, где система оставляет свои панели)
 };
 
 // Вибрация телефона (если поддерживается и не отключена пользователем).
@@ -4288,6 +4290,7 @@ function switchTab(tab, btn){
   if(tab==='main') updateMainEmptyState();
   if(tab==='stats') renderStats();
   if(tab==='shop') renderShop();
+  if(tab==='profile'){ try{ updateFullscreenMenu(); }catch(e){} }
 }
 
 /* ══ ЭФФЕКТЫ ══ */
@@ -4482,6 +4485,45 @@ function applyTheme(theme){
     }
   }catch(e){}
 }
+/* Полный экран вручную.
+   Нужен, когда система не отдаёт полноэкранный режим сама: приложение установлено
+   ярлыком (Яндекс.Браузер и др.), либо оболочка телефона (Xiaomi, Samsung…) оставляет
+   свою полосу навигации. Работает в любом случае — по нажатию пользователя. */
+function _fsActive(){
+  return !!(document.fullscreenElement||document.webkitFullscreenElement||
+            window.matchMedia('(display-mode: fullscreen)').matches);
+}
+function updateFullscreenMenu(){
+  const it=document.getElementById('menu-fullscreen');
+  const tx=document.getElementById('menu-fullscreen-text');
+  if(!it||!tx) return;
+  const el=document.documentElement;
+  const can=!!(el.requestFullscreen||el.webkitRequestFullscreen);
+  const inTG=!!(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData);
+  // В Telegram полный экран не нужен, там свой контейнер
+  it.style.display = (can && !inTG) ? 'flex' : 'none';
+  tx.textContent = _fsActive() ? 'Полный экран: включён' : 'Полный экран: выключен';
+}
+function toggleFullscreen(){
+  const el=document.documentElement;
+  try{
+    if(_fsActive()){
+      const ex=(document.exitFullscreen||document.webkitExitFullscreen);
+      if(ex) Promise.resolve(ex.call(document)).catch(()=>{});
+      settings.fullscreen=false;
+    } else {
+      const rq=(el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen);
+      if(rq) Promise.resolve(rq.call(el,{navigationUI:'hide'})).catch(()=>{
+        toast('Устройство не разрешило полный экран');
+      });
+      settings.fullscreen=true;
+    }
+    saveProgress();
+  }catch(e){}
+  setTimeout(updateFullscreenMenu, 300);
+}
+document.addEventListener('fullscreenchange', ()=>{ try{ updateFullscreenMenu(); }catch(e){} });
+
 function toggleTheme(){
   applyTheme(settings.theme==='light' ? 'dark' : 'light');
   // Перерисовываем витраж, чтобы закрытые осколки взяли цвет новой темы
@@ -7000,7 +7042,7 @@ function serializeProgress(){
     deletedIds:(app.deletedIds||[]),
     allActiveDays:(app.allActiveDays||[]),
     promise: app.promise ? {text:(app.promise.text||''), audio:(app.promise.audio&&app.promise.audio!=='__MEDIA__'?'__MEDIA__':(app.promise.audio||null))} : null,
-    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt, vibration:settings.vibration, sound:settings.sound},
+    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt, vibration:settings.vibration, sound:settings.sound, fullscreen:settings.fullscreen===true},
     started: !document.getElementById('app-screen').classList.contains('hidden')
   };
 }
@@ -7248,6 +7290,7 @@ function applyProgress(data){
     settings.memoPrompt=data.settings.memoPrompt||'each';
     settings.vibration=data.settings.vibration!==false; // по умолчанию включена
     settings.sound=data.settings.sound!==false; // звук по умолчанию включён
+    settings.fullscreen=data.settings.fullscreen===true; // полный экран — по выбору пользователя
     applyTheme(settings.theme);
   }
   TOTAL = data.TOTAL || data.vTotal || 30;
@@ -7492,7 +7535,12 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
     const isStandalone=window.matchMedia('(display-mode: standalone)').matches ||
                        window.matchMedia('(display-mode: minimal-ui)').matches ||
                        window.navigator.standalone===true;
-    if(!isStandalone) return;              // в обычной вкладке браузера не навязываем
+    const inTG=!!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
+    // Пробуем сами: если приложение установлено (standalone) — всегда;
+    // если установлено ярлыком (тогда режим «браузер») — только если пользователь
+    // сам включал полный экран в Мастерской.
+    const wanted = isStandalone || (settings && settings.fullscreen===true);
+    if(inTG || !wanted) return;
     if(window.matchMedia('(display-mode: fullscreen)').matches) return; // уже полный экран
     const go=()=>{
       if(already()) return;
