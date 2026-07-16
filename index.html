@@ -180,9 +180,8 @@ body.tg-mode .ob-wrap{padding-top:var(--pad-top);}
 body.tg-mode #ob-screen{padding:0;}
 
 /* ── ПЛАНШЕТЫ ──
-   На планшете колонка 520px с фоном по бокам смотрелась как «рамки» (особенно
-   в светлой теме). Здесь приложение занимает экран целиком, а содержимое
-   центрируется колонкой — дизайн не разъезжается. */
+   Фон приложения на весь экран (без «рамок» по бокам), а всё содержимое —
+   единой колонкой по центру, как на телефоне: кнопки и заголовки не растягиваются. */
 @media (min-width:481px) and (max-width:1180px) and (orientation:portrait),
        (min-width:481px) and (max-height:900px) and (min-height:481px) and (max-width:1180px){
   body, html.light-theme body{ background:var(--app-bg); }
@@ -190,17 +189,20 @@ body.tg-mode #ob-screen{padding:0;}
     max-width:none!important;
     box-shadow:none!important;
     border:none!important;
+    align-items:center;               /* колонка контента — по центру экрана */
   }
-  /* Содержимое — колонкой по центру, чтобы не растягивалось на всю ширину */
-  .phone > div[id^="tab-"] > .scroll > *,
-  .phone > div[id^="tab-"] > .screen-header,
-  .ob-step > *{
-    max-width:600px;
-    margin-left:auto;
-    margin-right:auto;
+  /* Ширина колонки — как у телефона, чтобы вёрстка выглядела так же аккуратно */
+  .phone > div[id^="tab-"]{ width:100%; max-width:var(--col, 460px); }
+  .ob-step{ width:100%; max-width:var(--col, 460px); align-self:center; }
+  /* Нижняя панель — во всю ширину, но кнопки в той же колонке */
+  .nav{
+    width:100%;
+    padding-left:max(env(safe-area-inset-left,0px), calc((100% - var(--col, 460px)) / 2));
+    padding-right:max(env(safe-area-inset-right,0px), calc((100% - var(--col, 460px)) / 2));
   }
-  .nav{ padding-left:max(env(safe-area-inset-left,0px), 8%); padding-right:max(env(safe-area-inset-right,0px), 8%); }
-  #gallery-fab{ right:calc(8% + 18px); }
+  #gallery-fab{ right:calc((100% - var(--col, 460px)) / 2 + 18px); }
+  /* Лавка: витражи переносятся вниз (в ленту они складываются только на телефоне) */
+  #shop-carousel{ flex-wrap:wrap; overflow-x:visible; justify-content:flex-start; }
 }
 
 @media (max-width:480px){
@@ -4698,7 +4700,16 @@ function shareVitrazh(){
 
 let _resetting = false; // блокирует автосохранение во время сброса
 function resetApp(){
-  if(confirm('Начать заново? Весь прогресс будет полностью удалён без возможности восстановления.')){
+  // Действие необратимое — предупреждаем строго и прямо.
+  const warn = '🛑 НАЧАТЬ ЗАНОВО?\n\n'+
+    'Будет БЕЗВОЗВРАТНО удалено:\n'+
+    '• все витражи — собранные и в работе\n'+
+    '• весь прогресс и серия дней\n'+
+    '• все комментарии, голосовые заметки и фото\n'+
+    '• твои обещания себе\n\n'+
+    '⚠️ Удаление произойдёт НА ВСЕХ УСТРОЙСТВАХ, где ты входишь в приложение.\n\n'+
+    'Восстановить это будет невозможно.\n\nТочно продолжить?';
+  if(confirm(warn)){
     _resetting = true; // запрещаем любые saveProgress до перезагрузки
     // Очищаем состояние в памяти, чтобы обработчики выгрузки не записали его обратно
     try{
@@ -6457,28 +6468,28 @@ function shareCompletedVitrazh(v){
   // В вебе (PWA): системное окно «Поделиться» — почта, мессенджеры, соцсети.
   // Отдаём КАРТИНКУ витража + текст со ссылкой на приложение.
   const shareWith = (file)=>{
-    // Отправляем картинку ВМЕСТЕ с текстом и ссылкой на приложение.
-    // (url добавляем всегда: часть приложений берёт ссылку именно из него, а не из текста)
-    const data = { title:'Витражист ✦', text: text, url: url };
+    // Картинка + текст (ссылка на приложение уже внутри текста).
+    // Отдельное поле url не задаём: при наличии файла многие приложения показывают
+    // только ссылку и теряют текст — а нам нужен именно полный текст с картинкой.
+    let data;
     if(file && navigator.canShare && navigator.canShare({files:[file]})){
-      const withFile = { files:[file], title:'Витражист ✦', text: text, url: url };
-      // Не все системы принимают файл вместе с url — пробуем полный вариант, затем без url
-      if(navigator.canShare(withFile)) data.files=[file];
-      else if(navigator.canShare({files:[file], text: text})){ delete data.url; data.files=[file]; data.text = text; }
+      data = { files:[file], title:'Витражист ✦', text: text };
+      if(!navigator.canShare(data)) data = { files:[file], text: text };
+    } else {
+      data = { title:'Витражист ✦', text: text, url: url };
     }
     try{
       navigator.share(data).catch(err=>{
         if(err && err.name==='AbortError') return;
-        // не получилось с файлом — пробуем хотя бы текст со ссылкой
         try{ navigator.share({title:'Витражист ✦', text:text, url:url}).catch(()=>_copyText(text)); }
         catch(e){ _copyText(text); }
       });
     }catch(e){ _copyText(text); }
   };
   if(!navigator.share){ _copyText(text); return; }
-  // Картинка уже готова (предрендер) — делимся сразу, в жесте
+  // 1) Картинка уже готова (предрендер) — делимся сразу, в жесте
   if(_saveReady && _saveReady.file){ shareWith(_saveReady.file); return; }
-  // Иначе берём готовый canvas с экрана
+  // 2) Берём готовый canvas с экрана
   const scr=document.querySelector('#vitrazh-overlay canvas');
   if(scr && scr.toBlob){
     showSavePreparing();
@@ -6490,7 +6501,20 @@ function shareCompletedVitrazh(v){
     },'image/png');
     return;
   }
-  shareWith(null);
+  // 3) Витража нет на экране (например, окно поздравления сразу после завершения) —
+  //    рисуем картинку специально, чтобы поделиться именно витражом, а не одним текстом.
+  showSavePreparing();
+  try{
+    renderVitrazhToCanvas(v).then(cv=>{
+      if(!cv || !cv.toBlob){ hideSavePreparing(); shareWith(null); return; }
+      cv.toBlob(blob=>{
+        hideSavePreparing();
+        let file=null;
+        try{ if(blob) file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
+        shareWith(file);
+      },'image/png');
+    }).catch(()=>{ hideSavePreparing(); shareWith(null); });
+  }catch(e){ hideSavePreparing(); shareWith(null); }
 }
 // Запасной вариант: поделиться текстом (если картинку отдать нельзя)
 function _shareFallback(text){
