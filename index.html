@@ -6404,13 +6404,21 @@ function shareCompletedVitrazh(v){
   // В вебе (PWA): системное окно «Поделиться» — почта, мессенджеры, соцсети.
   // Отдаём КАРТИНКУ витража + текст со ссылкой на приложение.
   const shareWith = (file)=>{
-    const data = { title:'Витражист', text: text };
-    if(file && navigator.canShare && navigator.canShare({files:[file]})) data.files=[file];
-    else data.url = url; // без файла — хотя бы ссылка
+    // Отправляем картинку ВМЕСТЕ с текстом и ссылкой на приложение.
+    // (url добавляем всегда: часть приложений берёт ссылку именно из него, а не из текста)
+    const data = { title:'Витражист ✦', text: text, url: url };
+    if(file && navigator.canShare && navigator.canShare({files:[file]})){
+      const withFile = { files:[file], title:'Витражист ✦', text: text, url: url };
+      // Не все системы принимают файл вместе с url — пробуем полный вариант, затем без url
+      if(navigator.canShare(withFile)) data.files=[file];
+      else if(navigator.canShare({files:[file], text: text})){ delete data.url; data.files=[file]; data.text = text; }
+    }
     try{
       navigator.share(data).catch(err=>{
         if(err && err.name==='AbortError') return;
-        _copyText(text);
+        // не получилось с файлом — пробуем хотя бы текст со ссылкой
+        try{ navigator.share({title:'Витражист ✦', text:text, url:url}).catch(()=>_copyText(text)); }
+        catch(e){ _copyText(text); }
       });
     }catch(e){ _copyText(text); }
   };
@@ -7460,6 +7468,33 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
   // Сразу приводим цвет системных панелей в соответствие теме (иначе на старте
   // может мелькнуть белая полоса сверху/снизу).
   try{ applyTheme(settings.theme || 'dark'); }catch(e){}
+
+  /* Полный экран без белых полос.
+     Если приложение запущено как установленное (standalone) или как ярлык браузера,
+     система может оставить свои панели (сверху статус-бар, снизу навигация) — они
+     рисуются белым. Просим настоящий полноэкранный режим при первом касании
+     (раньше нельзя: браузеры разрешают это только в ответ на действие пользователя).
+     Панели по-прежнему вызываются свайпом от края. */
+  (function autoFullscreen(){
+    const el=document.documentElement;
+    const already=()=>document.fullscreenElement||document.webkitFullscreenElement;
+    const isStandalone=window.matchMedia('(display-mode: standalone)').matches ||
+                       window.matchMedia('(display-mode: minimal-ui)').matches ||
+                       window.navigator.standalone===true;
+    if(!isStandalone) return;              // в обычной вкладке браузера не навязываем
+    if(window.matchMedia('(display-mode: fullscreen)').matches) return; // уже полный экран
+    const go=()=>{
+      if(already()) return;
+      try{
+        const p=(el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen||el.msRequestFullscreen);
+        if(p) p.call(el,{navigationUI:'hide'}).catch(()=>{});
+      }catch(e){}
+      window.removeEventListener('pointerdown',go);
+      window.removeEventListener('touchstart',go);
+    };
+    window.addEventListener('pointerdown',go,{once:true,passive:true});
+    window.addEventListener('touchstart',go,{once:true,passive:true});
+  })();
   const inTelegram = !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
   // 1) Service worker — офлайн + возможность установки. В Telegram не нужен.
   if('serviceWorker' in navigator && !inTelegram){
