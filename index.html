@@ -805,6 +805,7 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div class="menu-item" onclick="openMemoPromptSettings()">✍️<span id="menu-memoprompt-text">Впечатления: после каждого</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleTheme()">🎨<span id="menu-theme-text">Тема: тёмная</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" id="menu-fullscreen" onclick="toggleFullscreen()" style="display:none;">⛶<span id="menu-fullscreen-text">Полный экран</span><span class="mi-arrow">›</span></div>
+      <div class="menu-item" id="menu-install" onclick="installFromMenu()" style="display:none;">⬇<span id="menu-install-text">Установить приложение</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleVibration()">📳<span id="menu-vibration-text">Вибрация: включена</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="toggleSound()">🔊<span id="menu-sound-text">Звук: включён</span><span class="mi-arrow">›</span></div>
       <div class="menu-item" onclick="shareVitrazh()">📤<span>Поделиться витражом</span><span class="mi-arrow">›</span></div>
@@ -1989,6 +1990,7 @@ const settings = {
   vibration: true,      // вибрация при открытии осколка
   sound: true,          // звук стекла при полном открытии осколка
   fullscreen: false,    // полный экран (для устройств, где система оставляет свои панели)
+  installHidden: false, // пользователь скрыл предложение установить (или уже установил)
 };
 
 // Вибрация телефона (если поддерживается и не отключена пользователем).
@@ -4292,7 +4294,7 @@ function switchTab(tab, btn){
   if(tab==='main') updateMainEmptyState();
   if(tab==='stats') renderStats();
   if(tab==='shop') renderShop();
-  if(tab==='profile'){ try{ updateFullscreenMenu(); }catch(e){} }
+  if(tab==='profile'){ try{ updateFullscreenMenu(); }catch(e){} try{ updateInstallMenu(); }catch(e){} }
 }
 
 /* ══ ЭФФЕКТЫ ══ */
@@ -4491,6 +4493,51 @@ function applyTheme(theme){
    Нужен, когда система не отдаёт полноэкранный режим сама: приложение установлено
    ярлыком (Яндекс.Браузер и др.), либо оболочка телефона (Xiaomi, Samsung…) оставляет
    свою полосу навигации. Работает в любом случае — по нажатию пользователя. */
+/* Флаги интерфейса (полный экран, скрытое предложение установки) храним отдельно:
+   основной прогресс не сохраняется, пока у пользователя нет ни одного витража,
+   а эти настройки должны запоминаться с первого запуска. */
+const UI_FLAGS_KEY='vitrazh_ui_flags';
+function loadUiFlags(){
+  try{
+    const raw=localStorage.getItem(UI_FLAGS_KEY);
+    if(!raw) return;
+    const f=JSON.parse(raw);
+    if(typeof f.fullscreen==='boolean') settings.fullscreen=f.fullscreen;
+    if(typeof f.installHidden==='boolean') settings.installHidden=f.installHidden;
+  }catch(e){}
+}
+function saveUiFlags(){
+  try{
+    localStorage.setItem(UI_FLAGS_KEY, JSON.stringify({
+      fullscreen: settings.fullscreen===true,
+      installHidden: settings.installHidden===true
+    }));
+  }catch(e){}
+}
+
+/* Установка из Мастерской: способ поставить приложение в любой момент,
+   даже если предложение внизу было скрыто. */
+function updateInstallMenu(){
+  const it=document.getElementById('menu-install');
+  if(!it) return;
+  const inTG=!!(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData);
+  const installed=window.matchMedia('(display-mode: standalone)').matches ||
+                  window.matchMedia('(display-mode: fullscreen)').matches ||
+                  window.navigator.standalone===true;
+  // Прячем там, где установка не нужна: внутри Telegram и когда уже открыто с экрана
+  it.style.display = (inTG || installed) ? 'none' : 'flex';
+}
+function installFromMenu(){
+  if(window._pwaPrompt){
+    window._pwaPrompt.prompt();
+    window._pwaPrompt.userChoice.then((res)=>{
+      if(res && res.outcome==='accepted' && typeof window._pwaShowInstalling==='function') window._pwaShowInstalling();
+    }).finally(()=>{ window._pwaPrompt=null; });
+    return;
+  }
+  if(typeof window.showInstallHint==='function') window.showInstallHint();
+}
+
 function _fsActive(){
   return !!(document.fullscreenElement||document.webkitFullscreenElement||
             window.matchMedia('(display-mode: fullscreen)').matches);
@@ -4520,7 +4567,7 @@ function toggleFullscreen(){
       });
       settings.fullscreen=true;
     }
-    saveProgress();
+    saveUiFlags(); saveProgress();
   }catch(e){}
   setTimeout(updateFullscreenMenu, 300);
 }
@@ -7066,7 +7113,7 @@ function serializeProgress(){
     deletedIds:(app.deletedIds||[]),
     allActiveDays:(app.allActiveDays||[]),
     promise: app.promise ? {text:(app.promise.text||''), audio:(app.promise.audio&&app.promise.audio!=='__MEDIA__'?'__MEDIA__':(app.promise.audio||null))} : null,
-    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt, vibration:settings.vibration, sound:settings.sound, fullscreen:settings.fullscreen===true},
+    settings:{shardCount:settings.shardCount, dailyLimit:settings.dailyLimit, reminderTime:settings.reminderTime, reminderOn:settings.reminderOn, theme:settings.theme, memoPrompt:settings.memoPrompt, vibration:settings.vibration, sound:settings.sound, fullscreen:settings.fullscreen===true, installHidden:settings.installHidden===true},
     started: !document.getElementById('app-screen').classList.contains('hidden')
   };
 }
@@ -7315,6 +7362,7 @@ function applyProgress(data){
     settings.vibration=data.settings.vibration!==false; // по умолчанию включена
     settings.sound=data.settings.sound!==false; // звук по умолчанию включён
     settings.fullscreen=data.settings.fullscreen===true; // полный экран — по выбору пользователя
+    settings.installHidden=data.settings.installHidden===true; // предложение установить скрыто
     applyTheme(settings.theme);
   }
   TOTAL = data.TOTAL || data.vTotal || 30;
@@ -7543,6 +7591,8 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
    PWA: установка на домашний экран и офлайн-работа
    ══════════════════════════════════════════════ */
 (function initPWA(){
+  // Настройки интерфейса — раньше всего, до показа предложений
+  try{ loadUiFlags(); }catch(e){}
   // Сразу приводим цвет системных панелей в соответствие теме (иначе на старте
   // может мелькнуть белая полоса сверху/снизу).
   try{ applyTheme(settings.theme || 'dark'); }catch(e){}
@@ -7616,27 +7666,46 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
     setTimeout(()=>{ const x=document.getElementById('pwa-installing'); if(x) x.remove(); }, 90000);
   }
   function hideInstalling(){ const d=document.getElementById('pwa-installing'); if(d) d.remove(); }
+  window._pwaShowInstalling = showInstalling;
 
   function makeBtn(){
-    if(document.getElementById('pwa-install')) return;
-    const b=document.createElement('button');
-    b.id='pwa-install';
-    b.innerHTML='⬇ Установить приложение';
-    b.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:2500;background:var(--accent,#7c6fff);color:#fff;border:none;border-radius:22px;padding:11px 20px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;box-shadow:0 8px 26px rgba(124,111,255,.5);';
-    b.onclick=()=>{
+    if(document.getElementById('pwa-install-bar')) return;
+    if(settings && settings.installHidden) return;   // пользователь уже скрыл предложение
+    const bar=document.createElement('div');
+    bar.id='pwa-install-bar';
+    bar.style.cssText='position:fixed;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;transition:opacity .35s,transform .35s;'+
+      'bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:2500;width:calc(100% - 28px);max-width:430px;'+
+      'display:flex;align-items:center;gap:12px;padding:11px 12px 11px 14px;box-sizing:border-box;'+
+      'background:var(--bg2,#12131f);border:1px solid var(--border2,rgba(255,255,255,.14));border-radius:16px;'+
+      'box-shadow:0 10px 30px rgba(0,0,0,.45);';
+    bar.innerHTML=
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="font-size:13px;font-weight:600;color:var(--text,#fff);">Установить приложение</div>'+
+        '<div style="font-size:11px;color:var(--text2,#9b9db5);margin-top:1px;">Открывается с домашнего экрана, работает без интернета</div>'+
+      '</div>'+
+      '<button id="pwa-install" style="flex:0 0 auto;background:var(--accent,#7c6fff);color:#fff;border:none;border-radius:11px;padding:9px 14px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;">Установить</button>'+
+      '<button id="pwa-install-close" aria-label="Скрыть" style="flex:0 0 auto;background:none;border:none;color:var(--text2,#9b9db5);font-size:20px;line-height:1;cursor:pointer;padding:2px 4px;">×</button>';
+    document.body.appendChild(bar);
+    requestAnimationFrame(()=>{ bar.style.opacity='1'; bar.style.transform='translateX(-50%) translateY(0)'; });
+    bar.querySelector('#pwa-install').onclick=()=>{
       if(deferredPrompt){
         deferredPrompt.prompt();
         deferredPrompt.userChoice.then((res)=>{
-          if(res && res.outcome==='accepted') showInstalling(); // видно, что установка началась
-        }).finally(()=>{ deferredPrompt=null; b.remove(); });
-      } else if(isIOS){
-        showInstallHint();
+          if(res && res.outcome==='accepted') showInstalling();
+        }).finally(()=>{ deferredPrompt=null; closeBar(true); });
       } else {
         showInstallHint();
       }
     };
-    document.body.appendChild(b);
-    setTimeout(()=>{ if(b.parentNode) b.style.display='none'; }, 12000);
+    // «×» — больше не предлагать (запоминаем: ярлык открывается в том же браузере,
+    // поэтому выбор сохранится и там)
+    bar.querySelector('#pwa-install-close').onclick=()=>closeBar(true);
+    function closeBar(remember){
+      bar.style.opacity='0'; bar.style.transform='translateX(-50%) translateY(20px)';
+      setTimeout(()=>bar.remove(), 350);
+      if(remember){ try{ settings.installHidden=true; saveUiFlags(); saveProgress(); }catch(e){} }
+    }
+    window._closeInstallBar = closeBar;
   }
   // Инструкция по установке — своя для iPhone и для «слабых» браузеров на Android
   function showInstallHint(){
@@ -7688,19 +7757,29 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
   window.showIOSInstallHint = showInstallHint;
   window.showInstallHint = showInstallHint;
 
-  // Android/Chrome: браузер сам предложит установку — перехватываем и показываем свою кнопку
+  // Показываем предложение не сразу: сначала дать человеку увидеть приложение.
+  const offerInstall = ()=>{
+    if(isInstalled || (settings && settings.installHidden)) return;
+    setTimeout(makeBtn, 9000); // ~9 секунд — успел осмотреться, но ещё не ушёл
+  };
+  // Android/Chrome: браузер сам предложит установку — перехватываем и показываем своё предложение
   window.addEventListener('beforeinstallprompt',(e)=>{
     e.preventDefault(); deferredPrompt=e;
-    if(!isInstalled) makeBtn();
+    window._pwaPrompt=e;              // чтобы кнопка в Мастерской тоже работала
+    try{ updateInstallMenu(); }catch(_){}
+    offerInstall();
   });
-  // iPhone и «слабые» браузеры (Яндекс, Firefox, Opera…): своей кнопкой ведём в инструкцию,
+  // iPhone и «слабые» браузеры (Яндекс, Firefox, Opera…): своим предложением ведём в инструкцию,
   // потому что автоматической установки там нет (или она делает лишь ярлык).
-  if((isIOS || isWeakInstaller) && !isInstalled){
-    window.addEventListener('load',()=>setTimeout(makeBtn, 2500));
+  if(isIOS || isWeakInstaller){
+    window.addEventListener('load',()=>offerInstall());
   }
   window.addEventListener('appinstalled',()=>{
     hideInstalling();
-    const b=document.getElementById('pwa-install'); if(b) b.remove();
+    const bar=document.getElementById('pwa-install-bar'); if(bar) bar.remove();
+    // Установлено — больше не предлагаем никогда (в т.ч. если открыть сайт в браузере)
+    try{ settings.installHidden=true; saveUiFlags(); saveProgress(); }catch(e){}
+    try{ updateInstallMenu(); }catch(e){}
     try{ toast('Готово — открывай с домашнего экрана ✦'); }catch(e){}
   });
 })();
