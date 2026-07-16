@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#07080f">
+<!-- Системные панели (статус-бар, полоса навигации) должны быть в тон приложения,
+     а не белыми. Без color-scheme Android рисует их по теме телефона. -->
+<meta name="color-scheme" content="dark light">
 <!-- PWA: приложение можно установить на телефон и открывать с домашнего экрана -->
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=3">
@@ -45,6 +48,7 @@ input, textarea, .ob-sub, .ob-title, [contenteditable]{
   user-select:text;
 }
 :root{
+  color-scheme: dark;   /* системные панели и элементы — тёмные, в тон приложению */
   --bg:#07080f;--bg2:#0d0f1a;--bg3:#13151f;
   --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);
   --text:#eeedf8;--text2:#8e8cac;--text3:#4e4d68;
@@ -62,6 +66,7 @@ input, textarea, .ob-sub, .ob-title, [contenteditable]{
 }
 /* ══ СВЕТЛАЯ ТЕМА ══ */
 html.light-theme{
+  color-scheme: light;  /* в светлой теме системные панели тоже светлые */
   --bg:#f4f3fa;--bg2:#ffffff;--bg3:#eeecf7;
   --border:rgba(20,16,40,0.09);--border2:rgba(20,16,40,0.16);
   --text:#1a1726;--text2:#5e5a76;--text3:#9a96b0;
@@ -4458,6 +4463,12 @@ function applyTheme(theme){
     let mt=document.querySelector('meta[name="theme-color"]');
     if(!mt){ mt=document.createElement('meta'); mt.name='theme-color'; document.head.appendChild(mt); }
     mt.setAttribute('content', col);
+    // Главное: сообщаем системе схему приложения — иначе Android красит свои панели
+    // по теме телефона (в светлой теме телефона они получались белыми).
+    let cs=document.querySelector('meta[name="color-scheme"]');
+    if(!cs){ cs=document.createElement('meta'); cs.name='color-scheme'; document.head.appendChild(cs); }
+    cs.setAttribute('content', isLight ? 'light' : 'dark');
+    document.documentElement.style.colorScheme = isLight ? 'light' : 'dark';
     document.documentElement.style.background = col;
     document.body.style.background = col;
   }catch(e){}
