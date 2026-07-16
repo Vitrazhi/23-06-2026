@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#07080f">
 <!-- PWA: приложение можно установить на телефон и открывать с домашнего экрана -->
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -173,6 +173,30 @@ body.tg-mode .status-bar{display:none;}
 body.tg-mode .phone > div[id^="tab-"],
 body.tg-mode .ob-wrap{padding-top:var(--pad-top);}
 body.tg-mode #ob-screen{padding:0;}
+
+/* ── ПЛАНШЕТЫ ──
+   На планшете колонка 520px с фоном по бокам смотрелась как «рамки» (особенно
+   в светлой теме). Здесь приложение занимает экран целиком, а содержимое
+   центрируется колонкой — дизайн не разъезжается. */
+@media (min-width:481px) and (max-width:1180px) and (orientation:portrait),
+       (min-width:481px) and (max-height:900px) and (min-height:481px) and (max-width:1180px){
+  body, html.light-theme body{ background:var(--app-bg); }
+  .phone,.ob-wrap{
+    max-width:none!important;
+    box-shadow:none!important;
+    border:none!important;
+  }
+  /* Содержимое — колонкой по центру, чтобы не растягивалось на всю ширину */
+  .phone > div[id^="tab-"] > .scroll > *,
+  .phone > div[id^="tab-"] > .screen-header,
+  .ob-step > *{
+    max-width:600px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  .nav{ padding-left:max(env(safe-area-inset-left,0px), 8%); padding-right:max(env(safe-area-inset-right,0px), 8%); }
+  #gallery-fab{ right:calc(8% + 18px); }
+}
 
 @media (max-width:480px){
   .screen{align-items:stretch;justify-content:stretch;}
@@ -4564,6 +4588,14 @@ function closeMemoPromptModal(){ document.getElementById('set-memoprompt-modal')
 // бот достаточно поменять здесь.
 const APP_BOT = 'vitrazhist_bot';
 const APP_BOT_URL = 'https://t.me/'+APP_BOT;
+// Ссылка на само приложение (PWA). В Telegram — ссылка на бота, в вебе — адрес сайта.
+function appShareUrl(){
+  try{
+    if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) return APP_BOT_URL;
+    const u = location.origin + location.pathname.replace(/index\.html$/,'');
+    return u.startsWith('http') ? u : APP_BOT_URL;
+  }catch(e){ return APP_BOT_URL; }
+}
 
 // ── ТЕХПОДДЕРЖКА ──
 // Username аккаунта/бота поддержки (без @). Кнопка открывает чат с ним;
@@ -6359,24 +6391,45 @@ function renderVitrazhToCanvas(v){
 // (чаты, соцсети, сторис и т.д.). Если поделиться файлом нельзя — запасной текст.
 function shareCompletedVitrazh(v){
   const sphereName=v.name||v.sphereName||'витраж';
-  const text=`Мой витраж «${sphereName}» собран целиком! ✦ Собери свой в приложении Витражист: ${APP_BOT_URL}`;
+  const url=appShareUrl();
+  const text=`Мой витраж «${sphereName}» собран целиком! ✦ Собери свой в приложении Витражист: ${url}`;
   const tg=window.Telegram&&window.Telegram.WebApp;
-  // В Telegram открываем окно «Поделиться» со ссылкой на приложение СРАЗУ, внутри жеста —
-  // тогда приложение надёжно сворачивается и даёт выбрать чат. Раньше перед этим шёл
-  // асинхронный рендер картинки, из-за чего жест терялся и окно иногда не открывалось.
-  // Картинку Telegram через ссылку всё равно не примет — её сохраняют кнопкой «В галерею».
-  if(tg && tg.openTelegramLink){
+  // Внутри Telegram: картинку по ссылке отдать нельзя — открываем окно «Поделиться» с текстом.
+  if(tg && tg.initData && tg.openTelegramLink){
     try{
-      tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(APP_BOT_URL)+'&text='+encodeURIComponent(text));
+      tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(url)+'&text='+encodeURIComponent(text));
       return;
     }catch(e){}
   }
-  // Вне Telegram — системное «Поделиться» с картинкой, если она уже готова (предрендер), в жесте
-  if(_saveReady && _saveReady.file && navigator.share){
-    try{ navigator.share({files:[_saveReady.file], text}).catch(()=>{}); return; }catch(e){}
+  // В вебе (PWA): системное окно «Поделиться» — почта, мессенджеры, соцсети.
+  // Отдаём КАРТИНКУ витража + текст со ссылкой на приложение.
+  const shareWith = (file)=>{
+    const data = { title:'Витражист', text: text };
+    if(file && navigator.canShare && navigator.canShare({files:[file]})) data.files=[file];
+    else data.url = url; // без файла — хотя бы ссылка
+    try{
+      navigator.share(data).catch(err=>{
+        if(err && err.name==='AbortError') return;
+        _copyText(text);
+      });
+    }catch(e){ _copyText(text); }
+  };
+  if(!navigator.share){ _copyText(text); return; }
+  // Картинка уже готова (предрендер) — делимся сразу, в жесте
+  if(_saveReady && _saveReady.file){ shareWith(_saveReady.file); return; }
+  // Иначе берём готовый canvas с экрана
+  const scr=document.querySelector('#vitrazh-overlay canvas');
+  if(scr && scr.toBlob){
+    showSavePreparing();
+    scr.toBlob(blob=>{
+      hideSavePreparing();
+      let file=null;
+      try{ if(blob) file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
+      shareWith(file);
+    },'image/png');
+    return;
   }
-  if(navigator.share){ try{ navigator.share({text, url:APP_BOT_URL}).catch(()=>_copyText(text)); return; }catch(e){} }
-  _copyText(text);
+  shareWith(null);
 }
 // Запасной вариант: поделиться текстом (если картинку отдать нельзя)
 function _shareFallback(text){
@@ -6439,8 +6492,14 @@ function saveVitrazhImage(v){
   showSavePreparing(); // мгновенный отклик — видно, что нажатие принято
   const go = (blob, url, file)=>{
     hideSavePreparing();
-    // 1) Системное окно «Поделиться» с файлом (iOS + часть Android) — синхронно, в жесте
-    if(file && navigator.share){
+    // «В галерею» — именно СОХРАНЯЕМ картинку (не открываем окно «Поделиться»:
+    // для отправки есть отдельная кнопка «Поделиться»).
+    // 1) В Telegram — нативное скачивание
+    if(url && tgDownloadFile(url)) return;
+    // 2) iPhone: скачать файл в «Фото» из браузера нельзя — там сохранение идёт только
+    //    через системное меню («Сохранить изображение»). Открываем его с файлом.
+    const _isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if(_isIOS && file && navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
       try{
         navigator.share({files:[file]}).catch(err=>{
           if(err && err.name==='AbortError') return;
@@ -6449,7 +6508,20 @@ function saveVitrazhImage(v){
         return;
       }catch(e){}
     }
-    // 2) share недоступен → оверлей-хаб (Telegram-скачивание, скачать файл, долгое нажатие)
+    // 3) Android/десктоп — обычное скачивание файла: попадает в «Загрузки»/галерею
+    try{
+      const href = blob ? URL.createObjectURL(blob) : url;
+      if(href){
+        const a=document.createElement('a');
+        a.href=href;
+        a.download='vitrazh-'+(v && (v.name||v.sphereName) ? String(v.name||v.sphereName).replace(/[^\wа-яА-ЯёЁ\- ]/g,'').trim().replace(/\s+/g,'-') : 'obraz')+'.png';
+        document.body.appendChild(a); a.click(); a.remove();
+        if(blob) setTimeout(()=>URL.revokeObjectURL(href), 4000);
+        try{ toast('Витраж сохранён ✦'); }catch(e){}
+        return;
+      }
+    }catch(e){}
+    // 3) Не получилось — оверлей с картинкой (долгое нажатие → «Сохранить изображение»)
     showImageSaveOverlay(url, v, blob);
   };
   // A) Уже готово (предрендер из canvas) — мгновенно, файл готов → share в жесте
@@ -7410,6 +7482,23 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
   const isChromeAndroid = !isIOS && /chrome|chromium/i.test(ua) && !isWeakInstaller;
   let deferredPrompt = null;
 
+  // Показ прогресса установки: Android генерирует приложение на серверах Google,
+  // это занимает до минуты. Без индикатора пользователь думает, что ничего не произошло.
+  function showInstalling(){
+    const old=document.getElementById('pwa-installing'); if(old) return;
+    const d=document.createElement('div'); d.id='pwa-installing';
+    d.style.cssText='position:fixed;inset:0;z-index:4200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(6,6,14,.92);padding:30px;text-align:center;';
+    d.innerHTML='<div style="width:44px;height:44px;border:3px solid rgba(255,255,255,.2);border-top-color:#e8c86a;border-radius:50%;animation:spin .9s linear infinite;"></div>'+
+      '<div style="color:#fff;font-size:16px;font-weight:600;">Устанавливаю приложение…</div>'+
+      '<div style="color:rgba(255,255,255,.6);font-size:13px;line-height:1.5;max-width:280px;">Это занимает до минуты. Иконка «Витражист» появится на домашнем экране.</div>'+
+      '<button onclick="document.getElementById(\'pwa-installing\').remove()" style="margin-top:6px;background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:12px;padding:10px 18px;font-size:13px;font-family:inherit;cursor:pointer;">Скрыть</button>';
+    if(!document.getElementById('spin-kf')){ const st=document.createElement('style'); st.id='spin-kf'; st.textContent='@keyframes spin{to{transform:rotate(360deg)}}'; document.head.appendChild(st); }
+    document.body.appendChild(d);
+    // подстраховка: не висим вечно
+    setTimeout(()=>{ const x=document.getElementById('pwa-installing'); if(x) x.remove(); }, 90000);
+  }
+  function hideInstalling(){ const d=document.getElementById('pwa-installing'); if(d) d.remove(); }
+
   function makeBtn(){
     if(document.getElementById('pwa-install')) return;
     const b=document.createElement('button');
@@ -7419,7 +7508,9 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
     b.onclick=()=>{
       if(deferredPrompt){
         deferredPrompt.prompt();
-        deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; b.remove(); });
+        deferredPrompt.userChoice.then((res)=>{
+          if(res && res.outcome==='accepted') showInstalling(); // видно, что установка началась
+        }).finally(()=>{ deferredPrompt=null; b.remove(); });
       } else if(isIOS){
         showInstallHint();
       } else {
@@ -7462,7 +7553,9 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
     if(ti) ti.onclick=()=>{
       if(deferredPrompt){
         deferredPrompt.prompt();
-        deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; m.remove(); });
+        deferredPrompt.userChoice.then((res)=>{
+          if(res && res.outcome==='accepted') showInstalling();
+        }).finally(()=>{ deferredPrompt=null; m.remove(); });
       } else {
         ti.textContent='Открой меню браузера (⋮) → «Добавить на главный экран»';
         ti.style.background='rgba(255,255,255,.12)';
@@ -7488,6 +7581,7 @@ if(document.readyState==='complete' || document.readyState==='interactive'){
     window.addEventListener('load',()=>setTimeout(makeBtn, 2500));
   }
   window.addEventListener('appinstalled',()=>{
+    hideInstalling();
     const b=document.getElementById('pwa-install'); if(b) b.remove();
     try{ toast('Готово — открывай с домашнего экрана ✦'); }catch(e){}
   });
