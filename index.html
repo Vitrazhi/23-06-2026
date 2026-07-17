@@ -1729,32 +1729,6 @@ function buildGemInlay(type, leftPct, topPct, onClickIdx){
   return el;
 }
 
-function addMemoIndicators(svg){
-  if(!svg||!app.shardMemos) return;
-  const polys=getShardPolygons(vitrazh_W,vitrazh_H);
-  polys.forEach((pts,i)=>{
-    if(!(app.shards[i]||(app.shardProgress&&app.shardProgress[i]>0))||!app.shardMemos[i]) return;
-    const m=app.shardMemos[i];
-    const type=memoGemType(m);
-    if(!type) return;
-    const cx=pts.reduce((s,p)=>s+p[0],0)/pts.length;
-    const cy=pts.reduce((s,p)=>s+p[1],0)/pts.length;
-    const NS='http://www.w3.org/2000/svg';
-    // Встраиваем камень как foreignObject поверх осколка
-    const fo=document.createElementNS(NS,'foreignObject');
-    const sz=18;
-    fo.setAttribute('x',(cx-sz/2).toFixed(1));
-    fo.setAttribute('y',(cy-sz/2).toFixed(1));
-    fo.setAttribute('width',sz); fo.setAttribute('height',sz);
-    fo.style.overflow='visible'; fo.style.cursor='pointer';
-    const div=document.createElement('div');
-    div.style.cssText='width:'+sz+'px;height:'+sz+'px;';
-    div.innerHTML=gemSVGMarkup(type.kind);
-    div.addEventListener('click', e=>{ e.stopPropagation(); openMemoModal(i); });
-    fo.appendChild(div);
-    svg.appendChild(fo);
-  });
-}
 
 function startApp(){
   // Собираем действия
@@ -3258,10 +3232,6 @@ function addMemoIndicators(svg){
 }
 
 // Ключ сегодняшнего дня в формате ГГГГ-ММ-ДД (локальное время)
-function todayKey(){
-  const d=new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
 // Считает «серию подряд» — число последовательных активных дней, заканчивающееся
 // сегодня (или вчера, если сегодня ещё не отмечали). Раньше app.streak нигде не
 // пересчитывался и всегда оставался 0 — отсюда «серия не обновляется».
@@ -3619,6 +3589,52 @@ function buildActionsList(){
 }
 
 // Универсальный обработчик долгого нажатия (мышь + тач). Не мешает обычному клику.
+/* Понятное объяснение, если микрофон недоступен.
+   Раньше показывалось просто «Нет доступа к микрофону» — человек не понимал,
+   что делать дальше. Теперь подсказываем и напоминаем про текстовую запись. */
+function micDeniedMessage(err){
+  const name = err && err.name ? err.name : '';
+  if(name==='NotAllowedError' || name==='SecurityError'){
+    return 'Микрофон запрещён. Разреши доступ в настройках браузера (значок замка рядом с адресом сайта) — или просто напиши текстом.';
+  }
+  if(name==='NotFoundError' || name==='DevicesNotFoundError'){
+    return 'Микрофон не найден. Проверь наушники или гарнитуру — или напиши текстом.';
+  }
+  if(name==='NotReadableError' || name==='TrackStartError'){
+    return 'Микрофон занят другим приложением. Закрой его и попробуй снова — или напиши текстом.';
+  }
+  return 'Не удалось включить микрофон. Можно записать текстом.';
+}
+function showMicError(err){
+  try{ toast(micDeniedMessage(err)); }catch(e){ alert(micDeniedMessage(err)); }
+}
+/* ══════════════════════════════════════════════
+   Связь: мягко сообщаем о её потере и возвращении.
+   Приложение работает офлайн (прогресс хранится на устройстве), но новые
+   картинки витражей без сети не загрузятся — человек должен понимать почему.
+   ══════════════════════════════════════════════ */
+(function initNetworkNotice(){
+  let wasOffline = false;
+  const onOffline = ()=>{
+    wasOffline = true;
+    try{ toast('Нет связи. Приложение работает, прогресс сохраняется на устройстве'); }catch(e){}
+  };
+  const onOnline = ()=>{
+    if(!wasOffline) return;      // не поздравляем тех, кто и не терял связь
+    wasOffline = false;
+    try{ toast('Связь восстановлена ✦'); }catch(e){}
+  };
+  window.addEventListener('offline', onOffline);
+  window.addEventListener('online', onOnline);
+  // Если приложение открыли уже без сети — предупреждаем сразу
+  if(navigator.onLine === false){
+    wasOffline = true;
+    window.addEventListener('load', ()=>setTimeout(()=>{
+      try{ toast('Нет связи. Часть витражей может не загрузиться'); }catch(e){}
+    }, 1200));
+  }
+})();
+
 function attachLongPress(el, cb){
   let timer=null, longFired=false, sx=0, sy=0;
   const start=(x,y)=>{ longFired=false; sx=x; sy=y; timer=setTimeout(()=>{ longFired=true; if(navigator.vibrate)navigator.vibrate(15); cb(sx,sy); }, 550); };
@@ -4094,7 +4110,24 @@ function renderShop(){
   const body=document.getElementById('shop-body');
   if(!body) return;
   const prem = isPremium();
-  const subCard = `
+  // Если продление не прошло — мягко предупреждаем и говорим, сколько есть времени.
+  // Данные приходят с сервера (renew_problem, grace_until).
+  let renewWarn = '';
+  const rp = (typeof app!=='undefined' && app.renewProblem) ? app.renewProblem : null;
+  if(rp && rp.grace_until){
+    const left = Math.max(0, Math.ceil((new Date(rp.grace_until) - new Date())/86400000));
+    const days = left===1?'день':(left>=2&&left<=4?'дня':'дней');
+    renewWarn = `
+    <div style="padding:4px 18px 0;">
+      <div style="background:rgba(240,192,96,.12);border:1px solid rgba(240,192,96,.4);border-radius:16px;padding:14px 16px;margin-bottom:10px;">
+        <div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:4px;">⚠ Не удалось продлить подписку</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.5;">
+          Доступ сохраняется ещё ${left} ${days}. Проверь карту или оплати заново — прогресс и витражи останутся на месте.
+        </div>
+      </div>
+    </div>`;
+  }
+  const subCard = renewWarn + `
     <div style="padding:4px 18px 0;">
       <div style="background:linear-gradient(135deg,#7c6fff,#5f4bd8 60%,#3b2b8a);border-radius:20px;padding:22px 20px;position:relative;overflow:hidden;margin-bottom:8px;box-shadow:0 12px 40px rgba(124,111,255,.35);">
         <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%);"></div>
@@ -4105,8 +4138,8 @@ function renderShop(){
         </div>
         ${prem ? `<button class="btn" onclick="togglePremiumTest()" style="width:100%;background:rgba(255,255,255,.18);color:#fff;font-size:13px;padding:12px;">Активна · управлять</button>` : `
         <div style="display:flex;gap:8px;">
-          <button class="btn" onclick="buySubscription('month')" style="flex:1;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:13px;padding:12px;">199 ₽ / мес</button>
-          <button class="btn" onclick="buySubscription('year')" style="flex:1.3;background:#fff;color:#5f4bd8;font-weight:700;font-size:13px;padding:12px;">2780 ₽ / год<div style="font-size:10px;font-weight:500;opacity:.7;">выгодно −16%</div></button>
+          <button class="btn" onclick="buySubscription('month')" style="flex:1;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:13px;padding:12px;">299 ₽ / мес</button>
+          <button class="btn" onclick="buySubscription('year')" style="flex:1.3;background:#fff;color:#5f4bd8;font-weight:700;font-size:13px;padding:12px;">2870 ₽ / год<div style="font-size:10px;font-weight:500;opacity:.7;">выгодно −20%</div></button>
         </div>`}
       </div>
     </div>`;
@@ -5357,7 +5390,16 @@ async function startCameraStream(){
     try{ await video.play(); }catch(e){}
   }catch(err){
     // Камера не дала доступ (нет разрешения / баг Telegram Android / нет камеры)
-    errText.textContent='Не удалось открыть камеру. Проверь разрешение на камеру для Telegram или выбери фото из галереи.';
+    // Текст зависит от причины: так человек понимает, что именно делать.
+    const _n = (err && err.name) || '';
+    errText.textContent =
+      (_n==='NotAllowedError' || _n==='SecurityError')
+        ? 'Камера запрещена. Разреши доступ в настройках браузера (значок замка рядом с адресом сайта) — или выбери фото из галереи.'
+      : (_n==='NotFoundError' || _n==='DevicesNotFoundError')
+        ? 'Камера не найдена на этом устройстве. Можно выбрать фото из галереи.'
+      : (_n==='NotReadableError' || _n==='TrackStartError')
+        ? 'Камера занята другим приложением. Закрой его и попробуй снова — или выбери фото из галереи.'
+        : 'Не удалось открыть камеру. Можно выбрать фото из галереи.';
     errBox.style.display='flex';
   }
 }
@@ -5540,6 +5582,9 @@ function startMemoAudio(){
     rec.ondataavailable=e=>{ if(e.data && e.data.size>0) chunks.push(e.data); };
     rec.onstop=()=>{
       const blob=new Blob(chunks,{type:'audio/webm'});
+      // Освобождаем прежнюю запись: иначе при каждой перезаписи в памяти
+      // остаётся старый файл (браузер сам их не чистит).
+      try{ if(app.memoAudioUrl && app.memoAudioUrl.startsWith('blob:')) URL.revokeObjectURL(app.memoAudioUrl); }catch(e){}
       app.memoAudioUrl=URL.createObjectURL(blob);
       _memoAudioChanged=true;
       // Показываем плеер с возможностью удалить
@@ -5556,7 +5601,7 @@ function startMemoAudio(){
       if(_memoStopResolve){ _memoStopResolve(); _memoStopResolve=null; }
     };
     rec.start();
-  }).catch(()=>{ alert('Нет доступа к микрофону'); _memoRecording=false; });
+  }).catch((err)=>{ showMicError(err); _memoRecording=false; });
 }
 function stopMemoAudio(){
   if(app.memoRecorder&&app.memoRecorder.state!=='inactive') app.memoRecorder.stop();
@@ -5615,7 +5660,7 @@ function togglePromiseAudio(){
       const s=document.getElementById('ob-promise-audio-status'); if(s) s.style.display='none';
     };
     rec.start();
-  }).catch(()=>{ toast('Нет доступа к микрофону'); _promiseRecording=false; });
+  }).catch((err)=>{ showMicError(err); _promiseRecording=false; });
 }
 function deletePromiseAudio(){
   _obPromiseAudio=null;
@@ -5738,6 +5783,7 @@ function startCompAudio(){
     rec.ondataavailable=e=>{ if(e.data && e.data.size>0) chunks.push(e.data); };
     rec.onstop=()=>{
       const blob=new Blob(chunks,{type:'audio/webm'});
+      try{ if(app.compAudioUrl && app.compAudioUrl.startsWith('blob:')) URL.revokeObjectURL(app.compAudioUrl); }catch(e){}
       app.compAudioUrl=URL.createObjectURL(blob);
       const st=document.getElementById('comp-audio-status'); if(st) st.style.display='none';
       const aw=document.getElementById('comp-audio-wrap');
@@ -5749,7 +5795,7 @@ function startCompAudio(){
       if(_compStopResolve){ _compStopResolve(); _compStopResolve=null; }
     };
     rec.start();
-  }).catch(()=>{ alert('Нет доступа к микрофону'); _compRecording=false; });
+  }).catch((err)=>{ showMicError(err); _compRecording=false; });
 }
 function stopCompAudio(){
   if(app.compRecorder&&app.compRecorder.state!=='inactive') app.compRecorder.stop();
@@ -5914,6 +5960,11 @@ function updateGallery(){
     const currentActive = (app.sphere && done<TOTAL) ? 1 : 0;
     gc.textContent = currentActive + app.activeVitrazhi.length + app.completed.length;
   }
+  // Счётчик «Завершено» тоже пересчитываем здесь. Раньше он обновлялся только
+  // в момент завершения витража — и после перезапуска приложения показывал 0,
+  // хотя собранные витражи были на месте.
+  const gcomp=document.getElementById('g-comp');
+  if(gcomp) gcomp.textContent = app.completed.length;
 
   // ── Filter buttons ──
   const filterBar=document.createElement('div');
@@ -6459,6 +6510,44 @@ function showFullscreenVitrazh(v){
 
 // Добавляет блок инсайта и историю осколков в полноэкранный просмотр
 // Рендерит завершённый витраж в картинку (canvas) и возвращает её как Promise<canvas>
+/* Подпись на картинке для отправки.
+   Многие приложения (Telegram, WhatsApp) при получении файла отбрасывают текст
+   сообщения — тогда ссылка на приложение теряется. Поэтому наносим её прямо
+   на изображение: так она дойдёт в любом случае. */
+function addShareWatermark(src){
+  try{
+    const W=src.width, pad=Math.round(W*0.055), fs=Math.round(W*0.032);
+    const barH=Math.round(pad*2 + fs*2.35);
+    const cv=document.createElement('canvas');
+    cv.width=W; cv.height=src.height + barH;
+    const g=cv.getContext('2d');
+    // сам витраж
+    g.drawImage(src,0,0);
+    // полоса-подпись
+    const grad=g.createLinearGradient(0,src.height,0,cv.height);
+    grad.addColorStop(0,'#0a0c18'); grad.addColorStop(1,'#12142a');
+    g.fillStyle=grad; g.fillRect(0,src.height,W,barH);
+    // золотая линия сверху полосы — в стиле витража
+    g.fillStyle='rgba(201,162,74,.55)'; g.fillRect(0,src.height,W,Math.max(1,Math.round(W*0.003)));
+    g.textBaseline='top';
+    // название
+    g.fillStyle='#f0dca8';
+    g.font='700 '+fs+'px Onest, -apple-system, sans-serif';
+    g.fillText('✦ Витражист', pad, src.height + pad*0.9);
+    // ссылка
+    g.fillStyle='rgba(255,255,255,.62)';
+    g.font='500 '+Math.round(fs*0.78)+'px Onest, -apple-system, sans-serif';
+    let link=(typeof appShareUrl==='function'?appShareUrl():'').replace(/^https?:\/\//,'').replace(/\/$/,'');
+    g.fillText(link, pad, src.height + pad*0.9 + fs*1.25);
+    // короткий призыв справа
+    g.textAlign='right'; g.fillStyle='rgba(255,255,255,.5)';
+    g.font='500 '+Math.round(fs*0.72)+'px Onest, -apple-system, sans-serif';
+    g.fillText('собери свой витраж', W-pad, src.height + pad*0.9 + fs*0.45);
+    g.textAlign='left';
+    return cv;
+  }catch(e){ return src; }
+}
+
 function renderVitrazhToCanvas(v){
   return new Promise((resolve)=>{
     const vtot = v.total || v.vTotal || TOTAL;
@@ -6534,13 +6623,24 @@ function shareCompletedVitrazh(v){
     }catch(e){ _copyText(text); }
   };
   if(!navigator.share){ _copyText(text); return; }
-  // 1) Картинка уже готова (предрендер) — делимся сразу, в жесте
+  // 1) Картинка уже готова (предрендер) — добавляем подпись и делимся
+  if(_saveReady && _saveReady.canvas){
+    showSavePreparing();
+    addShareWatermark(_saveReady.canvas).toBlob(blob=>{
+      hideSavePreparing();
+      let file=null;
+      try{ if(blob) file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
+      shareWith(file);
+    },'image/png');
+    return;
+  }
   if(_saveReady && _saveReady.file){ shareWith(_saveReady.file); return; }
-  // 2) Берём готовый canvas с экрана
+  // 2) Берём готовый canvas с экрана и добавляем подпись со ссылкой
   const scr=document.querySelector('#vitrazh-overlay canvas');
   if(scr && scr.toBlob){
     showSavePreparing();
-    scr.toBlob(blob=>{
+    const marked=addShareWatermark(scr);
+    marked.toBlob(blob=>{
       hideSavePreparing();
       let file=null;
       try{ if(blob) file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
@@ -6554,7 +6654,7 @@ function shareCompletedVitrazh(v){
   try{
     renderVitrazhToCanvas(v).then(cv=>{
       if(!cv || !cv.toBlob){ hideSavePreparing(); shareWith(null); return; }
-      cv.toBlob(blob=>{
+      addShareWatermark(cv).toBlob(blob=>{
         hideSavePreparing();
         let file=null;
         try{ if(blob) file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
