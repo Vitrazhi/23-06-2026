@@ -616,6 +616,16 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       </div>
     </div>
 
+    <!-- Сюжет витража. Блок скрыт, пока в сфере один сюжет: новичка не грузим лишним выбором. -->
+    <div id="ob-variant-wrap" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+        <div style="font-size:13px;font-weight:600;">🖼 Сюжет витража</div>
+        <div style="font-size:12px;color:var(--gold);font-weight:600;"><span id="ob-variant-light">0</span> ✦</div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Какой образ проявится, когда соберёшь все осколки</div>
+      <div id="ob-variant-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
     <!-- (Настройка «осколков в день» убрана: теперь 1 день = 1 осколок) -->
 
     <!-- Напоминание -->
@@ -1138,6 +1148,8 @@ const app = {
   shardProgress: [],  // сколько отметок (действий) вложено в каждый осколок
   activeShardIdx: -1, // осколок, набираемый отметками из списка действий (случайный)
   streak: 0, light: 0, totalDone: 0,
+  variant: null,      // сюжет текущего витража (null = основной)
+  unlocked: [],       // открытые за очки сюжеты: ключи вида 'sleep-15-cat'
   activeDays: [], // уникальные календарные дни активности (строки 'ГГГГ-ММ-ДД') текущего витража
   allActiveDays: [], // ГЛОБАЛЬНЫЕ дни активности по всем витражам — для серии (streak), не сбрасывается при смене витража
   customImage: null,
@@ -1604,6 +1616,8 @@ function selSetting(el, key, value){
   group.querySelectorAll('.opt-pill').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
   settings[key]=value;
+  // Сюжеты у разных длин свои — обновляем список
+  if(key==='shardCount'){ try{ renderVariantChoice(); }catch(e){} }
 }
 // Подсвечивает пилюли настроек согласно фактическим значениям settings.
 // Иначе в разметке жёстко подсвечена «30», и если settings.shardCount=15 (осталось
@@ -1621,6 +1635,8 @@ function syncSettingsPills(){
     const key=m[1]; const val=m[2].trim().replace(/^'|'$/g,'');
     p.classList.toggle('sel', String(settings[key])===String(val));
   });
+  // Список сюжетов зависит от сферы и длины — обновляем вместе с пилюлями
+  try{ renderVariantChoice(); }catch(e){}
 }
 
 function toggleReminder(){
@@ -1808,6 +1824,7 @@ function snapshotCurrentVitrazh(){
     customRatio:app.customRatio||null,
     isCustomGlass:app.isCustomGlass||false,
     isPresetImage:app.isPresetImage,
+    variant:app.variant||null,           // какой сюжет выбран для этого витража
     promise:app.promise||null,
     streak:app.streak, light:app.light, totalDone:app.totalDone,
     shardsToday:app.shardsToday,
@@ -1851,6 +1868,7 @@ function loadVitrazh(snap){
   app.customRatio=snap.customRatio||null;
   app.isCustomGlass=snap.isCustomGlass||false;
   app.promise=snap.promise||null;
+  app.variant=snap.variant||null;
   app.streak=snap.streak||0; app.light=snap.light||0; app.totalDone=snap.totalDone||0;
   app.shardsToday=snap.shardsToday||0;
   app.todayDone=new Set(snap.todayDone||[]);
@@ -2166,7 +2184,108 @@ function ptsD(pts){ return pts.map(([x,y],i)=>(i?'L':'M')+x.toFixed(1)+','+y.toF
    PRESET_GEOMETRY[sphere][count] = {ratio, img, polygons:[[[x,y]..]..]}
    Координаты полигонов нормализованы 0..1 (доли ширины/высоты).
    Геометрия осколков построена по линиям свинца на реальном изображении. */
-function getPreset(sphere, count){
+/* ══ СЮЖЕТЫ ВИТРАЖЕЙ ══
+   На одну сферу и длину может быть несколько сюжетов (разные картины).
+   В PRESET_GEOMETRY[сфера][длина] допустимы два вида записи:
+     • объект  — единственный сюжет (так было раньше, ничего менять не нужно);
+     • массив  — несколько сюжетов: [{id,name,price,premium,...геометрия}, ...]
+   Первый в списке — основной, он всегда бесплатный и доступен сразу. */
+function getVariants(sphere, count){
+  if(typeof PRESET_GEOMETRY==='undefined' || !PRESET_GEOMETRY) return [];
+  const bySphere = PRESET_GEOMETRY[sphere];
+  if(!bySphere) return [];
+  const v = bySphere[String(count)];
+  if(!v) return [];
+  const list = Array.isArray(v) ? v : [v];
+  // подставляем значения по умолчанию, чтобы старые записи работали как прежде
+  return list.map((x,i)=>Object.assign({
+    id: x.id || (i===0 ? 'main' : 'v'+i),
+    name: x.name || 'Основной сюжет',
+    price: i===0 ? 0 : (x.price||0),
+    premium: !!x.premium
+  }, x));
+}
+// Полный ключ сюжета — по нему запоминаем покупки: 'sleep-15-cat'
+function variantKey(sphere, count, id){ return sphere+'-'+count+'-'+id; }
+
+// Доступен ли сюжет: основной — всегда; премиальные и платные — по условию
+function isVariantOpen(sphere, count, v){
+  if(!v || v.price===0 && !v.premium) return true;
+  if(typeof isPremium==='function' && isPremium()) return true;   // подписка открывает всё
+  const key = variantKey(sphere, count, v.id);
+  return !!(app.unlocked && app.unlocked.indexOf(key)>=0);
+}
+
+/* Покупка сюжета за очки света.
+   Очки копятся сами: +10 за каждый открытый осколок. Витраж на 15 даёт 150 ✦. */
+function buyVariant(sphere, count, id){
+  const v = getVariants(sphere, count).find(x=>x.id===id);
+  if(!v) return false;
+  if(isVariantOpen(sphere, count, v)){ toast('Этот сюжет уже открыт'); return true; }
+  if(v.premium && !(typeof isPremium==='function' && isPremium())){
+    showPremiumGate('Сюжет из подписки', 'Этот витраж доступен с полным доступом. Открой подписку — и он появится сразу, вместе с остальными.');
+    return false;
+  }
+  const price = v.price||0;
+  if((app.light||0) < price){
+    toast('Не хватает ✦ — нужно ещё ' + (price-(app.light||0)) + '. Открывай осколки, каждый даёт 10 ✦');
+    return false;
+  }
+  app.light -= price;
+  app.unlocked = app.unlocked || [];
+  app.unlocked.push(variantKey(sphere, count, id));
+  try{ saveProgress(); }catch(e){}
+  try{ if(navigator.vibrate) navigator.vibrate([12,40,18]); }catch(e){}
+  toast('Сюжет «' + v.name + '» открыт ✦');
+  try{ refreshLightUI(); }catch(e){}
+  return true;
+}
+// Обновляем счётчики очков там, где они видны
+function refreshLightUI(){
+  const a=document.getElementById('s-light'); if(a) a.textContent=app.light;
+  const b=document.getElementById('p-light'); if(b) b.textContent=app.light;
+}
+
+/* Показ выбора сюжета на шаге настроек.
+   Если сюжет один — блок скрыт целиком: не усложняем путь новичку. */
+function renderVariantChoice(){
+  const wrap=document.getElementById('ob-variant-wrap');
+  const list=document.getElementById('ob-variant-list');
+  if(!wrap||!list) return;
+  const sphere=app.sphere, count=settings.shardCount;
+  const vars=getVariants(sphere, count);
+  if(!sphere || vars.length<2){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  const lightEl=document.getElementById('ob-variant-light');
+  if(lightEl) lightEl.textContent=app.light||0;
+  // если выбранный сюжет недоступен для этой длины — возвращаемся к основному
+  if(app.variant && !vars.find(v=>v.id===app.variant)) app.variant=null;
+  const curId = app.variant || vars[0].id;
+  list.innerHTML='';
+  vars.forEach(v=>{
+    const open=isVariantOpen(sphere,count,v);
+    const sel=(v.id===curId);
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;cursor:pointer;'+
+      'border:1px solid '+(sel?'var(--accent)':'var(--border)')+';background:'+(sel?'rgba(124,111,255,.12)':'var(--bg3)')+';';
+    const label = open
+      ? '<div style="font-size:13px;font-weight:600;color:var(--text);">'+v.name+'</div>'
+      : '<div style="font-size:13px;font-weight:600;color:var(--text2);">'+v.name+'</div>';
+    const right = open
+      ? (sel?'<span style="color:var(--accent);font-size:15px;">✓</span>':'')
+      : (v.premium
+          ? '<span style="font-size:11px;color:var(--gold);font-weight:600;white-space:nowrap;">🔒 подписка</span>'
+          : '<span style="font-size:12px;color:var(--gold);font-weight:700;white-space:nowrap;">'+v.price+' ✦</span>');
+    row.innerHTML='<div style="flex:1;min-width:0;">'+label+'</div>'+right;
+    row.onclick=()=>{
+      if(open){ app.variant=(v.id===vars[0].id?null:v.id); renderVariantChoice(); }
+      else if(buyVariant(sphere,count,v.id)){ app.variant=v.id; renderVariantChoice(); }
+    };
+    list.appendChild(row);
+  });
+}
+
+function getPreset(sphere, count, variantId){
   // Пользовательский стеклянный витраж: пресет собираем из данных, сохранённых
   // в самом витраже (картинка-основа + карта осколков как data-URL). Это позволяет
   // корректно восстановить его после перезагрузки, когда runtime-PRESET_GEOMETRY пуст.
@@ -2183,11 +2302,19 @@ function getPreset(sphere, count){
   if(typeof PRESET_GEOMETRY==='undefined' || !PRESET_GEOMETRY) return null;
   const bySphere = PRESET_GEOMETRY[sphere];
   if(!bySphere) return null;
-  return bySphere[String(count)] || null;
+  const raw = bySphere[String(count)];
+  if(!raw) return null;
+  if(!Array.isArray(raw)) return raw;              // один сюжет — как раньше
+  const list = getVariants(sphere, count);
+  if(variantId){
+    const found = list.find(x=>x.id===variantId);
+    if(found) return found;
+  }
+  return list[0] || null;                          // по умолчанию основной
 }
 // Текущий активный пресет (если выбрана сфера с предустановленным витражом)
 function currentPreset(){
-  return getPreset(app.sphere, TOTAL);
+  return getPreset(app.sphere, TOTAL, app.variant);
 }
 
 let SHARD_CACHE={key:null, polys:null};
@@ -4158,7 +4285,43 @@ function renderShop(){
       </div>
     </div>`).join('');
 
-  body.innerHTML = subCard + `
+  // ── Сюжеты витражей: покупка за очки света ──
+  // Показываем только сферы, где сюжетов больше одного — иначе раздела нет вовсе.
+  const SPHERE_NAMES = {sleep:'🌙 Сон', sport:'🏃 Спорт', work:'🧠 Работа',
+                        food:'🥗 Питание', creative:'🎨 Творчество', calm:'🌿 Спокойствие'};
+  let variantRows = '';
+  Object.keys(SPHERE_NAMES).forEach(sp=>{
+    [7,15,30].forEach(cnt=>{
+      const vars = getVariants(sp, cnt);
+      if(vars.length<2) return;
+      vars.slice(1).forEach(v=>{           // первый сюжет всегда открыт — его не показываем
+        const open = isVariantOpen(sp, cnt, v);
+        const badge = open
+          ? '<span style="font-size:11px;color:var(--teal);font-weight:600;">✓ открыт</span>'
+          : (v.premium
+              ? '<span style="font-size:11px;color:var(--gold);font-weight:600;">🔒 подписка</span>'
+              : `<button class="btn" onclick="buyVariant('${sp}',${cnt},'${v.id}');renderShop();" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;white-space:nowrap;">${v.price} ✦</button>`);
+        variantRows += `
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:var(--text);">${v.name}</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:1px;">${SPHERE_NAMES[sp]} · ${cnt} осколков</div>
+            </div>${badge}
+          </div>`;
+      });
+    });
+  });
+  const variantsBlock = variantRows ? `
+    <div style="padding:18px 18px 6px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;">Сюжеты витражей</div>
+      <div style="font-size:13px;font-weight:700;color:var(--gold);">${app.light||0} ✦</div>
+    </div>
+    <div style="padding:0 18px 6px;font-size:12px;color:var(--text2);line-height:1.5;">
+      Очки света копятся сами — по 10 за каждый открытый осколок
+    </div>
+    <div style="padding:8px 18px 18px;display:flex;flex-direction:column;gap:8px;">${variantRows}</div>` : '';
+
+  body.innerHTML = subCard + variantsBlock + `
     <div style="padding:16px 0 6px 18px;font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;">Витражи и курсы</div>
     <div id="shop-carousel" style="display:flex;gap:12px;overflow-x:auto;padding:0 18px 18px;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;">${stories}</div>
     <div style="padding:0 18px 24px;">
@@ -7201,6 +7364,8 @@ function serializeProgress(){
     activeShardIdx:app.activeShardIdx,
     markLog:[...(app.markLog||[])],
     streak:app.streak, light:app.light, totalDone:app.totalDone,
+    variant: app.variant||null,
+    unlocked: Array.isArray(app.unlocked)?app.unlocked:[],   // купленные сюжеты
     activeDays: Array.isArray(app.activeDays)?app.activeDays:[],
     shardActionIdx: app.shardActionIdx||{},
     customImage: app.isPresetImage? app.customImage : (app.customImage?'__MEDIA__':null),
@@ -7410,6 +7575,8 @@ function applyProgress(data){
   app.activeShardIdx=(typeof data.activeShardIdx==='number')?data.activeShardIdx:-1;
   app.markLog=Array.isArray(data.markLog)?[...data.markLog]:[];
   app.streak=data.streak||0; app.light=data.light||0; app.totalDone=data.totalDone||0;
+  app.variant=data.variant||null;
+  app.unlocked=Array.isArray(data.unlocked)?data.unlocked:[];   // купленные сюжеты
   app.activeDays=Array.isArray(data.activeDays)?data.activeDays:[];
   app.shardActionIdx=data.shardActionIdx||{};
   app.customImage=data.customImage||null; app.isPresetImage=data.isPresetImage||false;
