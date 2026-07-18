@@ -738,8 +738,9 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
         </div>
         <div class="hint" id="v-hint">Нажми на тёмный осколок — открой образ</div>
       </div>
-      <!-- Урок дня курса: появляется только когда собираешь курс-витраж -->
-      <div id="course-panel" style="display:none;"></div>
+      <!-- Урок дня курса: появляется только когда собираешь курс-витраж.
+           Боковые отступы 18px — как у блока действий, иначе контент упирался в край экрана. -->
+      <div id="course-panel" style="display:none;margin:4px 18px 20px;"></div>
       <div class="actions-wrap">
         <div class="sec-label">Сегодняшние действия</div>
         <div id="acts-list"></div>
@@ -2719,13 +2720,21 @@ function startCourse(courseId){
   app.activeId=null;
   app.isPresetImage=false;   // курс — абстрактный витраж (стеклянные осколки из палитры)
   app.isCustomGlass=false;   // отдельные картины для курсов пока не нарисованы
-  app.customImage=null; app.customMap=null;
+  app.customImage=null; app.customMap=null; app.customCentroids=null;
+
+  // Сбрасываем кэши отрисовки — иначе на экране остаётся прошлый витраж
+  // (курс «накладывался» на текущий, пока не перезайдёшь через Собор).
+  if(typeof _maskAssets!=='undefined'){ _maskAssets={ key:null, base:null, idData:null, w:0, h:0 }; }
+  SHARD_CACHE={key:null,polys:null};
 
   try{ saveProgress(); }catch(e){}
   closeCourseIntro();
-  switchTab('main');
-  try{ enterVitrazh&&enterVitrazh(); }catch(e){}
-  try{ buildActionsList(); updateMainScreen&&updateMainScreen(); }catch(e){}
+  document.getElementById('ob-screen') && document.getElementById('ob-screen').classList.add('hidden');
+  document.getElementById('app-screen') && document.getElementById('app-screen').classList.remove('hidden');
+  switchTab('main', document.querySelector('.ni'));
+  try{ initMainScreen(); }catch(e){}
+  try{ buildActionsList(); }catch(e){}
+  scheduleSave();
   toast('Курс начат — открывай первый осколок');
 }
 
@@ -4175,7 +4184,8 @@ function applyMark(idx, e, fromTap){
     app.markLog.push({act:freeAct, shard:idx});
   }
 
-  app.light+=10;
+  // Курсовое действие ценнее обычного — это шаг доказанной программы, а не просто отметка.
+  app.light += app.course ? 20 : 10;
   app.totalDone++;
   app.shardProgress[idx]=(app.shardProgress[idx]||0)+1;
 
@@ -5034,25 +5044,9 @@ function renderShop(){
     </div>`;
   // Не даём Telegram перехватывать горизонтальный свайп по карусели (иначе он
   // листает разделы приложения вместо прокрутки товаров).
-  // Карусели листаются горизонтально. Раньше они глушили ВСЕ касания —
-  // из-за этого по ним нельзя было прокрутить Лавку вниз. Теперь останавливаем
-  // всплытие только для явно горизонтального жеста, вертикаль отдаём странице.
-  ['shop-carousel','variant-carousel'].forEach(cid=>{
-    const carousel=document.getElementById(cid);
-    if(!carousel) return;
-    let sx=0, sy=0, horiz=null;
-    carousel.addEventListener('touchstart', e=>{
-      if(e.touches[0]){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; horiz=null; }
-    }, {passive:true});
-    carousel.addEventListener('touchmove', e=>{
-      if(!e.touches[0]) return;
-      if(horiz===null){
-        const dx=Math.abs(e.touches[0].clientX-sx), dy=Math.abs(e.touches[0].clientY-sy);
-        if(dx>6 || dy>6) horiz = dx>dy;      // определяем направление один раз
-      }
-      if(horiz) e.stopPropagation();          // горизонталь — карусели; вертикаль — странице
-    }, {passive:true});
-  });
+  // Скролл каруселей: горизонталь листает товары, вертикаль прокручивает Лавку.
+  // Это обеспечивает CSS touch-action:pan-x на каруселях, а свайп табов теперь
+  // игнорирует жесты, начатые внутри них. Отдельный JS-перехват не нужен.
 }
 function openShopItem(id){
   const it=SHOP_ITEMS.find(x=>x.id===id); if(!it) return;
@@ -7858,6 +7852,65 @@ function appendFullscreenExtras(v, overlay){
       overlay.appendChild(histWrap);
     }
   }
+
+  // ── Теория курса на собранном курсовом витраже ──
+  // Обычный витраж хранит только комментарии. Курсовой дополнительно показывает
+  // всю теорию, которую человек прошёл: привычки ядра и техники. Спойлера нет —
+  // витраж уже собран, путь пройден. Это «чертёж», к которому можно вернуться.
+  try{ if(v.course) appendCourseTheory(overlay, v); }catch(e){}
+}
+
+/* Разворачиваемая теория курса под собранным витражом:
+   привычки ядра (хук + урок) и техники инструментария (описание + «стекло знания»),
+   плюс личный топ по оценкам. */
+function appendCourseTheory(overlay, v){
+  const course = window.COURSES && window.COURSES[v.course];
+  if(!course) return;
+  const wrap=document.createElement('div');
+  wrap.style.cssText='margin:0 18px 24px;';
+
+  wrap.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">📚 Теория курса</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:14px;">Всё, что ты прошёл. Разверни любой блок, чтобы освежить.</div>`;
+
+  // Привычки ядра
+  wrap.innerHTML += `<div style="font-size:12px;font-weight:600;color:var(--text);margin:4px 0 8px;">Привычки ядра</div>`;
+  course.core.forEach(c=>{
+    const block=document.createElement('div');
+    block.style.cssText='background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:13px 15px;margin-bottom:8px;';
+    block.innerHTML = `<div onclick="toggleCourseLesson(this)" style="cursor:pointer;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;">${c.name} <span style="float:right;color:var(--accent);font-size:13px;">→</span></div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;">${c.hook}</div>
+      </div>
+      <div class="course-lesson" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">▸ ${c.action}</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.6;">${c.lesson.replace(/\n/g,'<br>')}</div>
+      </div>`;
+    wrap.appendChild(block);
+  });
+
+  // Техники инструментария
+  const toolsTitle=document.createElement('div');
+  toolsTitle.style.cssText='font-size:12px;font-weight:600;color:var(--text);margin:16px 0 8px;';
+  toolsTitle.textContent='Техники';
+  wrap.appendChild(toolsTitle);
+  course.tools.forEach(t=>{
+    const block=document.createElement('div');
+    block.style.cssText='background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:13px 15px;margin-bottom:8px;';
+    // личная оценка техники, если есть
+    const arr=(app.courseTools&&app.courseTools[t.id])||[];
+    const avg=arr.length?(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1):null;
+    const rateStr=avg?`<span style="float:right;font-size:12px;color:var(--gold);">${avg} ✦</span>`:'<span style="float:right;color:var(--accent);font-size:13px;">→</span>';
+    block.innerHTML = `<div onclick="toggleCourseLesson(this)" style="cursor:pointer;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;">${t.name} ${rateStr}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;">${t.evening}</div>
+      </div>
+      <div class="course-lesson" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <div style="font-size:13px;color:var(--text2);line-height:1.6;">${t.knowledge}</div>
+      </div>`;
+    wrap.appendChild(block);
+  });
+
+  overlay.appendChild(wrap);
 }
 
 // Открывает заметку осколка ЗАВЕРШЁННОГО витража в режиме редактирования
@@ -7957,6 +8010,9 @@ function switchTabByName(name){
       const overlay=document.getElementById('vitrazh-overlay');
       const fsOpen=overlay && overlay.style.display!=='none';
       if(memoOpen||compOpen||photoOpen||camOpen||fsOpen){ tracking=false; return; }
+      // Не перехватываем, если палец в горизонтальной карусели (Лавка): там свой скролл вбок,
+      // иначе листание товаров перекидывало в соседний раздел.
+      if(e.target.closest && e.target.closest('#shop-carousel, #variant-carousel')){ tracking=false; return; }
       startX=e.touches[0].clientX; startY=e.touches[0].clientY; tracking=true;
     }, {passive:true});
     appScreen.addEventListener('touchend', e=>{
