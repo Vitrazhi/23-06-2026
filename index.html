@@ -1463,6 +1463,7 @@ function selSphere(el,id,emoji,name,color){
   document.querySelectorAll('.sphere-opt').forEach(o=>o.classList.remove('sel'));
   el.classList.add('sel');
   app.sphere=id; app.sphereName=name; app.sphereEmoji=emoji; app.sphereColor=color;
+  app.course=null;   // обычный витраж — не курс
   const btn=document.getElementById('ob1-next');
   btn.style.opacity='1'; btn.style.pointerEvents='auto';
   // Если пользователь сменил сферу (через «Назад» → выбор другой) —
@@ -2458,7 +2459,7 @@ function renderCoursePanel(){
       <div onclick="toggleCourseLesson(this)" style="margin-top:9px;font-size:12px;color:var(--accent);cursor:pointer;font-weight:600;">Почему это работает →</div>
       <div class="course-lesson" style="display:none;font-size:13px;color:var(--text2);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid rgba(124,111,255,.25);">${tool.knowledge}</div>
       <div style="margin-top:12px;padding-top:11px;border-top:1px solid rgba(124,111,255,.2);">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">${already?'Оценка сохранена. Можно переоценить утром:':'Утром оцени, как сработало (1–10):'}</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">${already?'Оценка сохранена. Из лучших техник соберётся твой ритуал — смотри «Мои техники» ниже.':'Утром оцени, как сработало (1–10). Оценки копятся → на вехах курса из лучших соберётся твой личный ритуал.'}</div>
         <div id="tool-rating" style="display:flex;gap:4px;flex-wrap:wrap;">${
           [1,2,3,4,5,6,7,8,9,10].map(n=>`<button onclick="rateCourseTool('${tool.id}',${n});renderCoursePanel();toast('Оценка ${n} сохранена')" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;">${n}</button>`).join('')
         }</div>
@@ -2469,6 +2470,23 @@ function renderCoursePanel(){
   // Веха или финал
   if(ms){
     html += renderCourseMilestone(course, ms.final ? course.final : ms, ms.final);
+  }
+
+  // «Мои техники» — свёрнутый блок с личным топом. Всегда доступен во время курса,
+  // чтобы человек видел, куда идут его оценки, а не гадал.
+  const rated = courseTopTools(course);
+  if(rated.length){
+    html += `<div style="margin-top:12px;">
+      <div onclick="toggleCourseLesson(this)" style="font-size:13px;color:var(--accent);cursor:pointer;font-weight:600;padding:4px 0;">📊 Мои техники (${rated.length}) →</div>
+      <div class="course-lesson" style="display:none;margin-top:8px;">
+        <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;">Средняя оценка по каждой технике. Чем выше — тем лучше сработала именно у тебя. Из лучших соберётся твой ритуал на вехах курса.</div>
+        ${rated.map((t,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--bg2);border-radius:10px;margin-bottom:6px;">
+          <span style="font-size:13px;font-weight:700;color:${i<3?'var(--gold)':'var(--text3)'};width:18px;">${i+1}</span>
+          <span style="flex:1;font-size:13px;color:var(--text);">${t.name}</span>
+          <span style="font-size:12px;color:var(--text3);">${t.avg.toFixed(1)} · ${t.count}×</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
   }
 
   panel.innerHTML=html;
@@ -3461,6 +3479,7 @@ function startCustomVitrazhFlow(name, count, baseUrl, mapUrl){
   try{ if(app.sphere) saveCurrentToActive(); }catch(e){}
 
   app.sphere='custom';
+  app.course=null;   // витраж из своего фото — не курс
   app.sphereName=name;
   app.sphereEmoji='🖼️';
   app.sphereColor='#7c6fff';
@@ -4122,6 +4141,7 @@ function registerCompletedVitrazh(){
     isCustomGlass:app.isCustomGlass||false,
     isPresetImage:app.isPresetImage,
     variant:app.variant||null,     // сюжет: без него в Соборе рисовался основной витраж
+    course:app.course||null,       // отметка курса для плашки в Соборе
     insight:null, insightPhoto:null, insightAudio:null,
     completedAt
   });
@@ -4675,7 +4695,7 @@ const SHOP_ITEMS = [
 /* Рисуем витраж внутри карточки в Лавке.
    Показываем его частично собранным: виден стиль и настроение, но целый образ
    остаётся сюрпризом — как и в самом приложении. */
-function paintVariantCard(cv, sphere, count, v){
+function paintVariantCard(cv, sphere, count, v, isOpen){
   if(!cv || !v || !v.img) return;
   const W=260, H=360;                       // с запасом под плотные экраны
   cv.width=W; cv.height=H;
@@ -4686,35 +4706,57 @@ function paintVariantCard(cv, sphere, count, v){
     // вписываем «по обрезке», как object-fit: cover
     const s=Math.max(W/img.width, H/img.height);
     const dw=img.width*s, dh=img.height*s, dx=(W-dw)/2, dy=(H-dh)/2;
-    if(!v.map){ ctx.drawImage(img,dx,dy,dw,dh); return; }
-    const map=new Image();
-    map.onload=()=>{
-      const off=document.createElement('canvas'); off.width=map.width; off.height=map.height;
-      const octx=off.getContext('2d', {willReadFrequently:true});
-      octx.drawImage(map,0,0);
-      let idd;
-      try{ idd=octx.getImageData(0,0,map.width,map.height).data; }
-      catch(e){ ctx.drawImage(img,dx,dy,dw,dh); return; }
-      // показываем примерно половину осколков — вперемешку, но всегда одинаково
-      const shown={};
-      for(let i=1;i<=count;i++) shown[i] = ((i*7)%10) < 5;
-      const layer=document.createElement('canvas'); layer.width=W; layer.height=H;
-      const lctx=layer.getContext('2d', {willReadFrequently:true});
-      lctx.drawImage(img,dx,dy,dw,dh);
-      const pix=lctx.getImageData(0,0,W,H), p=pix.data;
-      for(let y=0;y<H;y++){
-        for(let x=0;x<W;x++){
-          const mx=Math.min(map.width-1,  Math.max(0, Math.round((x-dx)/dw*map.width)));
-          const my=Math.min(map.height-1, Math.max(0, Math.round((y-dy)/dh*map.height)));
-          const id=idd[(my*map.width+mx)*4];
-          if(!shown[id]){ const k=(y*W+x)*4; p[k]=10; p[k+1]=12; p[k+2]=26; }  // тёмное стекло
+
+    // Купленный витраж — показываем в цвете (собранным).
+    // Некупленный — бесцветный силуэт: виден образ и грани, но красок нет.
+    // Так человек понимает «раскрашу сам, когда начну собирать».
+    if(isOpen){ ctx.drawImage(img,dx,dy,dw,dh); return; }
+
+    const layer=document.createElement('canvas'); layer.width=W; layer.height=H;
+    const lctx=layer.getContext('2d', {willReadFrequently:true});
+    lctx.drawImage(img,dx,dy,dw,dh);
+    const pix=lctx.getImageData(0,0,W,H), p=pix.data;
+    // обесцвечиваем и притемняем — получается «непроявленное стекло»
+    for(let i=0;i<p.length;i+=4){
+      const g = p[i]*0.299 + p[i+1]*0.587 + p[i+2]*0.114;   // яркость
+      const v2 = 30 + g*0.42;                                // сжимаем в тёмный диапазон
+      const tint = 1.0;
+      p[i]   = v2*0.82;         // лёгкий холодный оттенок, как у неподсвеченного витража
+      p[i+1] = v2*0.86;
+      p[i+2] = v2*1.05;
+    }
+    lctx.putImageData(pix,0,0);
+    // тонкие грани осколков поверх силуэта — чтобы читалась «витражность»
+    if(v.map){
+      const map=new Image();
+      map.onload=()=>{
+        const off=document.createElement('canvas'); off.width=map.width; off.height=map.height;
+        const octx=off.getContext('2d', {willReadFrequently:true});
+        octx.drawImage(map,0,0);
+        let idd;
+        try{ idd=octx.getImageData(0,0,map.width,map.height).data; }
+        catch(e){ ctx.drawImage(layer,0,0); return; }
+        const edge=lctx.getImageData(0,0,W,H), ep=edge.data;
+        for(let y=1;y<H;y++){
+          for(let x=1;x<W;x++){
+            const mx=Math.min(map.width-1,  Math.max(0, Math.round((x-dx)/dw*map.width)));
+            const my=Math.min(map.height-1, Math.max(0, Math.round((y-dy)/dh*map.height)));
+            const id=idd[(my*map.width+mx)*4];
+            const mxL=Math.min(map.width-1, Math.max(0, Math.round((x-1-dx)/dw*map.width)));
+            const idL=idd[(my*map.width+mxL)*4];
+            const myU=Math.min(map.height-1, Math.max(0, Math.round((y-1-dy)/dh*map.height)));
+            const idU=idd[(myU*map.width+mx)*4];
+            if(id!==idL || id!==idU){ const k=(y*W+x)*4; ep[k]=90; ep[k+1]=96; ep[k+2]=120; }  // грань
+          }
         }
-      }
-      lctx.putImageData(pix,0,0);
+        lctx.putImageData(edge,0,0);
+        ctx.drawImage(layer,0,0);
+      };
+      map.onerror=()=>ctx.drawImage(layer,0,0);
+      map.src = (typeof _EMBEDDED_IDMAPS!=='undefined' && _EMBEDDED_IDMAPS[v.map]) || v.map;
+    } else {
       ctx.drawImage(layer,0,0);
-    };
-    map.onerror=()=>ctx.drawImage(img,dx,dy,dw,dh);
-    map.src = (typeof _EMBEDDED_IDMAPS!=='undefined' && _EMBEDDED_IDMAPS[v.map]) || v.map;
+    }
   };
   img.onerror=()=>{ ctx.fillStyle='#141728'; ctx.fillRect(0,0,W,H); };
   img.src=v.img;
@@ -4832,7 +4874,7 @@ function renderShop(){
     setTimeout(()=>{
       variantCards.forEach((c,i)=>{
         const cv=document.getElementById('vcard-'+i);
-        if(cv) paintVariantCard(cv, c.sphere, c.count, c.v);
+        if(cv) paintVariantCard(cv, c.sphere, c.count, c.v, c.open);
       });
     }, 0);
   }
@@ -6685,6 +6727,8 @@ function updateGallery(){
         shardColors:app.shardColors,
         shardMemos:app.shardMemos,
         shardDates:app.shardDates,
+        variant:app.variant||null,     // без сюжета мини-превью рисовало не тот витраж
+        course:app.course||null,       // отметка курса для плашки
         done,total:TOTAL,
         isActive:true,
         isCurrent:true,
@@ -6800,6 +6844,10 @@ function createGalleryCard(v){
   const badge=v.isActive?(v.isCurrent?'ТЕКУЩИЙ':'В РАБОТЕ'):'ЗАВЕРШЁН';
   const badgeColor=v.isActive?(v.isCurrent?'rgba(124,111,255,.2)':'rgba(45,212,191,.15)'):'rgba(124,111,255,.18)';
   const badgeTextColor=v.isActive?(v.isCurrent?'var(--accent2)':'var(--teal)'):'var(--accent2)';
+  // Плашка «КУРС» — если витраж собирается в рамках курса
+  const courseBadge = v.course
+    ? `<div style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;background:rgba(232,200,106,.18);color:var(--gold);">📚 КУРС</div>`
+    : '';
 
   card.innerHTML=`
     <div class="gal-card-hdr">
@@ -6808,7 +6856,7 @@ function createGalleryCard(v){
         <div style="font-size:12px;color:var(--text2);margin-top:2px;">${v.done} из ${v.total} открыто${v.isActive?'':' · завершён '+( v.completedAt||'')} </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <div style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:${badgeColor};color:${badgeTextColor};">${badge}</div>
+        <div style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;background:${badgeColor};color:${badgeTextColor};">${badge}</div>${courseBadge}
         <button class="gal-del-btn" title="Удалить витраж" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;line-height:1;transition:color .2s;">🗑</button>
       </div>
     </div>`;
