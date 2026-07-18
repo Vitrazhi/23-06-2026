@@ -202,7 +202,7 @@ body.tg-mode #ob-screen{padding:0;}
   }
   #gallery-fab{ right:calc((100% - var(--col, 460px)) / 2 + 18px); }
   /* Лавка: витражи переносятся вниз (в ленту они складываются только на телефоне) */
-  #shop-carousel{ flex-wrap:wrap; overflow-x:visible; justify-content:flex-start; }
+  #shop-carousel, #variant-carousel{ flex-wrap:wrap; overflow-x:visible; justify-content:flex-start; }
 }
 
 @media (max-width:480px){
@@ -1784,7 +1784,7 @@ function startApp(){
 
   // Если для выбранной сферы и количества осколков есть предустановленный витраж —
   // загружаем его изображение, чтобы осколки окрашивались фрагментами реальной картинки.
-  const preset=getPreset(app.sphere, TOTAL);
+  const preset=getPreset(app.sphere, TOTAL, app.variant);
   if(preset && preset.mask){
     // Маск-пресет: рендерится отдельно (canvas + карта осколков). Старая загрузка пикселей не нужна.
     app.customImage=preset.img;
@@ -1884,7 +1884,7 @@ function loadVitrazh(snap){
   SHARD_CACHE={key:null,polys:null};
   // Для маск-пресетов (картинка-витраж) старая загрузка пикселей НЕ нужна —
   // их рисует canvas-рендерер. Вызов loadCustomImagePixels тут ломал отрисовку.
-  const _preset = (typeof getPreset==='function') ? getPreset(app.sphere, TOTAL) : null;
+  const _preset = (typeof getPreset==='function') ? getPreset(app.sphere, TOTAL, app.variant) : null;
   if(_preset && _preset.mask){
     app.isPresetImage=true;
     app.customImage=_preset.img;
@@ -3689,6 +3689,7 @@ function registerCompletedVitrazh(){
     customRatio:app.customRatio||null,
     isCustomGlass:app.isCustomGlass||false,
     isPresetImage:app.isPresetImage,
+    variant:app.variant||null,     // сюжет: без него в Соборе рисовался основной витраж
     insight:null, insightPhoto:null, insightAudio:null,
     completedAt
   });
@@ -4234,12 +4235,74 @@ function paywallCard(title, desc){
 /* ══ РАЗДЕЛ «ЛАВКА» (магазин) ══ */
 // Каталог предложений. story-карточки как в банковских приложениях.
 const SHOP_ITEMS = [
-  { id:'vitrazh-tiffany', kind:'vitrazh', title:'Витраж «Тиффани»', sub:'Эксклюзивный витраж', grad:'linear-gradient(160deg,#7c6fff,#3b2b8a)', emoji:'🪟', price:'Premium' },
-  { id:'vitrazh-cosmos', kind:'vitrazh', title:'Витраж «Космос»', sub:'Эксклюзивный витраж', grad:'linear-gradient(160deg,#5f6fff,#2a2a6a)', emoji:'🌌', price:'Premium' },
-  { id:'vitrazh-frost', kind:'vitrazh', title:'Витраж «Мороз»', sub:'Эксклюзивный витраж', grad:'linear-gradient(160deg,#5ff0d8,#2a7a8a)', emoji:'❄️', price:'Premium' },
+  // Витражи сюда не добавляем: они собираются из реальных сюжетов ниже,
+  // с живым превью и покупкой за очки света.
   { id:'course-habits', kind:'course', title:'Мини-курс «Сила привычек»', sub:'7 уроков', grad:'linear-gradient(160deg,#ff9cc0,#a04a70)', emoji:'📖', price:'490 ₽' },
   { id:'course-calm', kind:'course', title:'Мини-курс «Путь к спокойствию»', sub:'5 уроков', grad:'linear-gradient(160deg,#b794ff,#5a3a9a)', emoji:'🧘', price:'390 ₽' },
 ];
+/* Рисуем витраж внутри карточки в Лавке.
+   Показываем его частично собранным: виден стиль и настроение, но целый образ
+   остаётся сюрпризом — как и в самом приложении. */
+function paintVariantCard(cv, sphere, count, v){
+  if(!cv || !v || !v.img) return;
+  const W=260, H=360;                       // с запасом под плотные экраны
+  cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#04050e'; ctx.fillRect(0,0,W,H);
+  const img=new Image();
+  img.onload=()=>{
+    // вписываем «по обрезке», как object-fit: cover
+    const s=Math.max(W/img.width, H/img.height);
+    const dw=img.width*s, dh=img.height*s, dx=(W-dw)/2, dy=(H-dh)/2;
+    if(!v.map){ ctx.drawImage(img,dx,dy,dw,dh); return; }
+    const map=new Image();
+    map.onload=()=>{
+      const off=document.createElement('canvas'); off.width=map.width; off.height=map.height;
+      const octx=off.getContext('2d', {willReadFrequently:true});
+      octx.drawImage(map,0,0);
+      let idd;
+      try{ idd=octx.getImageData(0,0,map.width,map.height).data; }
+      catch(e){ ctx.drawImage(img,dx,dy,dw,dh); return; }
+      // показываем примерно половину осколков — вперемешку, но всегда одинаково
+      const shown={};
+      for(let i=1;i<=count;i++) shown[i] = ((i*7)%10) < 5;
+      const layer=document.createElement('canvas'); layer.width=W; layer.height=H;
+      const lctx=layer.getContext('2d', {willReadFrequently:true});
+      lctx.drawImage(img,dx,dy,dw,dh);
+      const pix=lctx.getImageData(0,0,W,H), p=pix.data;
+      for(let y=0;y<H;y++){
+        for(let x=0;x<W;x++){
+          const mx=Math.min(map.width-1,  Math.max(0, Math.round((x-dx)/dw*map.width)));
+          const my=Math.min(map.height-1, Math.max(0, Math.round((y-dy)/dh*map.height)));
+          const id=idd[(my*map.width+mx)*4];
+          if(!shown[id]){ const k=(y*W+x)*4; p[k]=10; p[k+1]=12; p[k+2]=26; }  // тёмное стекло
+        }
+      }
+      lctx.putImageData(pix,0,0);
+      ctx.drawImage(layer,0,0);
+    };
+    map.onerror=()=>ctx.drawImage(img,dx,dy,dw,dh);
+    map.src = (typeof _EMBEDDED_IDMAPS!=='undefined' && _EMBEDDED_IDMAPS[v.map]) || v.map;
+  };
+  img.onerror=()=>{ ctx.fillStyle='#141728'; ctx.fillRect(0,0,W,H); };
+  img.src=v.img;
+}
+
+/* Тап по карточке: открытый сюжет — подсказка, закрытый — покупка */
+function openVariantCard(sphere, count, id){
+  const v=getVariants(sphere,count).find(x=>x.id===id);
+  if(!v) return;
+  if(isVariantOpen(sphere,count,v)){
+    toast('«'+v.name+'» уже открыт — выбери его при создании витража');
+    return;
+  }
+  if(v.premium){
+    showPremiumGate('Сюжет «'+v.name+'»', 'Этот витраж входит в полный доступ. Оформи подписку — откроется сразу, вместе с остальными сюжетами.');
+    return;
+  }
+  if(buyVariant(sphere,count,id)) renderShop();
+}
+
 function renderShop(){
   const body=document.getElementById('shop-body');
   if(!body) return;
@@ -4288,56 +4351,75 @@ function renderShop(){
       </div>
     </div>`).join('');
 
-  // ── Сюжеты витражей: покупка за очки света ──
+  // ── Сюжеты витражей: карточки с живым витражом внутри ──
   // Показываем только сферы, где сюжетов больше одного — иначе раздела нет вовсе.
   const SPHERE_NAMES = {sleep:'🌙 Сон', sport:'🏃 Спорт', work:'🧠 Работа',
                         food:'🥗 Питание', creative:'🎨 Творчество', calm:'🌿 Спокойствие'};
-  let variantRows = '';
+  const variantCards = [];
   Object.keys(SPHERE_NAMES).forEach(sp=>{
     [7,15,30].forEach(cnt=>{
       const vars = getVariants(sp, cnt);
       if(vars.length<2) return;
-      vars.slice(1).forEach(v=>{           // первый сюжет всегда открыт — его не показываем
-        const open = isVariantOpen(sp, cnt, v);
-        const badge = open
-          ? '<span style="font-size:11px;color:var(--teal);font-weight:600;">✓ открыт</span>'
-          : (v.premium
-              ? '<span style="font-size:11px;color:var(--gold);font-weight:600;">🔒 подписка</span>'
-              : `<button class="btn" onclick="buyVariant('${sp}',${cnt},'${v.id}');renderShop();" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;white-space:nowrap;">${v.price} ✦</button>`);
-        variantRows += `
-          <div style="display:flex;align-items:center;gap:10px;padding:11px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;">
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:600;color:var(--text);">${v.name}</div>
-              <div style="font-size:11px;color:var(--text2);margin-top:1px;">${SPHERE_NAMES[sp]} · ${cnt} осколков</div>
-            </div>${badge}
-          </div>`;
+      vars.slice(1).forEach(v=>{        // первый сюжет всегда открыт — его не продаём
+        variantCards.push({sphere:sp, count:cnt, v:v, open:isVariantOpen(sp,cnt,v)});
       });
     });
   });
-  const variantsBlock = variantRows ? `
-    <div style="padding:18px 18px 6px;display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;">Сюжеты витражей</div>
-      <div style="font-size:13px;font-weight:700;color:var(--gold);">${app.light||0} ✦</div>
-    </div>
-    <div style="padding:0 18px 6px;font-size:12px;color:var(--text2);line-height:1.5;">
-      Очки света копятся сами — по 10 за каждый открытый осколок
-    </div>
-    <div style="padding:8px 18px 18px;display:flex;flex-direction:column;gap:8px;">${variantRows}</div>` : '';
+
+  let variantsBlock = '';
+  if(variantCards.length){
+    const cards = variantCards.map((c,i)=>{
+      const badge = c.open
+        ? '<span style="background:rgba(56,217,192,.9);color:#04231e;border-radius:8px;padding:3px 8px;font-size:10px;font-weight:700;">✓ ОТКРЫТ</span>'
+        : (c.v.premium
+            ? '<span style="background:rgba(240,192,96,.92);color:#3a2a00;border-radius:8px;padding:3px 8px;font-size:10px;font-weight:700;">🔒 ПОДПИСКА</span>'
+            : '<span style="background:rgba(124,111,255,.95);color:#fff;border-radius:8px;padding:3px 8px;font-size:10px;font-weight:700;">'+c.v.price+' ✦</span>');
+      return `
+        <div onclick="openVariantCard('${c.sphere}',${c.count},'${c.v.id}')" style="flex:0 0 auto;width:130px;cursor:pointer;">
+          <div style="width:130px;height:180px;border-radius:16px;background:#04050e;position:relative;overflow:hidden;box-shadow:0 6px 18px rgba(80,60,140,.22);">
+            <canvas id="vcard-${i}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;"></canvas>
+            <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(4,5,14,.92) 0%,rgba(4,5,14,.25) 45%,transparent 70%);"></div>
+            <div style="position:absolute;top:8px;left:8px;">${badge}</div>
+            <div style="position:absolute;left:10px;right:10px;bottom:9px;">
+              <div style="font-size:13px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:2px;">${c.v.name}</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.72);">${SPHERE_NAMES[c.sphere]} · ${c.count}</div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+    variantsBlock = `
+      <div style="padding:18px 18px 6px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;">Сюжеты витражей</div>
+        <div style="font-size:13px;font-weight:700;color:var(--gold);">${app.light||0} ✦</div>
+      </div>
+      <div style="padding:0 18px 8px;font-size:12px;color:var(--text2);line-height:1.5;">
+        Очки света копятся сами — по 10 за каждый открытый осколок
+      </div>
+      <div id="variant-carousel" style="display:flex;gap:12px;overflow-x:auto;padding:0 18px 18px;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;">${cards}</div>`;
+    // Рисуем витражи в карточках после вставки разметки
+    setTimeout(()=>{
+      variantCards.forEach((c,i)=>{
+        const cv=document.getElementById('vcard-'+i);
+        if(cv) paintVariantCard(cv, c.sphere, c.count, c.v);
+      });
+    }, 0);
+  }
 
   body.innerHTML = subCard + variantsBlock + `
-    <div style="padding:16px 0 6px 18px;font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;">Витражи и курсы</div>
+    <div style="padding:16px 0 6px 18px;font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;">Курсы</div>
     <div id="shop-carousel" style="display:flex;gap:12px;overflow-x:auto;padding:0 18px 18px;-webkit-overflow-scrolling:touch;touch-action:pan-x;scrollbar-width:none;">${stories}</div>
     <div style="padding:0 18px 24px;">
       <div style="font-size:12px;color:var(--text3);line-height:1.5;text-align:center;">Оплата подписки и покупок появится вместе с сервером. Сейчас витрина в режиме предпросмотра.</div>
     </div>`;
   // Не даём Telegram перехватывать горизонтальный свайп по карусели (иначе он
   // листает разделы приложения вместо прокрутки товаров).
-  const carousel=document.getElementById('shop-carousel');
-  if(carousel){
+  ['shop-carousel','variant-carousel'].forEach(cid=>{
+    const carousel=document.getElementById(cid);
+    if(!carousel) return;
     carousel.addEventListener('touchstart', e=>{ e.stopPropagation(); }, {passive:true});
     carousel.addEventListener('touchmove', e=>{ e.stopPropagation(); }, {passive:true});
     carousel.addEventListener('touchend', e=>{ e.stopPropagation(); }, {passive:true});
-  }
+  });
 }
 function openShopItem(id){
   const it=SHOP_ITEMS.find(x=>x.id===id); if(!it) return;
@@ -6312,7 +6394,7 @@ function createGalleryCard(v){
   const miniWrap=document.createElement('div');
   miniWrap.style.cssText='border-radius:8px;overflow:hidden;margin-bottom:10px;background:#04050e;cursor:pointer;position:relative;';
   // Если это маск-пресет (картинка-витраж) — рисуем мини-превью через canvas с реальным изображением
-  const vPreset = (typeof getPreset==='function') ? getPreset(v.sphere, v.total) : null;
+  const vPreset = (typeof getPreset==='function') ? getPreset(v.sphere, v.total, v.variant) : null;
   if(vPreset && vPreset.mask && vPreset.map){
     const mw2=312, mh2=Math.round(312*(vPreset.ratio||1.25));
     const ph=document.createElement('div');
@@ -6557,7 +6639,7 @@ function showFullscreenVitrazh(v){
   app.isPresetImage = !!v.isPresetImage;
   app.customImage = v.customImage || null;
   // Пропорции: для пресета — родные, иначе 1.4
-  const preset = (v.sphere && v.total) ? getPreset(v.sphere, v.total) : null;
+  const preset = (v.sphere && v.total) ? getPreset(v.sphere, v.total, v.variant) : null;
   const fsRatio = preset && preset.ratio ? preset.ratio : 1.4;
   const W = 354, H = Math.round(354*fsRatio);
   const pfx = 'fs'+Date.now()%9999+'_';
@@ -6721,7 +6803,7 @@ function addShareWatermark(src){
 function renderVitrazhToCanvas(v){
   return new Promise((resolve)=>{
     const vtot = v.total || v.vTotal || TOTAL;
-    const preset = v.sphere ? getPreset(v.sphere, vtot) : null;
+    const preset = v.sphere ? getPreset(v.sphere, vtot, v.variant) : null;
     const W=720, ratio = preset && preset.ratio ? preset.ratio : 1.4;
     const H=Math.round(W*ratio);
     if(preset && preset.mask && preset.map){
