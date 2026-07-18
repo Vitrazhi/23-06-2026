@@ -2582,7 +2582,9 @@ function startCourse(courseId){
   app.dayClosed=false;
   app.activeDays=[];
   app.activeId=null;
-  app.isPresetImage=true;
+  app.isPresetImage=false;   // курс — абстрактный витраж (стеклянные осколки из палитры)
+  app.isCustomGlass=false;   // отдельные картины для курсов пока не нарисованы
+  app.customImage=null; app.customMap=null;
 
   try{ saveProgress(); }catch(e){}
   closeCourseIntro();
@@ -2616,9 +2618,12 @@ function openCourseIntro(courseId){
   let m=document.getElementById('course-intro');
   if(!m){
     m=document.createElement('div'); m.id='course-intro';
-    m.style.cssText='position:fixed;inset:0;z-index:3400;background:rgba(4,6,15,.96);overflow-y:auto;padding:24px 20px 40px;';
+    m.style.cssText='position:fixed;inset:0;z-index:3400;overflow-y:auto;padding:24px 20px 40px;';
     document.body.appendChild(m);
   }
+  // Фон берём из темы и делаем полностью непрозрачным — иначе сквозь него
+  // просвечивала Лавка и мешала чтению. Работает и в тёмной, и в светлой теме.
+  m.style.background='var(--bg)';
   const owned=courseOwned(courseId);
   const intro=course.intro||{};
   m.innerHTML=`
@@ -2628,7 +2633,7 @@ function openCourseIntro(courseId){
       <div style="text-align:center;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700;">${course.subtitle||''}</div>
       <div style="text-align:center;font-size:24px;font-weight:800;color:var(--text);margin:6px 0 18px;">${course.title}</div>
       ${intro.heading?`<div style="font-size:18px;font-weight:700;color:var(--gold);line-height:1.4;margin-bottom:14px;text-align:center;">${intro.heading}</div>`:''}
-      <div style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:20px;">${(intro.body||'').replace(/\n/g,'<br><br>')}</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:20px;">${(intro.body||'').split('\n').filter(x=>x.trim()).map(x=>'<p style="margin:0 0 12px;">'+x+'</p>').join('')}</div>
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;">
         <div style="font-size:12px;color:var(--text3);line-height:1.5;">Курс — это витраж из ${course.total} осколков. Каждый день — привычка или техника. Собери все осколки — проявится образ и твой личный ритуал.</div>
       </div>
@@ -4892,12 +4897,24 @@ function renderShop(){
     </div>`;
   // Не даём Telegram перехватывать горизонтальный свайп по карусели (иначе он
   // листает разделы приложения вместо прокрутки товаров).
+  // Карусели листаются горизонтально. Раньше они глушили ВСЕ касания —
+  // из-за этого по ним нельзя было прокрутить Лавку вниз. Теперь останавливаем
+  // всплытие только для явно горизонтального жеста, вертикаль отдаём странице.
   ['shop-carousel','variant-carousel'].forEach(cid=>{
     const carousel=document.getElementById(cid);
     if(!carousel) return;
-    carousel.addEventListener('touchstart', e=>{ e.stopPropagation(); }, {passive:true});
-    carousel.addEventListener('touchmove', e=>{ e.stopPropagation(); }, {passive:true});
-    carousel.addEventListener('touchend', e=>{ e.stopPropagation(); }, {passive:true});
+    let sx=0, sy=0, horiz=null;
+    carousel.addEventListener('touchstart', e=>{
+      if(e.touches[0]){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; horiz=null; }
+    }, {passive:true});
+    carousel.addEventListener('touchmove', e=>{
+      if(!e.touches[0]) return;
+      if(horiz===null){
+        const dx=Math.abs(e.touches[0].clientX-sx), dy=Math.abs(e.touches[0].clientY-sy);
+        if(dx>6 || dy>6) horiz = dx>dy;      // определяем направление один раз
+      }
+      if(horiz) e.stopPropagation();          // горизонталь — карусели; вертикаль — странице
+    }, {passive:true});
   });
 }
 function openShopItem(id){
@@ -6705,22 +6722,24 @@ function updateGallery(){
   // ── Filter buttons ──
   const filterBar=document.createElement('div');
   filterBar.style.cssText='display:flex;gap:8px;margin:0 18px 14px;';
-  [['all','Все'],['done','Завершённые'],['active','В работе']].forEach(([f,label])=>{
+  [['all','Все'],['done','Завершённые'],['active','В работе'],['course','Курсы']].forEach(([f,label])=>{
     const b=document.createElement('button');
     b.className='btn btn-sm gal-filter-btn'+(galleryFilter===f?' sel':'');
     b.dataset.f=f;
     b.textContent=label;
-    b.style.cssText='flex:1;border-radius:10px;font-size:12px;padding:8px 4px;'+(galleryFilter===f?'background:var(--accent);color:#fff;border-color:var(--accent);':'');
+    b.style.cssText='flex:1;border-radius:10px;font-size:11px;padding:8px 2px;white-space:nowrap;'+(galleryFilter===f?'background:var(--accent);color:#fff;border-color:var(--accent);':'');
     b.onclick=()=>setGalleryFilter(f);
     filterBar.appendChild(b);
   });
   list.appendChild(filterBar);
 
   // ── Active vitrazhi: текущий + сохранённые ──
+  // Фильтр «Курсы» показывает только курсовые витражи из всех категорий.
+  const onlyCourse = galleryFilter==='course';
   if(galleryFilter!=='done'){
     // Текущий витраж показываем как активный ТОЛЬКО если он не завершён
     // (завершённый уже находится в app.completed и не должен дублироваться)
-    const currentDone = app.sphere && done<TOTAL;
+    const currentDone = app.sphere && done<TOTAL && (!onlyCourse || !!app.course);
     if(currentDone){
       const card=createGalleryCard({
         id: app.activeId,
@@ -6749,6 +6768,7 @@ function updateGallery(){
     if(currentDone && app.activeId) seen.add(app.activeId);
     const completedIds=new Set(app.completed.map(c=>c.id).filter(Boolean));
     app.activeVitrazhi.forEach(v=>{
+      if(onlyCourse && !v.course) return;   // фильтр «Курсы» — только курсовые
       if(v.id){
         if(seen.has(v.id)) return;       // уже показан (текущий или дубль)
         if(completedIds.has(v.id)) return; // уже завершён
@@ -6770,13 +6790,14 @@ function updateGallery(){
     // Показываем в обратном хронологическом порядке: недавно завершённые — сверху
     for(let ci=app.completed.length-1; ci>=0; ci--){
       const v=app.completed[ci];
+      if(onlyCourse && !v.course) continue;   // фильтр «Курсы» — только курсовые
       const card=createGalleryCard({...v, emoji:v.emoji||v.sphereEmoji, done:v.shards.filter(Boolean).length, total:v.shards.length, isActive:false, compIdx:ci});
       list.appendChild(card);
     }
   }
 
   // ── Кнопка добавления новой сферы (без премиум-ограничения на время разработки) ──
-  if(galleryFilter!=='done'){
+  if(galleryFilter!=='done' && galleryFilter!=='course'){
     const addCard=document.createElement('div');
     addCard.className='add-card';
     addCard.innerHTML='<span style="font-size:20px;">+</span><span>Добавить новый витраж</span>';
