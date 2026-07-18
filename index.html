@@ -1387,7 +1387,11 @@ function currentVitrazhOrdinal(){
 }
 // Сколько всего витражей «в работе» сейчас (текущий + остальные активные)
 function activeVitrazhiCount(){
-  return (app.sphere?1:0) + (app.activeVitrazhi||[]).length;
+  // Курсовые витражи не занимают бесплатный слот: купив курс, человек получает
+  // право вести его отдельно от своего бесплатного витража.
+  const currentCounts = (app.sphere && !app.course) ? 1 : 0;
+  const queueCounts = (app.activeVitrazhi||[]).filter(v=>!v.course).length;
+  return currentCounts + queueCounts;
 }
 
 /* ══ ВРЕМЯ ══ */
@@ -2549,8 +2553,9 @@ function startCourse(courseId){
   if(!course){ toast('Курс не найден'); return; }
   if(!courseOwned(courseId)){ toast('Сначала открой курс'); return; }
 
-  // если идёт другой витраж — сохраняем его
-  try{ if(app.sphere && (app.shards||[]).some(Boolean)) snapshotCurrentVitrazh(); }catch(e){}
+  // Если идёт другой витраж — сохраняем его в очередь, чтобы не потерялся.
+  // saveCurrentToActive кладёт в activeVitrazhi (snapshotCurrentVitrazh только возвращал объект).
+  try{ if(app.sphere && (app.shards||[]).some(Boolean)) saveCurrentToActive(); }catch(e){}
 
   app.course=courseId;
   app.courseTools={};
