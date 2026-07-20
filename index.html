@@ -598,8 +598,9 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
     <div class="ob-title" style="font-size:21px;">Настрой свой ритуал</div>
     <div class="ob-sub" style="font-size:13px;">Эти параметры можно изменить позже в Мастерской. Сейчас выбери то, что подходит именно тебе</div>
 
-    <!-- Название витража -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
+    <!-- Название витража. Для ПЕРВОГО витража скрыто (используется имя по сфере),
+         чтобы не грузить новичка. Со 2-го витража — показывается. -->
+    <div id="ob-name-block" style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:3px;">✦ Название витража</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Дай своему витражу имя — или оставь как есть</div>
       <input id="ob-vitrazh-name" type="text" maxlength="40" placeholder="Витраж Сна" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-size:14px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box;">
@@ -1629,9 +1630,12 @@ function isFirstVitrazhEver(){
 // Блок «обещание» в настройках показываем только со 2-го витража.
 // Для первого обещание даётся после первого осколка (экран 5).
 function updatePromiseVisibility(){
+  const first=isFirstVitrazhEver();
   const block=document.getElementById('ob-promise-block');
-  if(!block) return;
-  block.style.display = isFirstVitrazhEver() ? 'none' : 'block';
+  if(block) block.style.display = first ? 'none' : 'block';
+  // Блок названия тоже скрываем для первого витража — используется имя по сфере.
+  const nameBlock=document.getElementById('ob-name-block');
+  if(nameBlock) nameBlock.style.display = first ? 'none' : 'block';
 }
 // Возврат на предыдущий шаг онбординга (данные сохраняются)
 function obBack(toStep){
@@ -1678,16 +1682,8 @@ function actOverlay(){
 function closeActivation(){ const o=document.getElementById('activation-overlay'); if(o) o.style.display='none'; }
 
 function startActivationFlow(){
-  try{
-    if((app.shards||[]).filter(Boolean).length===0){
-      app.shards[0]=true;
-      app.shardColors[0]=app.sphereColor||'#7c6fff';
-      const now=new Date();
-      app.shardDates[0]=now.toLocaleDateString('ru')+' '+now.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
-      app.totalDone=(app.totalDone||0)+1;
-      try{ scheduleSave(); }catch(e){}
-    }
-  }catch(e){}
+  // Осколок НЕ открываем автоматически — его закрашивает сам пользователь.
+  // Эта функция вызывается уже ПОСЛЕ того, как первый осколок открыт вручную.
   sendEvent('first_shard_opened', {sphere:app.sphere});
   actScreenPromise();
 }
@@ -2362,11 +2358,10 @@ function startApp(){
   switchTab('main', document.querySelector('.ni'));
   initMainScreen();
   scheduleSave();
-  // Первый витраж: запускаем экраны активации (обещание → код+почта → установка).
-  if(app._pendingActivation){
-    app._pendingActivation=false;
-    setTimeout(()=>{ try{ startActivationFlow(); }catch(e){} }, 400);
-  }
+  // Первый витраж: НЕ запускаем активацию сразу. Оставляем флаг — активация
+  // (обещание → код → установка) откроется, когда пользователь САМ откроет
+  // первый осколок. До этого никакого авто-закрашивания.
+  // (app._pendingActivation уже выставлен при завершении онбординга)
 }
 
 /* ══ МНОЖЕСТВЕННЫЕ ВИТРАЖИ ══ */
@@ -4521,6 +4516,15 @@ function applyMark(idx, e, fromTap){
 
   // Форма впечатления — когда осколок полностью открыт
   if(shardJustOpened){
+    // Первый витраж, первый самостоятельно открытый осколок → цепочка активации
+    // (экран 5 «осколок открыт» → обещание → код → установка). Заменяет обычную
+    // форму комментария на этот единственный раз.
+    if(app._pendingActivation && !isFinalShard){
+      app._pendingActivation=false;
+      scheduleSave();
+      setTimeout(()=>{ try{ startActivationFlow(); }catch(e){} }, 650);
+      return;
+    }
     _pendingCompletion = isFinalShard;
     const mode = settings.memoPrompt || 'each';
     // Комментарий предлагаем по настройке. Раньше на финальном осколке форма
