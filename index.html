@@ -610,8 +610,8 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       <div style="font-size:13px;font-weight:600;margin-bottom:3px;"><span style="font-family:Apple Color Emoji,Segoe UI Emoji,sans-serif;">🪟</span> Размер витража</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Сколько осколков нужно собрать, чтобы открыть образ</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <div class="opt-pill" data-val="7" onclick="selSetting(this,'shardCount',7)"><div class="opt-pill-title">7</div><div class="opt-pill-sub">Неделя</div></div>
-        <div class="opt-pill sel" data-val="15" onclick="selSetting(this,'shardCount',15)"><div class="opt-pill-title">15</div><div class="opt-pill-sub">Рекомендуем</div></div>
+        <div class="opt-pill sel" data-val="7" onclick="selSetting(this,'shardCount',7)"><div class="opt-pill-title">7</div><div class="opt-pill-sub">Рекомендуем</div></div>
+        <div class="opt-pill" data-val="15" onclick="selSetting(this,'shardCount',15)"><div class="opt-pill-title">15</div><div class="opt-pill-sub">Две недели</div></div>
         <div class="opt-pill" data-val="30" onclick="selSetting(this,'shardCount',30)"><div class="opt-pill-title">30</div><div class="opt-pill-sub">Долгий путь</div></div>
       </div>
     </div>
@@ -652,8 +652,10 @@ html.boot-done #boot-splash{opacity:0;pointer-events:none;}
       </div>
     </div>
 
-    <!-- Обещание себе -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
+    <!-- Обещание себе. Для ПЕРВОГО витража этот блок скрыт — обещание даётся
+         после первого осколка (экран 5), где для него есть эмоция. Для 2-го и
+         последующих витражей — показывается здесь, на этапе настройки. -->
+    <div id="ob-promise-block" style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:14px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:3px;">✍️ Обещание себе <span style="font-weight:400;color:var(--text2);">— по желанию</span></div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Запиши, как пройдёшь этот путь и почему не бросишь. В трудный момент сможешь к нему вернуться.</div>
       <textarea id="ob-promise-text" maxlength="600" rows="3" placeholder="Например: Я иду до конца, даже когда трудно. Этот путь — мой выбор…" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-size:14px;color:var(--text);font-family:inherit;outline:none;box-sizing:border-box;resize:vertical;"></textarea>
@@ -1416,6 +1418,38 @@ function escapeHtml(s){
 /* ══════════════════════════════════════════════
    СОСТОЯНИЕ
 ══════════════════════════════════════════════ */
+/* ══ АНАЛИТИКА ══
+   Отправка событий воронки. Пока сервер не подключён, события копятся в очереди
+   в localStorage и уйдут, когда появится SERVER_URL. Персональные данные не пишем:
+   только имя события и обезличенные props (сфера, длина пути, тип обещания). */
+const SERVER_URL = '';   // задаётся при подключении сервера, напр. 'https://витражист.рф'
+function sendEvent(name, props){
+  try{
+    const ev = { name:name, props:props||{}, ts:Date.now() };
+    // копим локально (offline-first): очередь уйдёт при первом успешном коннекте
+    let q=[]; try{ q=JSON.parse(localStorage.getItem('vz_events')||'[]'); }catch(e){}
+    q.push(ev);
+    if(q.length>500) q=q.slice(-500);   // не разрастаться бесконечно
+    localStorage.setItem('vz_events', JSON.stringify(q));
+    flushEvents();
+  }catch(e){}
+}
+function flushEvents(){
+  if(!SERVER_URL) return;               // сервера ещё нет — просто копим
+  let q=[]; try{ q=JSON.parse(localStorage.getItem('vz_events')||'[]'); }catch(e){ return; }
+  if(!q.length) return;
+  const batch=q.slice(0,50);
+  fetch(SERVER_URL+'/api/event', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ events:batch, uid:(app&&app.uid)||null })
+  }).then(r=>{
+    if(r.ok){
+      let rest=[]; try{ rest=JSON.parse(localStorage.getItem('vz_events')||'[]'); }catch(e){}
+      localStorage.setItem('vz_events', JSON.stringify(rest.slice(batch.length)));
+    }
+  }).catch(()=>{});   // офлайн — попробуем в следующий раз
+}
+
 const app = {
   ob: 0,
   deletedIds: [], // «надгробия» удалённых витражей (id активных / completedAt завершённых) — для синхронизации удалений между устройствами
@@ -1434,6 +1468,8 @@ const app = {
   streak: 0, light: 0, totalDone: 0,
   variant: null,      // сюжет текущего витража (null = основной)
   unlocked: [],       // открытые за очки сюжеты: ключи вида 'sleep-15-cat'
+  recoveryCode: null, // код восстановления (генерируется на экране активации)
+  email: null,        // почта пользователя, если оставил
   course: null,       // id активного курса ('sleep-full' / 'sleep-mini') или null
   courseTools: {},    // оценки техник: { paradox:[8,9], breath:[7] }
   ownedCourses: [],   // купленные курсы
@@ -1573,11 +1609,29 @@ function nextOb(){
   document.getElementById('ob'+obStep).classList.add('on');
   if(obStep===2) initActFields();
   if(obStep===3){
-    // Подставляем название по умолчанию как placeholder (можно переопределить)
+    // Название витража предзаполняем значением по сфере (ТЗ экран 4) — не заставляем придумывать.
     const nameInp=document.getElementById('ob-vitrazh-name');
-    if(nameInp) nameInp.placeholder='Витраж '+(app.sphereName||'Сна');
-    syncSettingsPills(); // подсветить реальное количество осколков (а не жёстко «30»)
+    if(nameInp){
+      nameInp.placeholder=defaultVitrazhName(app.sphere);
+      if(!nameInp.value.trim()) nameInp.value=defaultVitrazhName(app.sphere);
+    }
+    syncSettingsPills(); // подсветить реальное количество осколков
+    try{ updatePromiseVisibility(); }catch(e){}
   }
+}
+// Первый ли это витраж у пользователя (нет ни завершённых, ни отложенных активных).
+// От этого зависит, где даётся «обещание себе».
+function isFirstVitrazhEver(){
+  const completed = (app.completed||[]).length;
+  const queued = (app.activeVitrazhi||[]).length;
+  return completed===0 && queued===0;
+}
+// Блок «обещание» в настройках показываем только со 2-го витража.
+// Для первого обещание даётся после первого осколка (экран 5).
+function updatePromiseVisibility(){
+  const block=document.getElementById('ob-promise-block');
+  if(!block) return;
+  block.style.display = isFirstVitrazhEver() ? 'none' : 'block';
 }
 // Возврат на предыдущий шаг онбординга (данные сохраняются)
 function obBack(toStep){
@@ -1593,10 +1647,222 @@ function nextObAndStart(){
   const custom=nameInp ? nameInp.value.trim() : '';
   app.vitrazhName = custom || ('Витраж '+app.sphereName);
   try{ capturePromiseFromForm(); }catch(e){} // сохраняем обещание себе в витраж
+  try{
+    const actCount = Array.from(document.querySelectorAll('.dyn-act-input')).map(i=>i.value.trim()).filter(Boolean).length;
+    sendEvent('onboarding_done', {sphere:app.sphere, path_length:settings.shardCount, actions_count:actCount});
+  }catch(e){}
+  // Первый витраж: обещание не бралось в настройках — покажем экран активации после старта
+  app._pendingActivation = isFirstVitrazhEver();
   // Screen 3 (settings) → directly launch app
   applyShardCountToGrid(settings.shardCount);
   startApp();
 }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   АКТИВАЦИЯ (экраны 5-6-7 из ТЗ) — показываются один раз, для первого витража.
+   Экран 5: первый осколок открыт + обещание себе (момент активации).
+   Экран 6: код восстановления + почта (привязка прогресса к человеку).
+   Экран 7: добавить на домашний экран (установка PWA).
+   ══════════════════════════════════════════════════════════════════ */
+function actOverlay(){
+  let o=document.getElementById('activation-overlay');
+  if(!o){
+    o=document.createElement('div'); o.id='activation-overlay';
+    o.style.cssText='position:fixed;inset:0;z-index:5000;background:var(--bg);overflow-y:auto;padding:26px 22px 40px;';
+    document.body.appendChild(o);
+  }
+  o.style.display='block';
+  return o;
+}
+function closeActivation(){ const o=document.getElementById('activation-overlay'); if(o) o.style.display='none'; }
+
+function startActivationFlow(){
+  try{
+    if((app.shards||[]).filter(Boolean).length===0){
+      app.shards[0]=true;
+      app.shardColors[0]=app.sphereColor||'#7c6fff';
+      const now=new Date();
+      app.shardDates[0]=now.toLocaleDateString('ru')+' '+now.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
+      app.totalDone=(app.totalDone||0)+1;
+      try{ scheduleSave(); }catch(e){}
+    }
+  }catch(e){}
+  sendEvent('first_shard_opened', {sphere:app.sphere});
+  actScreenPromise();
+}
+
+function actScreenPromise(){
+  const o=actOverlay();
+  const h=new Date().getHours();
+  const greet = h<5?'Доброй ночи':h<12?'Доброе утро':h<17?'Добрый день':h<23?'Добрый вечер':'Доброй ночи';
+  const dateStr=new Date().toLocaleDateString('ru',{day:'numeric',month:'long'});
+  const total=TOTAL;
+  o.innerHTML='<div style="max-width:480px;margin:0 auto;">'+
+    '<div style="text-align:center;font-size:13px;color:var(--accent2);font-weight:600;">'+greet+' \u2726</div>'+
+    '<div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:20px;">'+dateStr+'</div>'+
+    '<div style="background:linear-gradient(135deg,rgba(124,111,255,.14),rgba(45,212,191,.08));border:1px solid rgba(124,111,255,.25);border-radius:16px;padding:14px 16px;margin-bottom:18px;">'+
+      '<div style="font-size:11px;letter-spacing:.08em;color:var(--accent2);font-weight:700;text-transform:uppercase;margin-bottom:4px;">\u041c\u0430\u0441\u0442\u0435\u0440-\u0412\u0438\u0442\u0440\u0430\u0436\u0438\u0441\u0442</div>'+
+      '<div style="font-size:15px;font-weight:600;color:var(--text);">\u041a\u0440\u0430\u0441\u0438\u0432\u043e! \u041e\u0441\u043a\u043e\u043b\u043e\u043a \u043e\u0442\u043a\u0440\u044b\u0442 \u0446\u0435\u043b\u0438\u043a\u043e\u043c \u2726</div>'+
+    '</div>'+
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:20px;text-align:center;">'+
+      '<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">'+(app.vitrazhName||'\u0422\u0432\u043e\u0439 \u0432\u0438\u0442\u0440\u0430\u0436')+'</div>'+
+      '<div style="font-size:12px;color:var(--text3);margin-bottom:14px;">\u041e\u0442\u043a\u0440\u044b\u0442\u043e 1 \u0438\u0437 '+total+'</div>'+
+      '<div style="font-size:44px;">\ud83c\udf1f</div>'+
+    '</div>'+
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:20px;">'+
+      '<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;">\u041f\u0443\u0442\u044c \u043d\u0430\u0447\u0430\u0442</div>'+
+      '<div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:12px;">\u0417\u0430\u043f\u0438\u0448\u0438 \u2014 \u043f\u043e\u0447\u0435\u043c\u0443 \u0442\u044b \u043d\u0435 \u0431\u0440\u043e\u0441\u0438\u0448\u044c? \u0412\u0435\u0440\u043d\u0451\u0448\u044c\u0441\u044f \u043a \u044d\u0442\u043e\u043c\u0443 \u0432 \u0442\u0440\u0443\u0434\u043d\u044b\u0439 \u043c\u043e\u043c\u0435\u043d\u0442.</div>'+
+      '<textarea id="act-promise-text" maxlength="600" rows="3" placeholder="\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440: \u044f \u0438\u0434\u0443 \u0434\u043e \u043a\u043e\u043d\u0446\u0430..." style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px;color:var(--text);font-size:14px;resize:none;font-family:inherit;"></textarea>'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-top:10px;">'+
+        '<button id="act-promise-audio-btn" onclick="actToggleAudio()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px;cursor:pointer;">\ud83c\udf99 \u0417\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u0433\u043e\u043b\u043e\u0441\u043e\u043c</button>'+
+        '<span id="act-promise-audio-status" style="font-size:12px;color:var(--text3);display:none;"></span>'+
+      '</div>'+
+      '<div id="act-promise-audio-wrap" style="display:none;margin-top:10px;align-items:center;gap:8px;">'+
+        '<audio id="act-promise-audio" controls style="flex:1;height:36px;"></audio>'+
+      '</div>'+
+    '</div>'+
+    '<button class="btn btn-primary" onclick="actSavePromise()" style="width:100%;margin-bottom:10px;">\u0417\u0430\u043f\u0438\u0441\u0430\u0442\u044c \u043e\u0431\u0435\u0449\u0430\u043d\u0438\u0435</button>'+
+    '<button class="btn btn-ghost" onclick="actSkipPromise()" style="width:100%;font-size:13px;">\u041f\u043e\u0437\u0436\u0435</button>'+
+  '</div>';
+  o.scrollTop=0;
+}
+var _actAudioBlob=null, _actRec=null, _actChunks=[];
+function actToggleAudio(){
+  const btn=document.getElementById('act-promise-audio-btn');
+  if(_actRec && _actRec.state==='recording'){ _actRec.stop(); return; }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    _actChunks=[]; _actRec=new MediaRecorder(stream);
+    _actRec.ondataavailable=e=>{ if(e.data.size) _actChunks.push(e.data); };
+    _actRec.onstop=()=>{
+      _actAudioBlob=new Blob(_actChunks,{type:'audio/webm'});
+      const wrap=document.getElementById('act-promise-audio-wrap');
+      const au=document.getElementById('act-promise-audio');
+      if(au) au.src=URL.createObjectURL(_actAudioBlob);
+      if(wrap) wrap.style.display='flex';
+      if(btn) btn.textContent='\ud83c\udf99 \u041f\u0435\u0440\u0435\u0437\u0430\u043f\u0438\u0441\u0430\u0442\u044c';
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    _actRec.start();
+    if(btn) btn.textContent='\u23f9 \u041e\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c';
+  }).catch(()=>{
+    const st=document.getElementById('act-promise-audio-status');
+    if(st){ st.style.display='inline'; st.textContent='\u041c\u0438\u043a\u0440\u043e\u0444\u043e\u043d \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d \u2014 \u0437\u0430\u043f\u0438\u0448\u0438 \u0442\u0435\u043a\u0441\u0442\u043e\u043c'; }
+  });
+}
+function actSavePromise(){
+  const txt=(document.getElementById('act-promise-text')||{}).value||'';
+  let type=null;
+  if(_actAudioBlob){
+    type='voice';
+    const r=new FileReader();
+    r.onload=()=>{ app.promise={text:txt.trim()||null, audio:r.result}; try{scheduleSave();}catch(e){} };
+    r.readAsDataURL(_actAudioBlob);
+  } else if(txt.trim()){
+    type='text';
+    app.promise={text:txt.trim(), audio:null};
+    try{scheduleSave();}catch(e){}
+  }
+  if(type) sendEvent('promise_created', {type:type});
+  actScreenSave();
+}
+function actSkipPromise(){ actScreenSave(); }
+
+var _RECOVERY_WORDS=['\u043b\u0443\u043d\u0430','\u043a\u0435\u0434\u0440','\u0432\u0438\u0442\u0440\u0430\u0436','\u0440\u0435\u043a\u0430','\u0437\u0430\u0440\u044f','\u0433\u0440\u043e\u043c','\u0441\u043e\u043a\u043e\u043b','\u043c\u044f\u0442\u0430','\u0438\u0441\u043a\u0440\u0430','\u043f\u043b\u0430\u043c\u044f','\u0441\u0435\u0432\u0435\u0440','\u0442\u0440\u043e\u043f\u0430','\u043a\u0430\u043c\u0435\u043d\u044c','\u0432\u0435\u0442\u0435\u0440','\u0441\u043e\u0441\u043d\u0430','\u0440\u043e\u0441\u0430','\u0433\u0440\u0430\u043d\u0430\u0442','\u043b\u043e\u0442\u043e\u0441','\u0431\u0435\u0440\u0435\u0433','\u0441\u0442\u0440\u0438\u0436'];
+function makeRecoveryCode(){
+  const w=()=>_RECOVERY_WORDS[Math.floor(Math.random()*_RECOVERY_WORDS.length)];
+  const n=1000+Math.floor(Math.random()*9000);
+  return w()+'-'+w()+'-'+w()+'-'+n;
+}
+function actScreenSave(){
+  if(!app.recoveryCode) app.recoveryCode=makeRecoveryCode();
+  try{ scheduleSave(); }catch(e){}
+  sendEvent('recovery_created', {});
+  const o=actOverlay();
+  o.innerHTML='<div style="max-width:480px;margin:0 auto;">'+
+    '<div style="font-size:22px;font-weight:800;color:var(--text);text-align:center;margin-bottom:8px;">\u0421\u043e\u0445\u0440\u0430\u043d\u0438 \u0441\u0432\u043e\u0439 \u043f\u0443\u0442\u044c</div>'+
+    '<div style="font-size:14px;color:var(--text2);line-height:1.5;text-align:center;margin-bottom:24px;">\u0412\u0438\u0442\u0440\u0430\u0436 \u0436\u0438\u0432\u0451\u0442 \u043d\u0430 \u044d\u0442\u043e\u043c \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0435. \u041f\u0440\u0438\u0432\u044f\u0436\u0438 \u0435\u0433\u043e \u043a \u0441\u0435\u0431\u0435 \u2014 \u043d\u0435 \u043f\u043e\u0442\u0435\u0440\u044f\u0435\u0448\u044c \u043f\u0440\u043e\u0433\u0440\u0435\u0441\u0441.</div>'+
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:16px;">'+
+      '<div style="font-size:12px;color:var(--text3);margin-bottom:8px;">\u0422\u0432\u043e\u0439 \u043a\u043e\u0434 \u0432\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f:</div>'+
+      '<div style="font-family:ui-monospace,Menlo,monospace;font-size:19px;font-weight:700;color:var(--accent2);text-align:center;letter-spacing:.02em;padding:12px;background:var(--bg3);border-radius:10px;margin-bottom:12px;" id="act-code">'+app.recoveryCode+'</div>'+
+      '<button class="btn btn-ghost" onclick="actCopyCode()" style="width:100%;font-size:13px;">\ud83d\udccb \u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u043a\u043e\u0434</button>'+
+      '<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;">\u0421 \u043d\u0438\u043c \u0442\u044b \u0432\u0435\u0440\u043d\u0451\u0448\u044c \u0441\u0432\u043e\u0439 \u043f\u0443\u0442\u044c \u043d\u0430 \u043b\u044e\u0431\u043e\u043c \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0435.</div>'+
+    '</div>'+
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:20px;">'+
+      '<div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:12px;">\u041f\u0440\u0438\u0448\u043b\u0451\u043c \u043a\u043e\u0434 \u043d\u0430 \u043f\u043e\u0447\u0442\u0443 \u2014 \u0447\u0442\u043e\u0431\u044b \u0442\u043e\u0447\u043d\u043e \u043d\u0435 \u043f\u043e\u0442\u0435\u0440\u044f\u0442\u044c. \u0418 \u0431\u0443\u0434\u0435\u043c \u0431\u0435\u0440\u0435\u0436\u043d\u043e \u043d\u0430\u043f\u043e\u043c\u0438\u043d\u0430\u0442\u044c \u043e \u0442\u0432\u043e\u0451\u043c \u043f\u0443\u0442\u0438.</div>'+
+      '<input id="act-email" type="email" inputmode="email" placeholder="email" style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:12px;color:var(--text);font-size:15px;margin-bottom:6px;">'+
+      '<div id="act-email-err" style="font-size:12px;color:var(--rose);display:none;margin-bottom:6px;"></div>'+
+      '<button class="btn btn-primary" onclick="actSaveEmail()" style="width:100%;">\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c</button>'+
+      '<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px;">\u0411\u0435\u0437 \u0441\u043f\u0430\u043c\u0430. \u0422\u043e\u043b\u044c\u043a\u043e \u0442\u0432\u043e\u0439 \u043f\u0443\u0442\u044c. \u041e\u0442\u043f\u0438\u0441\u043a\u0430 \u0432 \u043e\u0434\u0438\u043d \u043a\u043b\u0438\u043a.</div>'+
+    '</div>'+
+    '<button class="btn btn-ghost" onclick="actScreenInstall(\'email_skipped\')" style="width:100%;font-size:13px;">\u041f\u043e\u0437\u0436\u0435</button>'+
+  '</div>';
+  o.scrollTop=0;
+}
+function actCopyCode(){
+  const code=app.recoveryCode||'';
+  try{ navigator.clipboard.writeText(code); toast('\u041a\u043e\u0434 \u0441\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d \u2726'); }
+  catch(e){ toast('\u041a\u043e\u0434: '+code); }
+}
+function actSaveEmail(){
+  const inp=document.getElementById('act-email');
+  const err=document.getElementById('act-email-err');
+  const val=(inp?inp.value:'').trim();
+  if(!val){ actScreenInstall('email_skipped'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){
+    if(err){ err.style.display='block'; err.textContent='\u041f\u0440\u043e\u0432\u0435\u0440\u044c \u0430\u0434\u0440\u0435\u0441 \u2014 \u043a\u0430\u0436\u0435\u0442\u0441\u044f, \u0442\u0443\u0442 \u043e\u043f\u0435\u0447\u0430\u0442\u043a\u0430.'; }
+    return;
+  }
+  app.email=val;
+  try{ scheduleSave(); }catch(e){}
+  sendEvent('email_saved', {source:'activation'});
+  toast('\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u043b\u0438 \u2726');
+  actScreenInstall(null);
+}
+
+function actScreenInstall(skipEvent){
+  if(skipEvent) sendEvent(skipEvent, {});
+  sendEvent('pwa_install_prompt_shown', {});
+  const o=actOverlay();
+  const ua=navigator.userAgent;
+  const isIOS=/iphone|ipad|ipod/i.test(ua);
+  const isSafari=/^((?!chrome|crios|android).)*safari/i.test(ua);
+  const isRealChrome=/chrome|crios/i.test(ua) && !/yabrowser|edg|opr|opera|samsungbrowser/i.test(ua);
+  let instr;
+  if(isIOS && isSafari){
+    instr='\u041d\u0430\u0436\u043c\u0438 \u043a\u043d\u043e\u043f\u043a\u0443 \u00ab\u041f\u043e\u0434\u0435\u043b\u0438\u0442\u044c\u0441\u044f\u00bb \u2b06\ufe0f \u0432\u043d\u0438\u0437\u0443 \u044d\u043a\u0440\u0430\u043d\u0430 \u2192 \u043f\u0440\u043e\u043b\u0438\u0441\u0442\u0430\u0439 \u0432\u043d\u0438\u0437 \u2192 \u00ab\u041d\u0430 \u044d\u043a\u0440\u0430\u043d \u201e\u0414\u043e\u043c\u043e\u0439\u201c\u00bb.';
+  } else if(isRealChrome){
+    instr='\u041d\u0430\u0436\u043c\u0438 \u00ab\u0423\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c\u00bb \u043d\u0438\u0436\u0435. \u0415\u0441\u043b\u0438 \u043a\u043d\u043e\u043f\u043a\u0430 \u043d\u0435 \u043f\u043e\u044f\u0432\u0438\u043b\u0430\u0441\u044c \u2014 \u043c\u0435\u043d\u044e Chrome (\u22ee) \u2192 \u00ab\u0423\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435\u00bb.';
+  } else {
+    instr='\u041e\u0442\u043a\u0440\u043e\u0439 \u043c\u0435\u043d\u044e \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430 \u0438 \u0432\u044b\u0431\u0435\u0440\u0438 \u00ab\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043d\u0430 \u0433\u043b\u0430\u0432\u043d\u044b\u0439 \u044d\u043a\u0440\u0430\u043d\u00bb.';
+  }
+  o.innerHTML='<div style="max-width:480px;margin:0 auto;text-align:center;">'+
+    '<div style="font-size:52px;margin:10px 0 14px;">\ud83d\udcf2</div>'+
+    '<div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px;">\u0412\u0438\u0442\u0440\u0430\u0436 \u2014 \u043d\u0430 \u0442\u0432\u043e\u0451\u043c \u0442\u0435\u043b\u0435\u0444\u043e\u043d\u0435</div>'+
+    '<div style="font-size:14px;color:var(--text2);line-height:1.5;margin-bottom:24px;">\u041e\u0442\u043a\u0440\u044b\u0432\u0430\u0439 \u043e\u0434\u043d\u0438\u043c \u043a\u0430\u0441\u0430\u043d\u0438\u0435\u043c, \u043a\u0430\u043a \u043e\u0431\u044b\u0447\u043d\u043e\u0435 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u0435. \u0420\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u043e\u0444\u043b\u0430\u0439\u043d.</div>'+
+    '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:20px;text-align:left;">'+
+      '<div style="font-size:14px;color:var(--text);line-height:1.6;">'+instr+'</div>'+
+    '</div>'+
+    (isRealChrome?'<button class="btn btn-primary" id="act-install-btn" onclick="actTriggerInstall()" style="width:100%;margin-bottom:10px;">\u0423\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c</button>':'')+
+    '<button class="btn '+(isRealChrome?'btn-ghost':'btn-primary')+'" onclick="actFinish()" style="width:100%;">\u0413\u043e\u0442\u043e\u0432\u043e</button>'+
+  '</div>';
+  o.scrollTop=0;
+}
+function actTriggerInstall(){
+  if(window._deferredInstallPrompt){
+    window._deferredInstallPrompt.prompt();
+    window._deferredInstallPrompt.userChoice.then(res=>{
+      if(res && res.outcome==='accepted') sendEvent('pwa_installed', {});
+      window._deferredInstallPrompt=null;
+    });
+  } else {
+    toast('\u041e\u0442\u043a\u0440\u043e\u0439 \u043c\u0435\u043d\u044e \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430 (\u22ee) \u2192 \u00ab\u0423\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c\u00bb');
+  }
+}
+function actFinish(){ closeActivation(); }
+window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window._deferredInstallPrompt=e; });
+window.addEventListener('appinstalled', function(){ sendEvent('pwa_installed', {}); });
+
 
 function selSphere(el,id,emoji,name,color){
   const prevSphere = app.sphere;
@@ -1604,6 +1870,7 @@ function selSphere(el,id,emoji,name,color){
   el.classList.add('sel');
   app.sphere=id; app.sphereName=name; app.sphereEmoji=emoji; app.sphereColor=color;
   app.course=null;   // обычный витраж — не курс
+  try{ sendEvent('sphere_selected', {sphere:id}); }catch(e){}
   const btn=document.getElementById('ob1-next');
   btn.style.opacity='1'; btn.style.pointerEvents='auto';
   // Если пользователь сменил сферу (через «Назад» → выбор другой) —
@@ -2095,6 +2362,11 @@ function startApp(){
   switchTab('main', document.querySelector('.ni'));
   initMainScreen();
   scheduleSave();
+  // Первый витраж: запускаем экраны активации (обещание → код+почта → установка).
+  if(app._pendingActivation){
+    app._pendingActivation=false;
+    setTimeout(()=>{ try{ startActivationFlow(); }catch(e){} }, 400);
+  }
 }
 
 /* ══ МНОЖЕСТВЕННЫЕ ВИТРАЖИ ══ */
@@ -2269,7 +2541,7 @@ function startNewVitrazh(){
 let TOTAL=30;
 
 const settings = {
-  shardCount: 15,      // 7, 15 или 30 (по умолчанию 15)
+  shardCount: 7,      // 7, 15 или 30 (по умолчанию 7 — первая картина за неделю, ТЗ)
   dailyLimit: 0,        // 0 = без лимита, иначе число осколков в день
   reminderTime: '21:00',
   reminderOn: true,
@@ -4277,6 +4549,7 @@ function dayLimitMessage(){
 // Инсайт можно добавить позже. Возвращает completedAt-id записи.
 let _justCompletedId = null;
 function registerCompletedVitrazh(){
+  _saveReady = null;   // сбрасываем кеш картинки — чтобы не поделиться прошлым витражом
   const completedAt = new Date().toLocaleString('ru');
   app.completed.push({
     name:app.vitrazhName||('Витраж '+app.sphereName),
@@ -5704,6 +5977,20 @@ function actionPlaceholder(index){
   return 'Например: моё ежедневное действие';
 }
 
+/* Дефолты онбординга по сфере (ТЗ, экраны 3-4):
+   первое действие предзаполнено, чтобы шаг проходился одним тапом,
+   и осмысленное имя витража. Всё редактируемо. */
+const SPHERE_DEFAULTS = {
+  sleep:    { action:'Лечь спать до 23:00',  name:'Витраж Сон' },
+  sport:    { action:'Зарядка 15 минут',     name:'Витраж Спорт' },
+  work:     { action:'Час без отвлечений',   name:'Витраж Работа' },
+  food:     { action:'Стакан воды утром',    name:'Витраж Питание' },
+  creative: { action:'15 минут творчества',  name:'Витраж Творчество' },
+  calm:     { action:'5 минут тишины',       name:'Витраж Спокойствие' }
+};
+function defaultActionFor(sphere){ return (SPHERE_DEFAULTS[sphere]||{}).action || ''; }
+function defaultVitrazhName(sphere){ return (SPHERE_DEFAULTS[sphere]||{}).name || ('Витраж '+(app.sphereName||'')); }
+
 const MAX_ACTIONS = 7;
 function addActionField(focusNew){
   const wrap=document.getElementById('act-list-wrap');
@@ -5721,8 +6008,10 @@ function addActionField(focusNew){
     `<button onclick="clearFirstAction(this)" title="Очистить" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;">✕</button>`
     :
     `<button onclick="this.parentElement.remove();renumberActions();updateAddBtn();" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1;">✕</button>`;
+  // Первое действие предзаполняем дефолтом сферы (ТЗ экран 3): проходится одним тапом.
+  const firstVal = isFirst ? defaultActionFor(app.sphere) : '';
   row.innerHTML=`<span class="action-num" style="min-width:22px;color:var(--text3);font-size:14px;">${num}</span>
-    <input class="action-inp dyn-act-input" placeholder="${actionPlaceholder(idx)}" style="flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;">
+    <input class="action-inp dyn-act-input" value="${firstVal.replace(/"/g,'&quot;')}" placeholder="${actionPlaceholder(idx)}" style="flex:1;background:none;border:none;outline:none;font-size:14px;color:var(--text);font-family:inherit;">
     ${delBtn}`;
   wrap.appendChild(row);
   const inp=row.querySelector('input');
@@ -7517,8 +7806,13 @@ function shareCompletedVitrazh(v){
     }catch(e){ _copyText(text); }
   };
   if(!navigator.share){ _copyText(text); return; }
-  // 1) Картинка уже готова (предрендер) — добавляем подпись и делимся
-  if(_saveReady && _saveReady.canvas){
+  // Отпечаток текущего витража: по нему проверяем, что закешированная картинка
+  // относится именно к нему, а не к прошлому. Иначе после завершения делился
+  // предыдущий или частично собранный витраж.
+  const fp = vitrazhFingerprint(v);
+  const cacheOk = _saveReady && _saveReady.fp===fp;
+  // 1) Картинка уже готова И это тот же витраж — добавляем подпись и делимся
+  if(cacheOk && _saveReady.canvas){
     showSavePreparing();
     addShareWatermark(_saveReady.canvas).toBlob(blob=>{
       hideSavePreparing();
@@ -7528,22 +7822,9 @@ function shareCompletedVitrazh(v){
     },'image/png');
     return;
   }
-  if(_saveReady && _saveReady.file){ shareWith(_saveReady.file); return; }
-  // 2) Берём готовый canvas с экрана и добавляем подпись со ссылкой
-  const scr=document.querySelector('#vitrazh-overlay canvas');
-  if(scr && scr.toBlob){
-    showSavePreparing();
-    const marked=addShareWatermark(scr);
-    marked.toBlob(blob=>{
-      hideSavePreparing();
-      let file=null;
-      try{ if(blob) file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
-      shareWith(file);
-    },'image/png');
-    return;
-  }
-  // 3) Витража нет на экране (например, окно поздравления сразу после завершения) —
-  //    рисуем картинку специально, чтобы поделиться именно витражом, а не одним текстом.
+  if(cacheOk && _saveReady.file){ shareWith(_saveReady.file); return; }
+  // 2) Кеша нужного витража нет — всегда рендерим свежую картинку из ЭТОГО v.
+  //    (Экранный canvas не берём: он мог остаться от прошлого витража.)
   showSavePreparing();
   try{
     renderVitrazhToCanvas(v).then(cv=>{
@@ -7556,6 +7837,13 @@ function shareCompletedVitrazh(v){
       },'image/png');
     }).catch(()=>{ hideSavePreparing(); shareWith(null); });
   }catch(e){ hideSavePreparing(); shareWith(null); }
+}
+// Отпечаток витража: сфера + сюжет + курс + какие осколки открыты.
+// Меняется при любом изменении картинки, поэтому надёжно отличает витражи.
+function vitrazhFingerprint(v){
+  if(!v) return 'none';
+  const sh=(v.shards||[]).map(x=>x?1:0).join('');
+  return [v.sphere||'', v.variant||'', v.course||'', v.completedAt||v.id||'', sh].join('|');
 }
 // Запасной вариант: поделиться текстом (если картинку отдать нельзя)
 function _shareFallback(text){
@@ -7583,7 +7871,8 @@ function prepareSaveImageFromCanvas(cv, v){
     let url=null; try{ url=cv.toDataURL('image/png'); }catch(e){ url=null; }
     cv.toBlob(blob=>{
       if(blob){ let file=null; try{ file=new File([blob],'vitrazh.png',{type:'image/png'}); }catch(e){}
-        _saveReady = { v:v, blob:blob, url:url, file:file }; }
+        // fp — отпечаток витража: гарантирует, что при шаринге не уйдёт чужая картинка
+        _saveReady = { v:v, fp:vitrazhFingerprint(v), canvas:cv, blob:blob, url:url, file:file }; }
     }, 'image/png');
   }catch(e){}
 }
@@ -8153,6 +8442,8 @@ function serializeProgress(){
     activeShardIdx:app.activeShardIdx,
     markLog:[...(app.markLog||[])],
     streak:app.streak, light:app.light, totalDone:app.totalDone,
+    recoveryCode: app.recoveryCode||null,   // код восстановления (экран активации)
+    email: app.email||null,                 // почта (если оставил)
     variant: app.variant||null,
     unlocked: Array.isArray(app.unlocked)?app.unlocked:[],   // купленные сюжеты
     course: app.course||null,
@@ -8367,6 +8658,7 @@ function applyProgress(data){
   app.activeShardIdx=(typeof data.activeShardIdx==='number')?data.activeShardIdx:-1;
   app.markLog=Array.isArray(data.markLog)?[...data.markLog]:[];
   app.streak=data.streak||0; app.light=data.light||0; app.totalDone=data.totalDone||0;
+  app.recoveryCode=data.recoveryCode||null; app.email=data.email||null;
   app.variant=data.variant||null;
   app.unlocked=Array.isArray(data.unlocked)?data.unlocked:[];   // купленные сюжеты
   app.course=data.course||null;
